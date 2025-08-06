@@ -1,0 +1,749 @@
+{% extends "base.html" %}
+
+{% block title %}Portfolio - Crypto Trading Bot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Portfolio Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card shadow-sm">
+                <div class="metric-label">Total Portfolio Value</div>
+                <div class="metric-value" id="portfolioValue">$0.00</div>
+                <div class="metric-change positive">
+                    <i class="fas fa-arrow-up"></i>
+                    <span id="portfolioChange">+0.00%</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card shadow-sm">
+                <div class="metric-label">Total P&L</div>
+                <div class="metric-value" id="totalPnl">$0.00</div>
+                <div class="metric-change positive">
+                    <i class="fas fa-arrow-up"></i>
+                    <span id="totalPnlPercent">+0.00%</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card shadow-sm">
+                <div class="metric-label">Daily P&L</div>
+                <div class="metric-value" id="dailyPnl">$0.00</div>
+                <div class="metric-change positive">
+                    <i class="fas fa-arrow-up"></i>
+                    <span id="dailyPnlPercent">+0.00%</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card shadow-sm">
+                <div class="metric-label">Active Positions</div>
+                <div class="metric-value" id="activePositions">0</div>
+                <div class="metric-change">
+                    <i class="fas fa-coins"></i>
+                    <span id="totalAssets">0 Assets</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Portfolio Allocation Chart -->
+        <div class="col-xl-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Portfolio Allocation
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="allocationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Chart -->
+        <div class="col-xl-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Portfolio Performance
+                    </h5>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-primary active" data-period="1d">1D</button>
+                        <button type="button" class="btn btn-outline-primary" data-period="7d">7D</button>
+                        <button type="button" class="btn btn-outline-primary" data-period="30d">30D</button>
+                        <button type="button" class="btn btn-outline-primary" data-period="90d">90D</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Current Positions -->
+        <div class="col-xl-8 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-wallet me-2"></i>
+                        Current Positions
+                    </h5>
+                    <button class="btn btn-primary btn-sm" onclick="refreshPositions()">
+                        <i class="fas fa-sync-alt me-1"></i>
+                        Refresh
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Asset</th>
+                                    <th>Size</th>
+                                    <th>Entry Price</th>
+                                    <th>Current Price</th>
+                                    <th>P&L</th>
+                                    <th>P&L %</th>
+                                    <th>Value</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="positionsTable">
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <div class="mt-2">Loading positions...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Portfolio Analytics -->
+        <div class="col-xl-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-analytics me-2"></i>
+                        Portfolio Analytics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="analytics-item mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Sharpe Ratio</span>
+                            <span class="fw-bold" id="sharpeRatio">-</span>
+                        </div>
+                    </div>
+                    <div class="analytics-item mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Max Drawdown</span>
+                            <span class="fw-bold text-danger" id="maxDrawdown">-</span>
+                        </div>
+                    </div>
+                    <div class="analytics-item mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Win Rate</span>
+                            <span class="fw-bold" id="winRate">-</span>
+                        </div>
+                    </div>
+                    <div class="analytics-item mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Total Trades</span>
+                            <span class="fw-bold" id="totalTrades">-</span>
+                        </div>
+                    </div>
+                    <div class="analytics-item mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Avg Trade Size</span>
+                            <span class="fw-bold" id="avgTradeSize">-</span>
+                        </div>
+                    </div>
+                    <div class="analytics-item mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Best Trade</span>
+                            <span class="fw-bold text-success" id="bestTrade">-</span>
+                        </div>
+                    </div>
+                    <div class="analytics-item">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Worst Trade</span>
+                            <span class="fw-bold text-danger" id="worstTrade">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Balance History -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Balance History
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="exportPortfolioData()">
+                            <i class="fas fa-download me-1"></i>
+                            Export
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="rebalancePortfolio()">
+                            <i class="fas fa-balance-scale me-1"></i>
+                            Rebalance
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 400px;">
+                        <canvas id="balanceHistoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Position Details Modal -->
+<div class="modal fade" id="positionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Position Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Position Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td>Symbol:</td>
+                                <td><strong id="modalSymbol">-</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Size:</td>
+                                <td><strong id="modalSize">-</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Entry Price:</td>
+                                <td><strong id="modalEntryPrice">-</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Current Price:</td>
+                                <td><strong id="modalCurrentPrice">-</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Unrealized P&L:</td>
+                                <td><strong id="modalPnl">-</strong></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Risk Management</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Stop Loss</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control" id="stopLossInput" step="0.01">
+                                <span class="input-group-text">USD</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Take Profit</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control" id="takeProfitInput" step="0.01">
+                                <span class="input-group-text">USD</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Partial Close %</label>
+                            <input type="range" class="form-range" id="partialCloseRange" min="10" max="100" step="10" value="50">
+                            <div class="d-flex justify-content-between">
+                                <small>10%</small>
+                                <small id="partialCloseValue">50%</small>
+                                <small>100%</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning" onclick="updateStopLoss()">Update Stop Loss</button>
+                <button type="button" class="btn btn-success" onclick="updateTakeProfit()">Update Take Profit</button>
+                <button type="button" class="btn btn-primary" onclick="partialClose()">Partial Close</button>
+                <button type="button" class="btn btn-danger" onclick="closePosition()">Close Position</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allocationChart, performanceChart, balanceHistoryChart;
+let currentPositions = [];
+let selectedPosition = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+    loadPortfolioData();
+    setupWebSocket();
+    setupEventListeners();
+});
+
+function initializeCharts() {
+    // Portfolio Allocation Chart
+    const allocationCtx = document.getElementById('allocationChart').getContext('2d');
+    allocationChart = new Chart(allocationCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [],
+            datasets: [{
+                data: [],
+                backgroundColor: [
+                    '#0d6efd', '#198754', '#dc3545', '#ffc107', '#0dcaf0',
+                    '#6f42c1', '#fd7e14', '#20c997', '#6c757d', '#f8f9fa'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label;
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: $${value.toLocaleString()} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Performance Chart
+    const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+    performanceChart = new Chart(performanceCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Portfolio Value',
+                data: [],
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
+
+    // Balance History Chart
+    const balanceCtx = document.getElementById('balanceHistoryChart').getContext('2d');
+    balanceHistoryChart = new Chart(balanceCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Total Balance',
+                data: [],
+                borderColor: '#198754',
+                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function loadPortfolioData() {
+    // Load portfolio summary
+    fetch('/api/portfolio/summary')
+        .then(response => response.json())
+        .then(data => {
+            updatePortfolioSummary(data);
+        })
+        .catch(error => {
+            console.error('Error loading portfolio summary:', error);
+        });
+
+    // Load positions
+    loadPositions();
+
+    // Load performance data
+    loadPerformanceData('1d');
+
+    // Load balance history
+    loadBalanceHistory();
+}
+
+function updatePortfolioSummary(data) {
+    document.getElementById('portfolioValue').textContent = formatCurrency(data.total_value);
+    document.getElementById('totalPnl').textContent = formatCurrency(data.total_pnl);
+    document.getElementById('dailyPnl').textContent = formatCurrency(data.daily_pnl);
+    document.getElementById('activePositions').textContent = data.active_positions;
+    
+    // Update percentage changes
+    updateMetricChange('portfolioChange', data.portfolio_change);
+    updateMetricChange('totalPnlPercent', data.total_pnl_percent);
+    updateMetricChange('dailyPnlPercent', data.daily_pnl_percent);
+    
+    // Update analytics
+    document.getElementById('sharpeRatio').textContent = data.sharpe_ratio?.toFixed(2) || '-';
+    document.getElementById('maxDrawdown').textContent = data.max_drawdown ? formatPercentage(data.max_drawdown) : '-';
+    document.getElementById('winRate').textContent = data.win_rate ? formatPercentage(data.win_rate) : '-';
+    document.getElementById('totalTrades').textContent = data.total_trades || '-';
+    document.getElementById('avgTradeSize').textContent = data.avg_trade_size ? formatCurrency(data.avg_trade_size) : '-';
+    document.getElementById('bestTrade').textContent = data.best_trade ? formatCurrency(data.best_trade) : '-';
+    document.getElementById('worstTrade').textContent = data.worst_trade ? formatCurrency(data.worst_trade) : '-';
+    
+    document.getElementById('totalAssets').textContent = `${data.total_assets || 0} Assets`;
+}
+
+function loadPositions() {
+    fetch('/api/portfolio/positions')
+        .then(response => response.json())
+        .then(data => {
+            currentPositions = data;
+            updatePositionsTable(data);
+            updateAllocationChart(data);
+        })
+        .catch(error => {
+            console.error('Error loading positions:', error);
+            document.getElementById('positionsTable').innerHTML = 
+                '<tr><td colspan="8" class="text-center text-danger">Error loading positions</td></tr>';
+        });
+}
+
+function updatePositionsTable(positions) {
+    const tbody = document.getElementById('positionsTable');
+    
+    if (positions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No active positions</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = positions.map(position => `
+        <tr>
+            <td>
+                <div class="d-flex align-items-center">
+                    <img src="https://cryptoicons.org/api/icon/${position.symbol.toLowerCase()}/32" 
+                         alt="${position.symbol}" class="me-2" style="width: 24px; height: 24px;" 
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTIiIGZpbGw9IiNjY2MiLz4KPHR5cGUgeD0iNiIgeT0iMTYiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMCIgZmlsbD0iI2ZmZiI+Pz88L3RleHQ+Cjwvc3ZnPgo='">
+                    <strong>${position.symbol}</strong>
+                </div>
+            </td>
+            <td>${formatNumber(position.size, 6)}</td>
+            <td>${formatCurrency(position.entry_price)}</td>
+            <td>${formatCurrency(position.current_price)}</td>
+            <td class="${position.pnl >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(position.pnl)}</td>
+            <td class="${position.pnl_percent >= 0 ? 'text-success' : 'text-danger'}">${formatPercentage(position.pnl_percent)}</td>
+            <td>${formatCurrency(position.current_value)}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="viewPosition('${position.symbol}')">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger ms-1" onclick="closePositionConfirm('${position.symbol}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function updateAllocationChart(positions) {
+    const labels = positions.map(p => p.symbol);
+    const data = positions.map(p => p.current_value);
+    
+    allocationChart.data.labels = labels;
+    allocationChart.data.datasets[0].data = data;
+    allocationChart.update();
+}
+
+function loadPerformanceData(period) {
+    fetch(`/api/portfolio/performance?period=${period}`)
+        .then(response => response.json())
+        .then(data => {
+            performanceChart.data.labels = data.timestamps;
+            performanceChart.data.datasets[0].data = data.values;
+            performanceChart.update();
+        })
+        .catch(error => {
+            console.error('Error loading performance data:', error);
+        });
+}
+
+function loadBalanceHistory() {
+    fetch('/api/portfolio/balance-history')
+        .then(response => response.json())
+        .then(data => {
+            balanceHistoryChart.data.labels = data.timestamps;
+            balanceHistoryChart.data.datasets[0].data = data.balances;
+            balanceHistoryChart.update();
+        })
+        .catch(error => {
+            console.error('Error loading balance history:', error);
+        });
+}
+
+function setupEventListeners() {
+    // Performance period buttons
+    document.querySelectorAll('[data-period]').forEach(button => {
+        button.addEventListener('click', function() {
+            document.querySelectorAll('[data-period]').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            loadPerformanceData(this.dataset.period);
+        });
+    });
+
+    // Partial close range
+    document.getElementById('partialCloseRange').addEventListener('input', function() {
+        document.getElementById('partialCloseValue').textContent = this.value + '%';
+    });
+}
+
+function viewPosition(symbol) {
+    const position = currentPositions.find(p => p.symbol === symbol);
+    if (!position) return;
+    
+    selectedPosition = position;
+    
+    // Populate modal
+    document.getElementById('modalSymbol').textContent = position.symbol;
+    document.getElementById('modalSize').textContent = formatNumber(position.size, 6);
+    document.getElementById('modalEntryPrice').textContent = formatCurrency(position.entry_price);
+    document.getElementById('modalCurrentPrice').textContent = formatCurrency(position.current_price);
+    document.getElementById('modalPnl').textContent = formatCurrency(position.pnl);
+    document.getElementById('modalPnl').className = position.pnl >= 0 ? 'text-success' : 'text-danger';
+    
+    // Show modal
+    new bootstrap.Modal(document.getElementById('positionModal')).show();
+}
+
+function refreshPositions() {
+    loadPositions();
+    showToast('Positions refreshed', 'success');
+}
+
+function rebalancePortfolio() {
+    if (!confirm('Are you sure you want to rebalance the portfolio? This will adjust all positions based on your strategy allocation.')) {
+        return;
+    }
+    
+    fetch('/api/portfolio/rebalance', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Portfolio rebalancing initiated', 'success');
+                setTimeout(() => loadPortfolioData(), 2000);
+            } else {
+                showToast('Rebalancing failed: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error rebalancing portfolio:', error);
+            showToast('Rebalancing failed', 'error');
+        });
+}
+
+function exportPortfolioData() {
+    const link = document.createElement('a');
+    link.href = '/api/portfolio/export';
+    link.download = `portfolio_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+}
+
+function closePositionConfirm(symbol) {
+    if (confirm(`Are you sure you want to close your ${symbol} position?`)) {
+        closePositionBySymbol(symbol);
+    }
+}
+
+function closePositionBySymbol(symbol) {
+    fetch(`/api/portfolio/positions/${symbol}/close`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`${symbol} position closed successfully`, 'success');
+                loadPortfolioData();
+            } else {
+                showToast(`Failed to close ${symbol} position: ` + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error closing position:', error);
+            showToast('Failed to close position', 'error');
+        });
+}
+
+function updateStopLoss() {
+    const stopLoss = document.getElementById('stopLossInput').value;
+    if (!stopLoss || !selectedPosition) return;
+    
+    fetch(`/api/portfolio/positions/${selectedPosition.symbol}/stop-loss`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stop_loss: parseFloat(stopLoss) })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Stop loss updated', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('positionModal')).hide();
+            loadPositions();
+        } else {
+            showToast('Failed to update stop loss: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating stop loss:', error);
+        showToast('Failed to update stop loss', 'error');
+    });
+}
+
+function updateTakeProfit() {
+    const takeProfit = document.getElementById('takeProfitInput').value;
+    if (!takeProfit || !selectedPosition) return;
+    
+    fetch(`/api/portfolio/positions/${selectedPosition.symbol}/take-profit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ take_profit: parseFloat(takeProfit) })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Take profit updated', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('positionModal')).hide();
+            loadPositions();
+        } else {
+            showToast('Failed to update take profit: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating take profit:', error);
+        showToast('Failed to update take profit', 'error');
+    });
+}
+
+function partialClose() {
+    const percentage = document.getElementById('partialCloseRange').value;
+    if (!selectedPosition) return;
+    
+    if (!confirm(`Close ${percentage}% of your ${selectedPosition.symbol} position?`)) return;
+    
+    fetch(`/api/portfolio/positions/${selectedPosition.symbol}/partial-close`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ percentage: parseFloat(percentage) })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`${percentage}% of ${selectedPosition.symbol} position closed`, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('positionModal')).hide();
+            loadPortfolioData();
+        } else {
+            showToast('Partial close failed: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error with partial close:', error);
+        showToast('Partial close failed', 'error');
+    });
+}
+
+function closePosition() {
+    if (!selectedPosition) return;
+    
+    if (!confirm(`Close your entire ${selectedPosition.symbol} position?`)) return;
+    
+    closePositionBySymbol(selectedPosition.symbol);
+    bootstrap.Modal.getInstance(document.getElementById('positionModal')).hide();
+}
+
+function setupWebSocket() {
+    if (window.ws) {
+        window.ws.addEventListener('message', function(event) {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'portfolio_update') {
+                updatePortfolioSummary(data.data);
+            } else if (data.type === 'position_update') {
+                loadPositions();
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

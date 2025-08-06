@@ -1,0 +1,213 @@
+"""
+Main entry point for the Crypto Trading Bot.
+Handles command-line arguments and starts the appropriate bot mode.
+"""
+
+import asyncio
+import argparse
+import sys
+import logging
+from pathlib import Path
+from typing import Optional
+
+# Add src to path
+sys.path.append(str(Path(__file__).parent / "src"))
+
+from src.core.bot import TradingBot
+from src.core.config import Config
+from src.utils.logger import setup_logging
+
+
+def parse_arguments() -> argparse.Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Advanced Crypto Trading Bot",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Paper trading with MA crossover strategy
+  python main.py --mode paper --strategy ma_crossover --symbol BTC/USDT
+
+  # Live trading with RSI strategy
+  python main.py --mode live --strategy rsi_strategy --symbol ETH/USDT --exchange binance
+
+  # Start web dashboard interface
+  python main.py --mode dashboard
+
+  # Run with custom config
+  python main.py --config config/custom_config.yaml
+        """,
+    )
+
+    parser.add_argument(
+        "--mode",
+        choices=["paper", "live", "backtest", "dashboard"],
+        default="paper",
+        help="Trading mode (default: paper)",
+    )
+
+    parser.add_argument(
+        "--strategy",
+        choices=["ma_crossover", "rsi_strategy", "ml_strategy"],
+        default="ma_crossover",
+        help="Trading strategy to use (default: ma_crossover)",
+    )
+
+    parser.add_argument(
+        "--symbol", default="BTC/USDT", help="Trading symbol (default: BTC/USDT)"
+    )
+
+    parser.add_argument(
+        "--exchange",
+        choices=["binance", "coinbase", "kraken"],
+        default="binance",
+        help="Exchange to use (default: binance)",
+    )
+
+    parser.add_argument(
+        "--timeframe",
+        choices=["1m", "5m", "15m", "1h", "4h", "1d"],
+        default="1h",
+        help="Timeframe for analysis (default: 1h)",
+    )
+
+    parser.add_argument(
+        "--config",
+        default="config/config.yaml",
+        help="Path to configuration file (default: config/config.yaml)",
+    )
+
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help="Logging level (default: INFO)",
+    )
+
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Run in dry-run mode (no actual trades)"
+    )
+
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Enable verbose output"
+    )
+
+    parser.add_argument(
+        "--port", type=int, default=8000, help="Port for dashboard mode (default: 8000)"
+    )
+
+    return parser.parse_args()
+
+
+def run_dashboard_mode(args):
+    """Run dashboard mode outside async context to avoid event loop issues."""
+    # Setup logging for dashboard
+    setup_logging(level=args.log_level, verbose=args.verbose)
+    logger = logging.getLogger(__name__)
+
+    logger.info("Starting Crypto Trading Bot Dashboard...")
+    logger.info("Starting dashboard web interface...")
+
+    try:
+        # Load configuration
+        config = Config(args.config)
+        config.trading.mode = args.mode
+        config.validate()
+
+        from src.dashboard.main import DashboardApp
+        import uvicorn
+
+        dashboard = DashboardApp(config)
+        app = dashboard.app  # Get the FastAPI app from the dashboard instance
+
+        logger.info(f"Dashboard starting on http://localhost:{args.port}")
+        logger.info(f"Access the web interface at: http://localhost:{args.port}")
+
+        # Run the FastAPI server (this will block)
+        uvicorn.run(app, host="0.0.0.0", port=args.port, log_level="info", reload=False)
+    except ImportError as e:
+        logger.error(f"Dashboard dependencies not available: {e}")
+        logger.error("Please install: pip install fastapi uvicorn jinja2")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"Dashboard error: {e}", exc_info=True)
+        sys.exit(1)
+
+
+async def main():
+    """Main function to start the trading bot."""
+
+    # Parse command line arguments
+    args = parse_arguments()
+
+    try:
+        # Setup logging
+        setup_logging(level=args.log_level, verbose=args.verbose)
+
+        logger = logging.getLogger(__name__)
+        logger.info("Starting Crypto Trading Bot...")
+        logger.info(f"Mode: {args.mode}")
+        logger.info(f"Strategy: {args.strategy}")
+        logger.info(f"Symbol: {args.symbol}")
+        logger.info(f"Exchange: {args.exchange}")
+        logger.info(f"Timeframe: {args.timeframe}")
+
+        # Load configuration
+        config = Config(args.config)
+
+        # Override config with command line arguments
+        config.trading.mode = args.mode
+        config.trading.strategy = args.strategy
+        config.trading.symbol = args.symbol
+        config.trading.exchange = args.exchange
+        config.trading.timeframe = args.timeframe
+        config.trading.dry_run = args.dry_run
+
+        # Validate configuration
+        config.validate()
+
+        # Create and start the trading bot for other modes
+        bot = TradingBot(config)
+
+        if args.mode == "backtest":
+            # Run backtest mode
+            logger.info("Running in backtest mode...")
+            await bot.run_backtest()
+        else:
+            # Run live or paper trading
+            logger.info(f"Running in {args.mode} mode...")
+            await bot.start()
+
+    except KeyboardInterrupt:
+        logger.info("Received shutdown signal...")
+        if "bot" in locals():
+            await bot.stop()
+        logger.info("Bot stopped successfully.")
+
+    except Exception as e:
+        logger.error(f"Fatal error: {e}", exc_info=True)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    # Parse arguments first to check mode
+    args = parse_arguments()
+
+    if args.mode == "dashboard":
+        # Run dashboard mode directly (not in async context)
+        try:
+            run_dashboard_mode(args)
+        except KeyboardInterrupt:
+            print("\nDashboard shutdown requested... exiting gracefully")
+        except Exception as e:
+            print(f"Dashboard fatal error: {e}")
+            sys.exit(1)
+    else:
+        # Run other modes in async context
+        try:
+            asyncio.run(main())
+        except KeyboardInterrupt:
+            print("\nShutdown requested... exiting gracefully")
+        except Exception as e:
+            print(f"Fatal error: {e}")
+            sys.exit(1)

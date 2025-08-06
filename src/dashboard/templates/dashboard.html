@@ -1,0 +1,584 @@
+{% extends "base.html" %}
+
+{% block title %}Trading Bot Dashboard{% endblock %}
+
+{% block content %}
+<!-- Bot Status Header -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="status-card">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2 class="mb-1">
+                        <i class="bi bi-robot me-2"></i>
+                        Crypto Trading Bot
+                    </h2>
+                    <p class="mb-0 opacity-75">Real-time monitoring and control dashboard</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-flex justify-content-end align-items-center">
+                        <span id="botStatus" class="status-badge me-3">
+                            <span class="status-stopped">
+                                <i class="bi bi-hourglass-split"></i> Loading...
+                            </span>
+                        </span>
+                        <div class="btn-group">
+                            <button class="btn btn-success btn-custom btn-sm" onclick="confirmAction('start')">
+                                <i class="bi bi-play-fill"></i> Start
+                            </button>
+                            <button class="btn btn-warning btn-custom btn-sm" onclick="confirmAction('pause')">
+                                <i class="bi bi-pause-fill"></i> Pause
+                            </button>
+                            <button class="btn btn-danger btn-custom btn-sm" onclick="confirmAction('stop')">
+                                <i class="bi bi-stop-fill"></i> Stop
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Metrics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-label">Portfolio Balance</div>
+                    <div class="metric-value" id="portfolioBalance">
+                        <span class="loading-placeholder">Loading...</span>
+                    </div>
+                </div>
+                <div class="text-primary">
+                    <i class="bi bi-wallet2 fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-label">Total P&L</div>
+                    <div class="metric-value" id="totalPnl">
+                        <span class="loading-placeholder">Loading...</span>
+                    </div>
+                    <small class="text-muted" id="pnlPercentage">
+                        ---%
+                    </small>
+                </div>
+                <div class="{% if (bot_data.portfolio.pnl or 0) >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    <i class="bi bi-{% if (bot_data.portfolio.pnl or 0) >= 0 %}trending-up{% else %}trending-down{% endif %} fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-label">Active Positions</div>
+                    <div class="metric-value" id="activePositions">
+                        <span class="loading-placeholder">0</span>
+                    </div>
+                </div>
+                <div class="text-info">
+                    <i class="bi bi-pie-chart fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-label">Active Orders</div>
+                    <div class="metric-value" id="activeOrders">
+                        <span class="loading-placeholder">0</span>
+                    </div>
+                </div>
+                <div class="text-warning">
+                    <i class="bi bi-list-check fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="chart-container">
+            <h5 class="mb-3">
+                <i class="bi bi-graph-up me-2"></i>
+                Portfolio Performance
+            </h5>
+            <canvas id="portfolioChart" height="100"></canvas>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="chart-container">
+            <h5 class="mb-3">
+                <i class="bi bi-pie-chart me-2"></i>
+                Position Distribution
+            </h5>
+            <canvas id="positionChart" height="200"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Strategy Performance -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="chart-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning me-2"></i>
+                    Active Strategies
+                </h5>
+                <a href="/strategies" class="btn btn-outline-primary btn-sm">
+                    View All <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+            <div class="row" id="strategiesContainer">
+                {% for strategy in bot_data.strategies.strategies %}
+                <div class="col-md-4 mb-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="card-title mb-0">{{ strategy.name }}</h6>
+                                <span class="badge {% if strategy.enabled %}bg-success{% else %}bg-secondary{% endif %}">
+                                    {{ 'Active' if strategy.enabled else 'Inactive' }}
+                                </span>
+                            </div>
+                            <p class="card-text small text-muted">
+                                Signals: {{ strategy.signals_count or 0 }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="chart-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history me-2"></i>
+                    Recent Orders
+                </h5>
+                <a href="/trades" class="btn btn-outline-primary btn-sm">
+                    View All <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-custom table-hover">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Symbol</th>
+                            <th>Side</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentOrdersTable">
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">
+                                <div class="py-3">
+                                    <i class="bi bi-hourglass-split loading-spinner me-2"></i>
+                                    Loading recent orders...
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="chart-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="bi bi-activity me-2"></i>
+                    System Status
+                </h5>
+                <span class="badge bg-info">Real-time</span>
+            </div>
+            <div class="list-group list-group-flush">
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-server text-primary me-2"></i>
+                        Exchange Connection
+                    </div>
+                    <span class="badge bg-success">Connected</span>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-database text-info me-2"></i>
+                        Database Status
+                    </div>
+                    <span class="badge bg-success">Online</span>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-shield-check text-success me-2"></i>
+                        Risk Management
+                    </div>
+                    <span class="badge bg-success">Active</span>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-bell text-warning me-2"></i>
+                        Notifications
+                    </div>
+                    <span class="badge bg-success">Enabled</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let portfolioChart = null;
+    let positionChart = null;
+    
+    // Initialize charts
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeCharts();
+        loadRecentOrders();
+        loadDashboardData();
+        
+        // Auto-refresh data every 30 seconds
+        setInterval(loadDashboardData, 30000);
+    });
+    
+    function loadDashboardData() {
+        // Load bot status
+        loadBotStatus();
+        
+        // Load portfolio data
+        loadPortfolioData();
+        
+        // Load strategies summary
+        loadStrategiesData();
+        
+        // Load active orders
+        loadActiveOrders();
+        
+        // Load recent orders
+        loadRecentOrders();
+    }
+    
+    function loadBotStatus() {
+        fetch('/api/status')
+            .then(response => response.json())
+            .then(data => {
+                updateBotStatus(data);
+            })
+            .catch(error => {
+                console.error('Error loading bot status:', error);
+            });
+    }
+    
+    function updateBotStatus(statusData) {
+        const statusElement = document.getElementById('botStatus');
+        const status = statusData.status || 'stopped';
+        
+        if (status === 'running') {
+            statusElement.innerHTML = `
+                <span class="status-running">
+                    <i class="bi bi-play-circle-fill"></i> Running
+                </span>
+            `;
+        } else {
+            statusElement.innerHTML = `
+                <span class="status-stopped">
+                    <i class="bi bi-stop-circle-fill"></i> Stopped
+                </span>
+            `;
+        }
+        
+        // Update connection status if available
+        if (statusData.connection) {
+            console.log('Exchange connection:', statusData.connection.status);
+        }
+    }
+    
+    function loadPortfolioData() {
+        // Load portfolio summary
+        fetch('/api/portfolio/summary')
+            .then(response => response.json())
+            .then(data => {
+                updatePortfolioSummary(data.summary);
+            })
+            .catch(error => {
+                console.error('Error loading portfolio summary:', error);
+            });
+        
+        // Load balance data
+        fetch('/api/balance')
+            .then(response => response.json())
+            .then(data => {
+                updateBalanceDisplay(data);
+            })
+            .catch(error => {
+                console.error('Error loading balance:', error);
+            });
+        
+        // Load positions
+        fetch('/api/portfolio/positions')
+            .then(response => response.json())
+            .then(data => {
+                updatePositionsDisplay(data.positions);
+            })
+            .catch(error => {
+                console.error('Error loading positions:', error);
+            });
+    }
+    
+    function updatePortfolioSummary(summary) {
+        if (summary) {
+            // Update portfolio balance
+            const balanceElement = document.getElementById('portfolioBalance');
+            if (balanceElement) {
+                balanceElement.textContent = formatCurrency(summary.total_balance || 0);
+            }
+            
+            // Update P&L
+            const pnlElement = document.getElementById('totalPnl');
+            if (pnlElement) {
+                const pnl = summary.total_pnl || 0;
+                pnlElement.innerHTML = `<span class="${pnl >= 0 ? 'profit' : 'loss'}">${formatCurrency(pnl)}</span>`;
+            }
+            
+            // Update P&L percentage
+            const pnlPercentElement = document.getElementById('pnlPercentage');
+            if (pnlPercentElement) {
+                const pnlPct = summary.daily_change || 0;
+                pnlPercentElement.textContent = formatPercentage(pnlPct / 100);
+            }
+            
+            // Update positions count
+            const positionsElement = document.getElementById('activePositions');
+            if (positionsElement) {
+                positionsElement.textContent = summary.positions_count || 0;
+            }
+        }
+    }
+    
+    function updateBalanceDisplay(balanceData) {
+        if (balanceData && balanceData.balance) {
+            const total = balanceData.balance.total || {};
+            const usdtBalance = total.USDT || 0;
+            
+            // Update main balance display
+            const balanceElement = document.getElementById('portfolioBalance');
+            if (balanceElement && usdtBalance > 0) {
+                balanceElement.textContent = formatCurrency(usdtBalance);
+            }
+        }
+    }
+    
+    function updatePositionsDisplay(positions) {
+        if (positions) {
+            const positionsElement = document.getElementById('activePositions');
+            if (positionsElement) {
+                positionsElement.textContent = positions.length || 0;
+            }
+        }
+    }
+    
+    function loadStrategiesData() {
+        fetch('/api/strategies/summary')
+            .then(response => response.json())
+            .then(data => {
+                updateStrategiesSummary(data);
+            })
+            .catch(error => {
+                console.error('Error loading strategies summary:', error);
+            });
+    }
+    
+    function updateStrategiesSummary(strategiesData) {
+        // Update active orders count from strategies
+        const activeOrdersElement = document.getElementById('activeOrders');
+        if (activeOrdersElement && strategiesData.active_strategies) {
+            activeOrdersElement.textContent = strategiesData.active_strategies;
+        }
+    }
+    
+    function loadActiveOrders() {
+        fetch('/api/trades/orders/open')
+            .then(response => response.json())
+            .then(data => {
+                const activeOrdersElement = document.getElementById('activeOrders');
+                if (activeOrdersElement) {
+                    activeOrdersElement.textContent = data.count || 0;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading active orders:', error);
+            });
+    }
+    
+    function initializeCharts() {
+        // Portfolio Performance Chart
+        const portfolioCtx = document.getElementById('portfolioChart').getContext('2d');
+        portfolioChart = new Chart(portfolioCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Portfolio Value',
+                    data: [],
+                    borderColor: 'rgb(37, 99, 235)',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        // Position Distribution Chart
+        const positionCtx = document.getElementById('positionChart').getContext('2d');
+        positionChart = new Chart(positionCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Cash', 'BTC', 'ETH', 'Others'],
+                datasets: [{
+                    data: [60, 25, 10, 5],
+                    backgroundColor: [
+                        'rgb(34, 197, 94)',
+                        'rgb(249, 115, 22)',
+                        'rgb(139, 69, 19)',
+                        'rgb(156, 163, 175)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    function updatePortfolioData(portfolioData) {
+        if (portfolioData && portfolioData.performance) {
+            const performance = portfolioData.performance;
+            
+            // Update balance
+            document.getElementById('portfolioBalance').textContent = formatCurrency(performance.current_balance || 0);
+            
+            // Update P&L
+            const pnlElement = document.getElementById('totalPnl');
+            const pnl = performance.total_pnl || 0;
+            pnlElement.innerHTML = `<span class="${pnl >= 0 ? 'profit' : 'loss'}">${formatCurrency(pnl)}</span>`;
+            
+            // Update P&L percentage
+            document.getElementById('pnlPercentage').textContent = formatPercentage(performance.total_return_pct || 0);
+            
+            // Update positions count
+            document.getElementById('activePositions').textContent = performance.active_positions || 0;
+        }
+    }
+    
+    function updateOrdersData(ordersData) {
+        if (ordersData && ordersData.stats) {
+            document.getElementById('activeOrders').textContent = ordersData.stats.active_orders || 0;
+        }
+    }
+    
+    function updateStrategiesData(strategiesData) {
+        // Update strategies container
+        if (strategiesData && strategiesData.strategies) {
+            // Implementation would update the strategies display
+        }
+    }
+    
+    function loadRecentOrders() {
+        fetch('/api/orders?limit=5')
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('recentOrdersTable');
+                tbody.innerHTML = '';
+                
+                if (data.orders && data.orders.length > 0) {
+                    data.orders.forEach(order => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${new Date(order.created_at).toLocaleTimeString()}</td>
+                            <td><strong>${order.symbol}</strong></td>
+                            <td>
+                                <span class="badge ${order.side === 'buy' ? 'bg-success' : 'bg-danger'}">
+                                    ${order.side.toUpperCase()}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">${order.status}</span>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                } else {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">
+                                <div class="py-3">
+                                    <i class="bi bi-inbox me-2"></i>
+                                    No recent orders
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading recent orders:', error);
+                const tbody = document.getElementById('recentOrdersTable');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center text-danger">
+                            <div class="py-3">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                Error loading orders
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+    }
+</script>
+{% endblock %}

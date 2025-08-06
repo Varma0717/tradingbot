@@ -1,0 +1,879 @@
+{% extends "base.html" %}
+
+{% block title %}Trades - Crypto Trading Bot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Trading Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card shadow-sm">
+                <div class="metric-label">Total Trades</div>
+                <div class="metric-value" id="totalTrades">0</div>
+                <div class="metric-change">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span id="todayTrades">0 Today</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card shadow-sm">
+                <div class="metric-label">Win Rate</div>
+                <div class="metric-value" id="winRate">0%</div>
+                <div class="metric-change positive">
+                    <i class="fas fa-arrow-up"></i>
+                    <span id="winRateChange">+0.0%</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card shadow-sm">
+                <div class="metric-label">Total P&L</div>
+                <div class="metric-value" id="totalPnL">$0.00</div>
+                <div class="metric-change positive">
+                    <i class="fas fa-arrow-up"></i>
+                    <span id="totalPnLChange">+0.00%</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card shadow-sm">
+                <div class="metric-label">Avg Trade Size</div>
+                <div class="metric-value" id="avgTradeSize">$0.00</div>
+                <div class="metric-change">
+                    <i class="fas fa-chart-bar"></i>
+                    <span id="maxTradeSize">Max: $0.00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Manual Trading -->
+        <div class="col-xl-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-hand-paper me-2"></i>
+                        Manual Trading
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="manualTradeForm">
+                        <div class="mb-3">
+                            <label class="form-label">Symbol</label>
+                            <select class="form-select" id="tradeSymbol" required>
+                                <option value="">Select Symbol</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Order Type</label>
+                            <select class="form-select" id="orderType" required>
+                                <option value="market">Market</option>
+                                <option value="limit">Limit</option>
+                                <option value="stop">Stop</option>
+                                <option value="stop_limit">Stop Limit</option>
+                            </select>
+                        </div>
+                        <div class="row">
+                            <div class="col-6">
+                                <label class="form-label">Side</label>
+                                <select class="form-select" id="tradeSide" required>
+                                    <option value="buy">Buy</option>
+                                    <option value="sell">Sell</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Amount</label>
+                                <input type="number" class="form-control" id="tradeAmount" step="0.00001" required>
+                            </div>
+                        </div>
+                        <div class="mb-3 mt-3" id="priceFields" style="display: none;">
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="form-label">Price</label>
+                                    <input type="number" class="form-control" id="tradePrice" step="0.01">
+                                </div>
+                                <div class="col-6" id="stopPriceField" style="display: none;">
+                                    <label class="form-label">Stop Price</label>
+                                    <input type="number" class="form-control" id="stopPrice" step="0.01">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Risk Management</label>
+                            <div class="row">
+                                <div class="col-6">
+                                    <input type="number" class="form-control" id="stopLoss" placeholder="Stop Loss" step="0.01">
+                                </div>
+                                <div class="col-6">
+                                    <input type="number" class="form-control" id="takeProfit" placeholder="Take Profit" step="0.01">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-1"></i>
+                                Place Order
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="getQuote()">
+                                <i class="fas fa-chart-line me-1"></i>
+                                Get Quote
+                            </button>
+                        </div>
+                    </form>
+                    <div id="quoteResult" class="mt-3" style="display: none;">
+                        <div class="alert alert-info">
+                            <strong>Quote:</strong> <span id="quotePrice"></span><br>
+                            <strong>Total:</strong> <span id="quoteTotal"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trade Performance Chart -->
+        <div class="col-xl-8 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Trade Performance
+                    </h5>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-primary active" data-chart="pnl">P&L</button>
+                        <button type="button" class="btn btn-outline-primary" data-chart="volume">Volume</button>
+                        <button type="button" class="btn btn-outline-primary" data-chart="winrate">Win Rate</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Open Orders -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        Open Orders
+                    </h5>
+                    <button class="btn btn-primary btn-sm" onclick="refreshOpenOrders()">
+                        <i class="fas fa-sync-alt me-1"></i>
+                        Refresh
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Symbol</th>
+                                    <th>Type</th>
+                                    <th>Side</th>
+                                    <th>Amount</th>
+                                    <th>Price</th>
+                                    <th>Filled</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="openOrdersTable">
+                                <tr>
+                                    <td colspan="10" class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <div class="mt-2">Loading open orders...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trade History -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Trade History
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" id="filterPeriod" style="width: auto;">
+                            <option value="1d">Last 24 Hours</option>
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d" selected>Last 30 Days</option>
+                            <option value="90d">Last 90 Days</option>
+                            <option value="all">All Time</option>
+                        </select>
+                        <select class="form-select form-select-sm" id="filterSymbol" style="width: auto;">
+                            <option value="">All Symbols</option>
+                        </select>
+                        <button class="btn btn-outline-primary btn-sm" onclick="exportTrades()">
+                            <i class="fas fa-download me-1"></i>
+                            Export
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Trade ID</th>
+                                    <th>Symbol</th>
+                                    <th>Side</th>
+                                    <th>Amount</th>
+                                    <th>Entry Price</th>
+                                    <th>Exit Price</th>
+                                    <th>P&L</th>
+                                    <th>P&L %</th>
+                                    <th>Duration</th>
+                                    <th>Strategy</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tradeHistoryTable">
+                                <tr>
+                                    <td colspan="12" class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <div class="mt-2">Loading trade history...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <nav class="mt-3">
+                        <ul class="pagination pagination-sm justify-content-center" id="paginationControls">
+                            <!-- Pagination will be added dynamically -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Trade Details Modal -->
+<div class="modal fade" id="tradeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Trade Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Trade Information</h6>
+                        <table class="table table-sm">
+                            <tr><td>Trade ID:</td><td><strong id="modalTradeId">-</strong></td></tr>
+                            <tr><td>Symbol:</td><td><strong id="modalSymbol">-</strong></td></tr>
+                            <tr><td>Side:</td><td><strong id="modalSide">-</strong></td></tr>
+                            <tr><td>Amount:</td><td><strong id="modalAmount">-</strong></td></tr>
+                            <tr><td>Entry Price:</td><td><strong id="modalEntryPrice">-</strong></td></tr>
+                            <tr><td>Exit Price:</td><td><strong id="modalExitPrice">-</strong></td></tr>
+                            <tr><td>Duration:</td><td><strong id="modalDuration">-</strong></td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Performance</h6>
+                        <table class="table table-sm">
+                            <tr><td>P&L:</td><td><strong id="modalPnL">-</strong></td></tr>
+                            <tr><td>P&L %:</td><td><strong id="modalPnLPercent">-</strong></td></tr>
+                            <tr><td>Fees:</td><td><strong id="modalFees">-</strong></td></tr>
+                            <tr><td>Strategy:</td><td><strong id="modalStrategy">-</strong></td></tr>
+                            <tr><td>Entry Date:</td><td><strong id="modalEntryDate">-</strong></td></tr>
+                            <tr><td>Exit Date:</td><td><strong id="modalExitDate">-</strong></td></tr>
+                            <tr><td>Risk Score:</td><td><strong id="modalRiskScore">-</strong></td></tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Trade Notes</h6>
+                        <textarea class="form-control" id="tradeNotes" rows="3" placeholder="Add notes about this trade..."></textarea>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-primary" onclick="saveTradeNotes()">Save Notes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="viewTradeChart()">View Chart</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Order Cancel Confirmation Modal -->
+<div class="modal fade" id="cancelOrderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cancel Order</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel this order?</p>
+                <div id="cancelOrderDetails"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, Keep Order</button>
+                <button type="button" class="btn btn-danger" onclick="confirmCancelOrder()">Yes, Cancel Order</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let performanceChart;
+let currentPage = 1;
+let totalPages = 1;
+let selectedOrderId = null;
+let selectedTradeId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+    loadTradingData();
+    setupEventListeners();
+    loadSymbols();
+    setupWebSocket();
+});
+
+function initializeCharts() {
+    const ctx = document.getElementById('performanceChart').getContext('2d');
+    performanceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'P&L',
+                data: [],
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function loadTradingData() {
+    // Load trading summary
+    fetch('/api/trades/summary')
+        .then(response => response.json())
+        .then(data => {
+            updateTradingSummary(data);
+        })
+        .catch(error => {
+            console.error('Error loading trading summary:', error);
+        });
+
+    // Load open orders
+    loadOpenOrders();
+
+    // Load trade history
+    loadTradeHistory();
+
+    // Load performance chart
+    loadPerformanceChart('pnl');
+}
+
+function updateTradingSummary(data) {
+    document.getElementById('totalTrades').textContent = data.total_trades || 0;
+    document.getElementById('winRate').textContent = data.win_rate ? formatPercentage(data.win_rate) : '0%';
+    document.getElementById('totalPnL').textContent = formatCurrency(data.total_pnl || 0);
+    document.getElementById('avgTradeSize').textContent = formatCurrency(data.avg_trade_size || 0);
+    
+    document.getElementById('todayTrades').textContent = `${data.today_trades || 0} Today`;
+    updateMetricChange('winRateChange', data.win_rate_change || 0);
+    updateMetricChange('totalPnLChange', data.total_pnl_change || 0);
+    document.getElementById('maxTradeSize').textContent = `Max: ${formatCurrency(data.max_trade_size || 0)}`;
+}
+
+function loadSymbols() {
+    fetch('/api/symbols')
+        .then(response => response.json())
+        .then(symbols => {
+            const symbolSelect = document.getElementById('tradeSymbol');
+            const filterSelect = document.getElementById('filterSymbol');
+            
+            symbolSelect.innerHTML = '<option value="">Select Symbol</option>';
+            filterSelect.innerHTML = '<option value="">All Symbols</option>';
+            
+            symbols.forEach(symbol => {
+                symbolSelect.innerHTML += `<option value="${symbol}">${symbol}</option>`;
+                filterSelect.innerHTML += `<option value="${symbol}">${symbol}</option>`;
+            });
+        })
+        .catch(error => {
+            console.error('Error loading symbols:', error);
+        });
+}
+
+function loadOpenOrders() {
+    fetch('/api/trades/orders/open')
+        .then(response => response.json())
+        .then(orders => {
+            updateOpenOrdersTable(orders);
+        })
+        .catch(error => {
+            console.error('Error loading open orders:', error);
+            document.getElementById('openOrdersTable').innerHTML = 
+                '<tr><td colspan="10" class="text-center text-danger">Error loading open orders</td></tr>';
+        });
+}
+
+function updateOpenOrdersTable(orders) {
+    const tbody = document.getElementById('openOrdersTable');
+    
+    if (orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No open orders</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = orders.map(order => `
+        <tr>
+            <td><code>${order.id.slice(0, 8)}...</code></td>
+            <td><strong>${order.symbol}</strong></td>
+            <td><span class="badge bg-secondary">${order.type.toUpperCase()}</span></td>
+            <td><span class="badge ${order.side === 'buy' ? 'bg-success' : 'bg-danger'}">${order.side.toUpperCase()}</span></td>
+            <td>${formatNumber(order.amount, 6)}</td>
+            <td>${order.price ? formatCurrency(order.price) : 'Market'}</td>
+            <td>${formatNumber(order.filled || 0, 6)} (${((order.filled || 0) / order.amount * 100).toFixed(1)}%)</td>
+            <td><span class="badge bg-warning">${order.status.toUpperCase()}</span></td>
+            <td>${formatDateTime(order.created_at)}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-danger" onclick="cancelOrder('${order.id}')">
+                    <i class="fas fa-times"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-primary ms-1" onclick="modifyOrder('${order.id}')">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function loadTradeHistory() {
+    const period = document.getElementById('filterPeriod').value;
+    const symbol = document.getElementById('filterSymbol').value;
+    
+    const params = new URLSearchParams({
+        period: period,
+        page: currentPage,
+        limit: 50
+    });
+    
+    if (symbol) {
+        params.append('symbol', symbol);
+    }
+    
+    fetch(`/api/trades/history?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            updateTradeHistoryTable(data.trades);
+            updatePagination(data.total_pages);
+        })
+        .catch(error => {
+            console.error('Error loading trade history:', error);
+            document.getElementById('tradeHistoryTable').innerHTML = 
+                '<tr><td colspan="12" class="text-center text-danger">Error loading trade history</td></tr>';
+        });
+}
+
+function updateTradeHistoryTable(trades) {
+    const tbody = document.getElementById('tradeHistoryTable');
+    
+    if (trades.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted">No trades found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = trades.map(trade => `
+        <tr>
+            <td><code>${trade.id.slice(0, 8)}...</code></td>
+            <td><strong>${trade.symbol}</strong></td>
+            <td><span class="badge ${trade.side === 'buy' ? 'bg-success' : 'bg-danger'}">${trade.side.toUpperCase()}</span></td>
+            <td>${formatNumber(trade.amount, 6)}</td>
+            <td>${formatCurrency(trade.entry_price)}</td>
+            <td>${trade.exit_price ? formatCurrency(trade.exit_price) : '-'}</td>
+            <td class="${trade.pnl >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(trade.pnl)}</td>
+            <td class="${trade.pnl_percent >= 0 ? 'text-success' : 'text-danger'}">${formatPercentage(trade.pnl_percent)}</td>
+            <td>${trade.duration || '-'}</td>
+            <td><span class="badge bg-info">${trade.strategy || 'Manual'}</span></td>
+            <td>${formatDateTime(trade.created_at)}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="viewTrade('${trade.id}')">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function loadPerformanceChart(type) {
+    fetch(`/api/trades/performance?type=${type}`)
+        .then(response => response.json())
+        .then(data => {
+            performanceChart.data.labels = data.timestamps;
+            performanceChart.data.datasets[0].data = data.values;
+            performanceChart.data.datasets[0].label = type.toUpperCase();
+            
+            if (type === 'pnl') {
+                performanceChart.options.scales.y.ticks.callback = function(value) {
+                    return '$' + value.toLocaleString();
+                };
+            } else if (type === 'volume') {
+                performanceChart.options.scales.y.ticks.callback = function(value) {
+                    return '$' + value.toLocaleString();
+                };
+            } else if (type === 'winrate') {
+                performanceChart.options.scales.y.ticks.callback = function(value) {
+                    return value.toFixed(1) + '%';
+                };
+            }
+            
+            performanceChart.update();
+        })
+        .catch(error => {
+            console.error('Error loading performance chart:', error);
+        });
+}
+
+function setupEventListeners() {
+    // Manual trade form
+    document.getElementById('manualTradeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitManualTrade();
+    });
+
+    // Order type change
+    document.getElementById('orderType').addEventListener('change', function() {
+        const priceFields = document.getElementById('priceFields');
+        const stopPriceField = document.getElementById('stopPriceField');
+        
+        if (this.value === 'market') {
+            priceFields.style.display = 'none';
+        } else {
+            priceFields.style.display = 'block';
+            
+            if (this.value === 'stop_limit') {
+                stopPriceField.style.display = 'block';
+            } else {
+                stopPriceField.style.display = 'none';
+            }
+        }
+    });
+
+    // Performance chart buttons
+    document.querySelectorAll('[data-chart]').forEach(button => {
+        button.addEventListener('click', function() {
+            document.querySelectorAll('[data-chart]').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            loadPerformanceChart(this.dataset.chart);
+        });
+    });
+
+    // Filter changes
+    document.getElementById('filterPeriod').addEventListener('change', function() {
+        currentPage = 1;
+        loadTradeHistory();
+    });
+
+    document.getElementById('filterSymbol').addEventListener('change', function() {
+        currentPage = 1;
+        loadTradeHistory();
+    });
+}
+
+function submitManualTrade() {
+    const formData = {
+        symbol: document.getElementById('tradeSymbol').value,
+        side: document.getElementById('tradeSide').value,
+        amount: parseFloat(document.getElementById('tradeAmount').value),
+        type: document.getElementById('orderType').value,
+        price: document.getElementById('tradePrice').value ? parseFloat(document.getElementById('tradePrice').value) : null,
+        stop_price: document.getElementById('stopPrice').value ? parseFloat(document.getElementById('stopPrice').value) : null,
+        stop_loss: document.getElementById('stopLoss').value ? parseFloat(document.getElementById('stopLoss').value) : null,
+        take_profit: document.getElementById('takeProfit').value ? parseFloat(document.getElementById('takeProfit').value) : null
+    };
+
+    fetch('/api/trades/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Order placed successfully', 'success');
+            document.getElementById('manualTradeForm').reset();
+            document.getElementById('priceFields').style.display = 'none';
+            loadOpenOrders();
+        } else {
+            showToast('Order failed: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error placing order:', error);
+        showToast('Order failed', 'error');
+    });
+}
+
+function getQuote() {
+    const symbol = document.getElementById('tradeSymbol').value;
+    const amount = document.getElementById('tradeAmount').value;
+    const side = document.getElementById('tradeSide').value;
+    
+    if (!symbol || !amount) {
+        showToast('Please select symbol and enter amount', 'warning');
+        return;
+    }
+
+    fetch(`/api/trades/quote?symbol=${symbol}&amount=${amount}&side=${side}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('quotePrice').textContent = formatCurrency(data.price);
+                document.getElementById('quoteTotal').textContent = formatCurrency(data.total);
+                document.getElementById('quoteResult').style.display = 'block';
+            } else {
+                showToast('Quote failed: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error getting quote:', error);
+            showToast('Quote failed', 'error');
+        });
+}
+
+function cancelOrder(orderId) {
+    selectedOrderId = orderId;
+    
+    // Get order details for confirmation
+    fetch(`/api/trades/orders/${orderId}`)
+        .then(response => response.json())
+        .then(order => {
+            document.getElementById('cancelOrderDetails').innerHTML = `
+                <strong>Order:</strong> ${order.side.toUpperCase()} ${formatNumber(order.amount, 6)} ${order.symbol}<br>
+                <strong>Type:</strong> ${order.type.toUpperCase()}<br>
+                <strong>Price:</strong> ${order.price ? formatCurrency(order.price) : 'Market'}
+            `;
+            new bootstrap.Modal(document.getElementById('cancelOrderModal')).show();
+        })
+        .catch(error => {
+            console.error('Error getting order details:', error);
+            showToast('Error loading order details', 'error');
+        });
+}
+
+function confirmCancelOrder() {
+    if (!selectedOrderId) return;
+    
+    fetch(`/api/trades/orders/${selectedOrderId}/cancel`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Order cancelled successfully', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('cancelOrderModal')).hide();
+                loadOpenOrders();
+            } else {
+                showToast('Cancel failed: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error cancelling order:', error);
+            showToast('Cancel failed', 'error');
+        });
+}
+
+function modifyOrder(orderId) {
+    // TODO: Implement order modification
+    showToast('Order modification coming soon', 'info');
+}
+
+function viewTrade(tradeId) {
+    selectedTradeId = tradeId;
+    
+    fetch(`/api/trades/${tradeId}`)
+        .then(response => response.json())
+        .then(trade => {
+            // Populate modal
+            document.getElementById('modalTradeId').textContent = trade.id.slice(0, 8) + '...';
+            document.getElementById('modalSymbol').textContent = trade.symbol;
+            document.getElementById('modalSide').textContent = trade.side.toUpperCase();
+            document.getElementById('modalAmount').textContent = formatNumber(trade.amount, 6);
+            document.getElementById('modalEntryPrice').textContent = formatCurrency(trade.entry_price);
+            document.getElementById('modalExitPrice').textContent = trade.exit_price ? formatCurrency(trade.exit_price) : '-';
+            document.getElementById('modalDuration').textContent = trade.duration || '-';
+            document.getElementById('modalPnL').textContent = formatCurrency(trade.pnl);
+            document.getElementById('modalPnL').className = trade.pnl >= 0 ? 'text-success' : 'text-danger';
+            document.getElementById('modalPnLPercent').textContent = formatPercentage(trade.pnl_percent);
+            document.getElementById('modalPnLPercent').className = trade.pnl_percent >= 0 ? 'text-success' : 'text-danger';
+            document.getElementById('modalFees').textContent = formatCurrency(trade.fees || 0);
+            document.getElementById('modalStrategy').textContent = trade.strategy || 'Manual';
+            document.getElementById('modalEntryDate').textContent = formatDateTime(trade.created_at);
+            document.getElementById('modalExitDate').textContent = trade.exit_date ? formatDateTime(trade.exit_date) : '-';
+            document.getElementById('modalRiskScore').textContent = trade.risk_score || '-';
+            document.getElementById('tradeNotes').value = trade.notes || '';
+            
+            new bootstrap.Modal(document.getElementById('tradeModal')).show();
+        })
+        .catch(error => {
+            console.error('Error loading trade details:', error);
+            showToast('Error loading trade details', 'error');
+        });
+}
+
+function saveTradeNotes() {
+    if (!selectedTradeId) return;
+    
+    const notes = document.getElementById('tradeNotes').value;
+    
+    fetch(`/api/trades/${selectedTradeId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: notes })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Notes saved', 'success');
+        } else {
+            showToast('Failed to save notes', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving notes:', error);
+        showToast('Failed to save notes', 'error');
+    });
+}
+
+function viewTradeChart() {
+    if (!selectedTradeId) return;
+    
+    // TODO: Implement trade chart view
+    showToast('Trade chart view coming soon', 'info');
+}
+
+function refreshOpenOrders() {
+    loadOpenOrders();
+    showToast('Open orders refreshed', 'success');
+}
+
+function exportTrades() {
+    const period = document.getElementById('filterPeriod').value;
+    const symbol = document.getElementById('filterSymbol').value;
+    
+    const params = new URLSearchParams({ period: period });
+    if (symbol) params.append('symbol', symbol);
+    
+    const link = document.createElement('a');
+    link.href = `/api/trades/export?${params}`;
+    link.download = `trades_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+}
+
+function updatePagination(totalPagesCount) {
+    totalPages = totalPagesCount;
+    const pagination = document.getElementById('paginationControls');
+    
+    if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+    
+    let paginationHTML = '';
+    
+    // Previous button
+    paginationHTML += `
+        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">&laquo;</a>
+        </li>
+    `;
+    
+    // Page numbers
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        paginationHTML += `
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+            </li>
+        `;
+    }
+    
+    // Next button
+    paginationHTML += `
+        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">&raquo;</a>
+        </li>
+    `;
+    
+    pagination.innerHTML = paginationHTML;
+}
+
+function changePage(page) {
+    if (page < 1 || page > totalPages || page === currentPage) return;
+    
+    currentPage = page;
+    loadTradeHistory();
+}
+
+function setupWebSocket() {
+    if (window.ws) {
+        window.ws.addEventListener('message', function(event) {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'order_update') {
+                loadOpenOrders();
+            } else if (data.type === 'trade_update') {
+                loadTradingData();
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

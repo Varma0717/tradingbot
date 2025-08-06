@@ -1,0 +1,716 @@
+{% extends "base.html" %}
+
+{% block title %}Grid DCA Strategy - Crypto Trading Bot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">Grid Trading + DCA Strategy</h1>
+                    <p class="text-muted mb-0">Advanced automated trading with grid placement and dollar cost averaging</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary" id="refreshBtn">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                    <button class="btn btn-success" id="startStrategyBtn" style="display: none;">
+                        <i class="bi bi-play-fill"></i> Start Strategy
+                    </button>
+                    <button class="btn btn-danger" id="stopStrategyBtn">
+                        <i class="bi bi-stop-fill"></i> Stop Strategy
+                    </button>
+                    <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#configModal">
+                        <i class="bi bi-gear-fill"></i> Configure
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Strategy Status Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1">Strategy Status</p>
+                            <h5 class="mb-0" id="strategyStatus">
+                                <span class="badge bg-success">Active</span>
+                            </h5>
+                        </div>
+                        <i class="bi bi-activity text-success" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1">Current Position</p>
+                            <h5 class="mb-0" id="currentPosition">0.023456 BTC</h5>
+                            <small class="text-muted" id="positionValue">$1,014.56</small>
+                        </div>
+                        <i class="bi bi-coin text-warning" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1">Total P&L</p>
+                            <h5 class="mb-0 text-success" id="totalPnl">+$156.78</h5>
+                            <small class="text-success" id="pnlPercentage">+15.68%</small>
+                        </div>
+                        <i class="bi bi-graph-up text-success" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1">Win Rate</p>
+                            <h5 class="mb-0" id="winRate">84.4%</h5>
+                            <small class="text-muted" id="totalTrades">45 trades</small>
+                        </div>
+                        <i class="bi bi-bullseye text-info" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row">
+        <!-- Strategy Overview -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Strategy Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Grid Configuration</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Symbol:</strong> <span id="tradingSymbol">BTC/USDT</span></li>
+                                <li><strong>Grid Levels:</strong> <span id="gridLevels">10</span></li>
+                                <li><strong>Grid Spacing:</strong> <span id="gridSpacing">2.0%</span></li>
+                                <li><strong>Active Orders:</strong> <span id="activeOrders">8</span></li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>DCA Configuration</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>DCA Enabled:</strong> <span id="dcaEnabled" class="badge bg-success">Yes</span></li>
+                                <li><strong>DCA Levels Used:</strong> <span id="dcaLevelsUsed">2 / 5</span></li>
+                                <li><strong>Next DCA Price:</strong> <span id="nextDcaPrice">$40,500.00</span></li>
+                                <li><strong>DCA Trigger:</strong> <span id="dcaTrigger">5% drop</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Chart -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Performance Chart</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="performanceChart" height="300"></canvas>
+                </div>
+            </div>
+
+            <!-- Active Orders -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Active Grid Orders</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                    <th>Level</th>
+                                    <th>Age</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activeOrdersTable">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Strategy Statistics -->
+        <div class="col-lg-4">
+            <!-- Profitability Analysis -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Profitability Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-success" role="alert">
+                        <h6>⭐⭐⭐⭐⭐ Highly Profitable Strategy</h6>
+                        <p class="mb-0">Grid Trading + DCA is considered the "king" of crypto trading strategies for passive income.</p>
+                    </div>
+                    
+                    <div class="mb-3" id="profitabilityDetails">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                    
+                    <button class="btn btn-outline-info btn-sm" id="viewAnalysisBtn">
+                        View Detailed Analysis
+                    </button>
+                </div>
+            </div>
+
+            <!-- Trade Statistics -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Trade Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="border-end">
+                                <h4 class="text-primary mb-0" id="gridTrades">40</h4>
+                                <small class="text-muted">Grid Trades</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <h4 class="text-warning mb-0" id="dcaTrades">5</h4>
+                            <small class="text-muted">DCA Trades</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="border-end">
+                                <h4 class="text-success mb-0" id="profitPerTrade">$3.48</h4>
+                                <small class="text-muted">Avg Profit/Trade</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-info mb-0" id="maxDrawdown">8.2%</h4>
+                            <small class="text-muted">Max Drawdown</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="emergencyStop()">
+                            <i class="bi bi-exclamation-triangle"></i> Emergency Stop
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="pauseStrategy()">
+                            <i class="bi bi-pause"></i> Pause Strategy
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="exportData()">
+                            <i class="bi bi-download"></i> Export Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration Modal -->
+<div class="modal fade" id="configModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Grid DCA Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="configForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Grid Settings</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Trading Symbol</label>
+                                <select class="form-select" id="configSymbol">
+                                    <option value="BTC/USDT">BTC/USDT</option>
+                                    <option value="ETH/USDT">ETH/USDT</option>
+                                    <option value="BNB/USDT">BNB/USDT</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Grid Size</label>
+                                <input type="number" class="form-control" id="configGridSize" value="10" min="5" max="20">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Grid Spacing (%)</label>
+                                <input type="number" class="form-control" id="configGridSpacing" value="2.0" min="0.5" max="5.0" step="0.1">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Initial Investment ($)</label>
+                                <input type="number" class="form-control" id="configInitialInvestment" value="1000" min="100" max="10000">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>DCA Settings</h6>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="configDcaEnabled" checked>
+                                    <label class="form-check-label" for="configDcaEnabled">
+                                        Enable DCA
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">DCA Trigger (%)</label>
+                                <input type="number" class="form-control" id="configDcaTrigger" value="5.0" min="2.0" max="15.0" step="0.5">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Max DCA Levels</label>
+                                <input type="number" class="form-control" id="configMaxDcaLevels" value="5" min="1" max="10">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Take Profit (%)</label>
+                                <input type="number" class="form-control" id="configTakeProfit" value="3.0" min="1.0" max="10.0" step="0.1">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Stop Loss (%)</label>
+                                <input type="number" class="form-control" id="configStopLoss" value="15.0" min="5.0" max="30.0" step="0.5">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveConfiguration()">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analysis Modal -->
+<div class="modal fade" id="analysisModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Grid DCA Profitability Analysis</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="analysisContent">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Grid DCA Strategy JavaScript
+let strategyData = {};
+let performanceChart;
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    loadStrategyData();
+    initializeChart();
+    setupEventListeners();
+    
+    // Auto refresh every 30 seconds
+    setInterval(loadStrategyData, 30000);
+});
+
+function setupEventListeners() {
+    document.getElementById('refreshBtn').addEventListener('click', loadStrategyData);
+    document.getElementById('startStrategyBtn').addEventListener('click', startStrategy);
+    document.getElementById('stopStrategyBtn').addEventListener('click', stopStrategy);
+    document.getElementById('viewAnalysisBtn').addEventListener('click', showProfitabilityAnalysis);
+}
+
+async function loadStrategyData() {
+    try {
+        const response = await fetch('/api/strategies/grid-dca/status');
+        const result = await response.json();
+        
+        if (result.success) {
+            strategyData = result.data;
+            updateUI();
+            loadActiveOrders();
+        }
+    } catch (error) {
+        console.error('Error loading strategy data:', error);
+        showToast('Error loading strategy data', 'error');
+    }
+}
+
+function updateUI() {
+    const data = strategyData;
+    
+    // Update status cards
+    document.getElementById('strategyStatus').innerHTML = 
+        `<span class="badge bg-${data.status === 'active' ? 'success' : 'secondary'}">${data.status}</span>`;
+    
+    document.getElementById('currentPosition').textContent = 
+        `${data.position.current_position.toFixed(6)} ${data.symbol.split('/')[0]}`;
+    document.getElementById('positionValue').textContent = 
+        `$${data.position.current_value.toLocaleString()}`;
+    
+    const pnlClass = data.position.unrealized_pnl >= 0 ? 'text-success' : 'text-danger';
+    const pnlSign = data.position.unrealized_pnl >= 0 ? '+' : '';
+    document.getElementById('totalPnl').className = `mb-0 ${pnlClass}`;
+    document.getElementById('totalPnl').textContent = 
+        `${pnlSign}$${data.statistics.total_profit.toFixed(2)}`;
+    document.getElementById('pnlPercentage').className = pnlClass;
+    document.getElementById('pnlPercentage').textContent = 
+        `${pnlSign}${data.performance.roi_percentage.toFixed(2)}%`;
+    
+    document.getElementById('winRate').textContent = `${data.statistics.win_rate.toFixed(1)}%`;
+    document.getElementById('totalTrades').textContent = `${data.statistics.total_trades} trades`;
+    
+    // Update overview
+    document.getElementById('tradingSymbol').textContent = data.symbol;
+    document.getElementById('gridLevels').textContent = data.grid.grid_levels;
+    document.getElementById('gridSpacing').textContent = `${data.grid.grid_spacing}%`;
+    document.getElementById('activeOrders').textContent = data.grid.active_orders;
+    
+    document.getElementById('dcaEnabled').className = 
+        `badge bg-${data.dca.dca_enabled ? 'success' : 'secondary'}`;
+    document.getElementById('dcaEnabled').textContent = data.dca.dca_enabled ? 'Yes' : 'No';
+    document.getElementById('dcaLevelsUsed').textContent = 
+        `${data.dca.dca_levels_used} / ${data.dca.max_dca_levels}`;
+    document.getElementById('nextDcaPrice').textContent = 
+        `$${data.dca.next_dca_price.toLocaleString()}`;
+    
+    // Update statistics
+    document.getElementById('gridTrades').textContent = data.statistics.grid_trades;
+    document.getElementById('dcaTrades').textContent = data.statistics.dca_trades;
+    document.getElementById('profitPerTrade').textContent = 
+        `$${data.performance.profit_per_trade.toFixed(2)}`;
+    document.getElementById('maxDrawdown').textContent = 
+        `${data.statistics.max_drawdown.toFixed(1)}%`;
+    
+    // Update button states
+    const isActive = data.status === 'active';
+    document.getElementById('startStrategyBtn').style.display = isActive ? 'none' : 'inline-block';
+    document.getElementById('stopStrategyBtn').style.display = isActive ? 'inline-block' : 'none';
+}
+
+async function loadActiveOrders() {
+    try {
+        const response = await fetch('/api/strategies/grid-dca/active-orders');
+        const result = await response.json();
+        
+        if (result.success) {
+            updateActiveOrdersTable(result.data);
+        }
+    } catch (error) {
+        console.error('Error loading active orders:', error);
+    }
+}
+
+function updateActiveOrdersTable(data) {
+    const tableBody = document.getElementById('activeOrdersTable');
+    tableBody.innerHTML = '';
+    
+    // Add buy orders
+    data.buy_orders.forEach(order => {
+        const row = tableBody.insertRow();
+        row.innerHTML = `
+            <td><span class="badge bg-success">Buy</span></td>
+            <td>$${order.price.toLocaleString()}</td>
+            <td>${order.quantity.toFixed(6)}</td>
+            <td>Level ${order.level}</td>
+            <td>${getTimeAgo(order.timestamp)}</td>
+        `;
+    });
+    
+    // Add sell orders
+    data.sell_orders.forEach(order => {
+        const row = tableBody.insertRow();
+        row.innerHTML = `
+            <td><span class="badge bg-danger">Sell</span></td>
+            <td>$${order.price.toLocaleString()}</td>
+            <td>${order.quantity.toFixed(6)}</td>
+            <td>${order.level}</td>
+            <td>${getTimeAgo(order.timestamp)}</td>
+        `;
+    });
+}
+
+function initializeChart() {
+    const ctx = document.getElementById('performanceChart').getContext('2d');
+    
+    // Mock performance data
+    const labels = [];
+    const profitData = [];
+    const now = new Date();
+    
+    for (let i = 23; i >= 0; i--) {
+        const time = new Date(now - i * 60 * 60 * 1000);
+        labels.push(time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+        profitData.push(Math.random() * 50 + (24-i) * 2);
+    }
+    
+    performanceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Cumulative Profit ($)',
+                data: profitData,
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Profit ($)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Time'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+async function startStrategy() {
+    try {
+        const response = await fetch('/api/strategies/grid-dca/start', {
+            method: 'POST'
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('Grid DCA strategy started successfully', 'success');
+            setTimeout(loadStrategyData, 2000);
+        } else {
+            showToast('Failed to start strategy', 'error');
+        }
+    } catch (error) {
+        console.error('Error starting strategy:', error);
+        showToast('Error starting strategy', 'error');
+    }
+}
+
+async function stopStrategy() {
+    if (!confirm('Are you sure you want to stop the Grid DCA strategy?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/strategies/grid-dca/stop', {
+            method: 'POST'
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('Grid DCA strategy stopped successfully', 'success');
+            setTimeout(loadStrategyData, 2000);
+        } else {
+            showToast('Failed to stop strategy', 'error');
+        }
+    } catch (error) {
+        console.error('Error stopping strategy:', error);
+        showToast('Error stopping strategy', 'error');
+    }
+}
+
+async function saveConfiguration() {
+    const config = {
+        symbol: document.getElementById('configSymbol').value,
+        grid_size: parseInt(document.getElementById('configGridSize').value),
+        grid_spacing: parseFloat(document.getElementById('configGridSpacing').value) / 100,
+        initial_investment: parseFloat(document.getElementById('configInitialInvestment').value),
+        dca_enabled: document.getElementById('configDcaEnabled').checked,
+        dca_percentage: parseFloat(document.getElementById('configDcaTrigger').value) / 100,
+        max_dca_levels: parseInt(document.getElementById('configMaxDcaLevels').value),
+        take_profit_percentage: parseFloat(document.getElementById('configTakeProfit').value) / 100,
+        stop_loss_percentage: parseFloat(document.getElementById('configStopLoss').value) / 100
+    };
+    
+    try {
+        const response = await fetch('/api/strategies/grid-dca/config', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(config)
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('Configuration saved successfully', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('configModal')).hide();
+            setTimeout(loadStrategyData, 1000);
+        } else {
+            showToast('Failed to save configuration', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving configuration:', error);
+        showToast('Error saving configuration', 'error');
+    }
+}
+
+async function showProfitabilityAnalysis() {
+    try {
+        const response = await fetch('/api/strategies/grid-dca/profitability-analysis');
+        const result = await response.json();
+        
+        if (result.success) {
+            const analysis = result.data;
+            const content = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Strategy Overview</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Rating:</strong> ${analysis.profitability_rating}</li>
+                            <li><strong>Difficulty:</strong> ${analysis.difficulty}</li>
+                            <li><strong>Time Commitment:</strong> ${analysis.time_commitment}</li>
+                            <li><strong>Capital Required:</strong> ${analysis.capital_requirement}</li>
+                            <li><strong>Expected Return:</strong> ${analysis.expected_monthly_return}/month</li>
+                            <li><strong>Max Drawdown:</strong> ${analysis.max_drawdown}</li>
+                            <li><strong>Win Rate:</strong> ${analysis.win_rate}</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Best Markets</h6>
+                        <ul>
+                            ${analysis.best_markets.map(market => `<li>${market}</li>`).join('')}
+                        </ul>
+                        
+                        <h6>Key Advantages</h6>
+                        <ul>
+                            ${analysis.advantages.slice(0, 4).map(advantage => `<li>${advantage}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <h6>Why Grid DCA is "The King" of Crypto Trading</h6>
+                    <p>Grid Trading + DCA combines the best of both worlds: profiting from volatility through grid trades while managing risk through dollar cost averaging. This strategy is particularly effective in crypto markets due to their high volatility.</p>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <h6>Optimization Tips</h6>
+                        <ul class="small">
+                            ${analysis.optimization_tips.map(tip => `<li>${tip}</li>`).join('')}
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Risk Factors</h6>
+                        <ul class="small">
+                            ${analysis.risks.map(risk => `<li>${risk}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('analysisContent').innerHTML = content;
+            new bootstrap.Modal(document.getElementById('analysisModal')).show();
+        }
+    } catch (error) {
+        console.error('Error loading profitability analysis:', error);
+        showToast('Error loading analysis', 'error');
+    }
+}
+
+function emergencyStop() {
+    if (confirm('EMERGENCY STOP: This will immediately stop the strategy and cancel all orders. Continue?')) {
+        stopStrategy();
+    }
+}
+
+function pauseStrategy() {
+    showToast('Pause functionality coming soon', 'info');
+}
+
+function exportData() {
+    showToast('Export functionality coming soon', 'info');
+}
+
+function getTimeAgo(timestamp) {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffMs = now - time;
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (diffHours > 0) {
+        return `${diffHours}h ${diffMins}m ago`;
+    } else {
+        return `${diffMins}m ago`;
+    }
+}
+
+function showToast(message, type = 'info') {
+    // Create toast element
+    const toastId = 'toast-' + Date.now();
+    const toastHTML = `
+        <div id="${toastId}" class="toast align-items-center text-white bg-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'primary'} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    // Add to toast container or create one
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+    
+    // Show toast
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    // Remove from DOM after hiding
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
+}
+</script>
+{% endblock %}

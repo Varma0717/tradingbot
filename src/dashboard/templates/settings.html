@@ -1,0 +1,635 @@
+{% extends 'base.html' %}
+
+{% block title %}
+  Settings - Crypto Trading Bot
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid py-4">
+    <!-- Settings Header -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-cogs me-2"></i>
+              Trading Bot Settings
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              Configure your trading bot settings. Changes will be applied immediately or after restart as indicated.
+            </div>
+            
+            <!-- Quick Status -->
+            <div class="row g-3">
+              <div class="col-md-3">
+                <div class="text-center">
+                  <div class="badge bg-primary fs-6 d-block mb-1" id="botStatusBadge">Loading...</div>
+                  <small class="text-muted">Bot Status</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center">
+                  <div class="badge bg-info fs-6 d-block mb-1" id="configStatusBadge">Unknown</div>
+                  <small class="text-muted">Configuration</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center">
+                  <div class="badge bg-success fs-6 d-block mb-1" id="exchangeStatusBadge">Checking...</div>
+                  <small class="text-muted">Exchange Connection</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center">
+                  <div class="badge bg-secondary fs-6 d-block mb-1" id="lastUpdateBadge">Never</div>
+                  <small class="text-muted">Last Updated</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- General Settings -->
+      <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+          <div class="card-header">
+            <h6 class="mb-0">General Settings</h6>
+          </div>
+          <div class="card-body">
+            <form id="generalSettingsForm">
+              <div class="mb-3">
+                <label class="form-label">Bot Mode</label>
+                <select class="form-select" id="botMode">
+                  <option value="paper">Paper Trading</option>
+                  <option value="live">Live Trading</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Max Positions</label>
+                <input type="number" class="form-control" id="maxPositions" value="5" min="1" max="20" />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Risk per Trade (%)</label>
+                <input type="number" class="form-control" id="riskPerTrade" value="1" min="0.1" max="10" step="0.1" />
+              </div>
+              <button type="submit" class="btn btn-primary">Save General Settings</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exchange Settings -->
+      <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+          <div class="card-header">
+            <h6 class="mb-0">Exchange Settings</h6>
+          </div>
+          <div class="card-body">
+            <form id="exchangeSettingsForm">
+              <div class="mb-3">
+                <label class="form-label">Exchange</label>
+                <select class="form-select" id="exchange">
+                  <option value="binance">Binance</option>
+                  <option value="coinbase">Coinbase Pro</option>
+                  <option value="kraken">Kraken</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">API Key</label>
+                <input type="password" class="form-control" id="apiKey" placeholder="Enter API Key" />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">API Secret</label>
+                <input type="password" class="form-control" id="apiSecret" placeholder="Enter API Secret" />
+              </div>
+              <button type="submit" class="btn btn-primary">Save Exchange Settings</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- Database Settings -->
+      <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+          <div class="card-header">
+            <h6 class="mb-0">Database Settings</h6>
+          </div>
+          <div class="card-body">
+            <form id="databaseSettingsForm">
+              <div class="mb-3">
+                <label class="form-label">Database URL</label>
+                <input type="text" class="form-control" id="databaseUrl" 
+                       placeholder="mysql://user:password@localhost/crypto_trading_bot" />
+              </div>
+              <div class="mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="dbEcho" />
+                  <label class="form-check-label" for="dbEcho">
+                    Enable SQL Query Logging
+                  </label>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">Save Database Settings</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notification Settings -->
+      <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+          <div class="card-header">
+            <h6 class="mb-0">Notification Settings</h6>
+          </div>
+          <div class="card-body">
+            <form id="notificationSettingsForm">
+              <div class="mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="emailNotifications" />
+                  <label class="form-check-label" for="emailNotifications">
+                    Enable Email Notifications
+                  </label>
+                </div>
+              </div>
+              <div class="mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="telegramNotifications" />
+                  <label class="form-check-label" for="telegramNotifications">
+                    Enable Telegram Notifications
+                  </label>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Telegram Bot Token</label>
+                <input type="password" class="form-control" id="telegramToken" 
+                       placeholder="Enter Telegram Bot Token" />
+              </div>
+              <button type="submit" class="btn btn-primary">Save Notification Settings</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- Bot Control -->
+                <input type="text" class="form-control" id="databaseUrl" value="mysql+pymysql://root:@localhost:3306/crypto_trading_bot" />
+              </div>
+              <div class="mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="dbEcho" />
+                  <label class="form-check-label" for="dbEcho">Enable SQL Echo (Debug)</label>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">Save Database Settings</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notification Settings -->
+      <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+          <div class="card-header">
+            <h6 class="mb-0">Notification Settings</h6>
+          </div>
+          <div class="card-body">
+            <form id="notificationSettingsForm">
+              <div class="mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="emailNotifications" />
+                  <label class="form-check-label" for="emailNotifications">Email Notifications</label>
+                </div>
+              </div>
+              <div class="mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="telegramNotifications" />
+                  <label class="form-check-label" for="telegramNotifications">Telegram Notifications</label>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Telegram Bot Token</label>
+                <input type="password" class="form-control" id="telegramToken" placeholder="Enter Bot Token" />
+              </div>
+              <button type="submit" class="btn btn-primary">Save Notification Settings</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bot Control -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-header">
+            <h6 class="mb-0">Bot Control</h6>
+          </div>
+          <div class="card-body">
+            <div class="d-flex gap-2">
+              <button class="btn btn-success" onclick="startBot()">
+                <i class="fas fa-play me-1"></i>
+                Start Bot
+              </button>
+              <button class="btn btn-danger" onclick="stopBot()">
+                <i class="fas fa-stop me-1"></i>
+                Stop Bot
+              </button>
+              <button class="btn btn-warning" onclick="restartBot()">
+                <i class="fas fa-redo me-1"></i>
+                Restart Bot
+              </button>
+              <button class="btn btn-secondary ms-auto" onclick="exportSettings()">
+                <i class="fas fa-download me-1"></i>
+                Export Settings
+              </button>
+              <button class="btn btn-outline-secondary" onclick="importSettings()">
+                <i class="fas fa-upload me-1"></i>
+                Import Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Settings Modal -->
+  <div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Import Settings</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Select Settings File</label>
+            <input type="file" class="form-control" id="settingsFile" accept=".json" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="uploadSettings()">Import</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      loadSettings()
+      loadBotStatus()
+      setupEventListeners()
+      
+      // Auto-refresh status every 30 seconds
+      setInterval(() => {
+        loadBotStatus()
+      }, 30000)
+    })
+    
+    function loadBotStatus() {
+      fetch('/api/status')
+        .then((response) => response.json())
+        .then((data) => {
+          updateStatusBadges(data)
+        })
+        .catch((error) => {
+          console.error('Error loading bot status:', error)
+          document.getElementById('botStatusBadge').textContent = 'Error'
+          document.getElementById('botStatusBadge').className = 'badge bg-danger fs-6 d-block mb-1'
+        })
+    }
+    
+    function updateStatusBadges(statusData) {
+      // Bot status
+      const botStatusBadge = document.getElementById('botStatusBadge')
+      const status = statusData.status || 'unknown'
+      botStatusBadge.textContent = status.charAt(0).toUpperCase() + status.slice(1)
+      botStatusBadge.className = `badge fs-6 d-block mb-1 ${
+        status === 'running' ? 'bg-success' : 
+        status === 'stopped' ? 'bg-secondary' : 
+        status === 'error' ? 'bg-danger' : 'bg-warning'
+      }`
+      
+      // Configuration status
+      const configBadge = document.getElementById('configStatusBadge')
+      const configValid = statusData.config && statusData.config.valid
+      configBadge.textContent = configValid ? 'Valid' : 'Incomplete'
+      configBadge.className = `badge fs-6 d-block mb-1 ${configValid ? 'bg-success' : 'bg-warning'}`
+      
+      // Exchange connection
+      const exchangeBadge = document.getElementById('exchangeStatusBadge')
+      const exchangeStatus = statusData.connection ? statusData.connection.status : 'unknown'
+      exchangeBadge.textContent = exchangeStatus === 'connected' ? 'Connected' : 'Disconnected'
+      exchangeBadge.className = `badge fs-6 d-block mb-1 ${exchangeStatus === 'connected' ? 'bg-success' : 'bg-danger'}`
+      
+      // Last update
+      const updateBadge = document.getElementById('lastUpdateBadge')
+      updateBadge.textContent = new Date().toLocaleTimeString()
+      updateBadge.className = 'badge bg-info fs-6 d-block mb-1'
+    }
+    
+    function loadSettings() {
+      fetch('/api/settings')
+        .then((response) => response.json())
+        .then((data) => {
+          // Populate form fields with current settings
+          if (data.trading) {
+            document.getElementById('botMode').value = data.trading.mode || 'paper'
+            document.getElementById('maxPositions').value = data.trading.max_positions || 5
+            document.getElementById('riskPerTrade').value = data.trading.risk_per_trade || 1
+          }
+          if (data.exchange) {
+            document.getElementById('exchange').value = data.exchange.name || 'binance'
+          }
+          // Note: Don't populate API keys for security
+        })
+        .catch((error) => {
+          console.error('Error loading settings:', error)
+          showToast('Failed to load settings', 'error')
+        })
+    }
+    
+    function setupEventListeners() {
+      // Form submissions
+      document.getElementById('generalSettingsForm').addEventListener('submit', function (e) {
+        e.preventDefault()
+        saveGeneralSettings()
+      })
+    
+      document.getElementById('exchangeSettingsForm').addEventListener('submit', function (e) {
+        e.preventDefault()
+        saveExchangeSettings()
+      })
+    
+      document.getElementById('databaseSettingsForm').addEventListener('submit', function (e) {
+        e.preventDefault()
+        saveDatabaseSettings()
+      })
+    
+      document.getElementById('notificationSettingsForm').addEventListener('submit', function (e) {
+        e.preventDefault()
+        saveNotificationSettings()
+      })
+    }
+    
+    function saveGeneralSettings() {
+      const botMode = document.getElementById('botMode').value
+      const maxPositions = parseInt(document.getElementById('maxPositions').value)
+      const riskPerTrade = parseFloat(document.getElementById('riskPerTrade').value)
+      
+      // Validation
+      if (maxPositions < 1 || maxPositions > 20) {
+        showToast('Max positions must be between 1 and 20', 'warning')
+        return
+      }
+      
+      if (riskPerTrade < 0.1 || riskPerTrade > 10) {
+        showToast('Risk per trade must be between 0.1% and 10%', 'warning')
+        return
+      }
+
+      const settings = {
+        mode: botMode,
+        max_positions: maxPositions,
+        risk_per_trade: riskPerTrade
+      }
+
+      saveSettings('trading', settings)
+    }
+
+    function saveExchangeSettings() {
+      const exchange = document.getElementById('exchange').value
+      const apiKey = document.getElementById('apiKey').value
+      const apiSecret = document.getElementById('apiSecret').value
+      
+      // Validation
+      if (!apiKey.trim()) {
+        showToast('API Key is required', 'warning')
+        return
+      }
+      
+      if (!apiSecret.trim()) {
+        showToast('API Secret is required', 'warning')
+        return
+      }
+
+      const settings = {
+        exchange: exchange,
+        api_key: apiKey,
+        api_secret: apiSecret
+      }
+
+      saveSettings('exchange', settings)
+      
+      // Clear sensitive fields after saving
+      document.getElementById('apiKey').value = ''
+      document.getElementById('apiSecret').value = ''
+    }    function saveDatabaseSettings() {
+      const settings = {
+        database_url: document.getElementById('databaseUrl').value,
+        db_echo: document.getElementById('dbEcho').checked
+      }
+    
+      saveSettings('database', settings)
+    }
+    
+    function saveNotificationSettings() {
+      const settings = {
+        email_notifications: document.getElementById('emailNotifications').checked,
+        telegram_notifications: document.getElementById('telegramNotifications').checked,
+        telegram_token: document.getElementById('telegramToken').value
+      }
+    
+      saveSettings('notifications', settings)
+    }
+    
+    function saveSettings(category, settings) {
+      fetch(`/api/settings/${category}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            showToast(`${category} settings saved successfully`, 'success')
+          } else {
+            showToast(`Failed to save ${category} settings: ` + (data.message || 'Unknown error'), 'error')
+          }
+        })
+        .catch((error) => {
+          console.error(`Error saving ${category} settings:`, error)
+          showToast(`Failed to save ${category} settings`, 'error')
+        })
+    }
+    
+    // Toast notification function
+    function showToast(message, type = 'info') {
+      // Create toast container if it doesn't exist
+      let toastContainer = document.getElementById('toastContainer')
+      if (!toastContainer) {
+        toastContainer = document.createElement('div')
+        toastContainer.id = 'toastContainer'
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3'
+        toastContainer.style.zIndex = '11'
+        document.body.appendChild(toastContainer)
+      }
+      
+      // Create toast element
+      const toastId = 'toast_' + Date.now()
+      const toastBg = type === 'success' ? 'bg-success' : type === 'error' ? 'bg-danger' : type === 'warning' ? 'bg-warning' : 'bg-info'
+      
+      const toastElement = document.createElement('div')
+      toastElement.id = toastId
+      toastElement.className = `toast ${toastBg} text-white`
+      toastElement.innerHTML = `
+        <div class="toast-header ${toastBg} text-white border-0">
+          <strong class="me-auto">
+            <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+            ${type === 'success' ? 'Success' : type === 'error' ? 'Error' : type === 'warning' ? 'Warning' : 'Info'}
+          </strong>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+          ${message}
+        </div>
+      `
+      
+      toastContainer.appendChild(toastElement)
+      
+      // Show toast
+      const toast = new bootstrap.Toast(toastElement, { delay: 5000 })
+      toast.show()
+      
+      // Remove from DOM after hiding
+      toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove()
+      })
+    }
+    
+    function startBot() {
+      fetch('/api/bot/start', { method: 'POST' })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            showToast('Bot started successfully', 'success')
+          } else {
+            showToast('Failed to start bot: ' + data.error, 'error')
+          }
+        })
+        .catch((error) => {
+          console.error('Error starting bot:', error)
+          showToast('Failed to start bot', 'error')
+        })
+    }
+    
+    function stopBot() {
+      fetch('/api/bot/stop', { method: 'POST' })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            showToast('Bot stopped successfully', 'success')
+          } else {
+            showToast('Failed to stop bot: ' + data.error, 'error')
+          }
+        })
+        .catch((error) => {
+          console.error('Error stopping bot:', error)
+          showToast('Failed to stop bot', 'error')
+        })
+    }
+    
+    function restartBot() {
+      if (!confirm('Are you sure you want to restart the bot? This will stop all current operations.')) {
+        return
+      }
+    
+      fetch('/api/bot/restart', { method: 'POST' })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            showToast('Bot restarted successfully', 'success')
+          } else {
+            showToast('Failed to restart bot: ' + data.error, 'error')
+          }
+        })
+        .catch((error) => {
+          console.error('Error restarting bot:', error)
+          showToast('Failed to restart bot', 'error')
+        })
+    }
+    
+    function exportSettings() {
+      fetch('/api/settings/export')
+        .then((response) => response.blob())
+        .then((blob) => {
+          const url = window.URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `bot_settings_${new Date().toISOString().split('T')[0]}.json`
+          a.click()
+          window.URL.revokeObjectURL(url)
+        })
+        .catch((error) => {
+          console.error('Error exporting settings:', error)
+          showToast('Failed to export settings', 'error')
+        })
+    }
+    
+    function importSettings() {
+      new bootstrap.Modal(document.getElementById('importModal')).show()
+    }
+    
+    function uploadSettings() {
+      const fileInput = document.getElementById('settingsFile')
+      const file = fileInput.files[0]
+
+      if (!file) {
+        showToast('Please select a settings file', 'warning')
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = function(e) {
+        try {
+          const settings = JSON.parse(e.target.result)
+          
+          fetch('/api/settings/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                showToast('Settings imported successfully', 'success')
+                bootstrap.Modal.getInstance(document.getElementById('importModal')).hide()
+                loadSettings()
+              } else {
+                showToast('Failed to import settings: ' + (data.message || 'Unknown error'), 'error')
+              }
+            })
+            .catch((error) => {
+              console.error('Error importing settings:', error)
+              showToast('Failed to import settings', 'error')
+            })
+        } catch (error) {
+          showToast('Invalid JSON file format', 'error')
+        }
+      }
+      reader.readAsText(file)
+    }
+  </script>
+{% endblock %}

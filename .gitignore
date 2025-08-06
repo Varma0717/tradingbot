@@ -1,0 +1,76 @@
+# Environment variables and secrets
+.env
+.env.local
+.env.production
+.env.staging
+
+# Python virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+log/
+
+# Database files (if using SQLite)
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+
+# Build and distribution
+build/
+dist/
+*.egg-info/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# pytest cache
+.pytest_cache/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Package managers
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Backup files
+*.bak
+*.backup
+
+# Trading bot specific
+config/secrets.json
+data/
+backups/
