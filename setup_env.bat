@@ -97,7 +97,7 @@ echo To activate the environment manually, run:
 echo   venv\Scripts\activate.bat
 echo.
 echo To start the dashboard, run:
-echo   python run_dashboard.py
+echo   python run.py
 echo.
 echo To start the main bot, run:
 echo   python main.py

@@ -77,7 +77,7 @@ TAKE_PROFIT_PERCENTAGE=0.05
 cd tradingbot
 
 # Start the dashboard
-python run_dashboard.py
+python run.py
 ```
 
 ### 2. Or use Windows Batch Files
@@ -225,7 +225,7 @@ git push -u origin main
 ```
 tradingbot/
 ├── main.py                 # Main trading bot entry point
-├── run_dashboard.py        # Web dashboard launcher
+├── run.py                  # Web dashboard launcher
 ├── requirements.txt        # Python dependencies
 ├── .env.example           # Environment variables template
 ├── config/                # Configuration files
@@ -249,7 +249,7 @@ tradingbot/
 ### Local Development
 - Current setup is ready for local development
 - Uses XAMPP MySQL database
-- Run dashboard: `python run_dashboard.py`
+- Run dashboard: `python run.py`
 
 ### Production Deployment
 For production deployment, consider:
