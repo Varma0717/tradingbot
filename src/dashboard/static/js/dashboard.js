@@ -588,7 +588,7 @@ if (typeof updateStrategiesData === 'function' && data.strategies) {
 if (typeof updateTradesData === 'function' && data.trades) {
     updateTradesData(data.trades);
 }
-}
+
 
 // === DATA REFRESH ===
 function refreshData() {
