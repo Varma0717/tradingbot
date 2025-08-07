@@ -208,6 +208,22 @@ body {
     padding: 1.5rem;
     box-shadow: var(--shadow-md);
     margin-top: 1rem;
+    max-height: 500px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Chart container content */
+.chart-container h5 {
+    flex-shrink: 0;
+    margin-bottom: 1rem;
+}
+
+.chart-container canvas {
+    flex: 1;
+    min-height: 0;
 }
 
 /* === TYPOGRAPHY === */
@@ -575,6 +591,44 @@ canvas {
     height: auto !important;
 }
 
+/* Chart container height constraints */
+.chart-container {
+    max-height: 500px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Portfolio Performance Chart - Specific height control */
+#portfolioChart {
+    max-height: 300px !important;
+    height: 300px !important;
+}
+
+/* Position Distribution Chart - Specific height control */
+#positionChart {
+    max-height: 400px !important;
+    height: 400px !important;
+}
+
+/* Ensure canvas maintains aspect ratio */
+.chart-container canvas {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain;
+}
+
+/* Additional Chart.js responsive controls */
+.chart-container .chartjs-render-monitor {
+    max-height: 100% !important;
+}
+
+/* Prevent chart containers from expanding beyond limits */
+.chart-container>div {
+    max-height: 100%;
+    overflow: hidden;
+}
+
 /* Fix dropdown menus */
 .dropdown-menu {
     max-width: calc(100vw - 2rem);
@@ -585,6 +639,17 @@ canvas {
     margin-left: 0;
     margin-right: 0;
     max-width: 100%;
+}
+
+/* Dashboard chart rows height control */
+.content-wrapper .row.mb-4 {
+    max-height: 600px;
+    overflow: visible;
+}
+
+/* Specific controls for chart sections */
+.content-wrapper .row.mb-4:has(.chart-container) {
+    max-height: 550px;
 }
 
 /* Fix Bootstrap column spacing */
@@ -627,6 +692,22 @@ canvas {
     .content-wrapper [class*="col-"] {
         padding-left: 0.5rem;
         padding-right: 0.5rem;
+    }
+
+    /* Mobile chart adjustments */
+    .chart-container {
+        max-height: 350px;
+        padding: 1rem;
+    }
+
+    #portfolioChart {
+        max-height: 250px !important;
+        height: 250px !important;
+    }
+
+    #positionChart {
+        max-height: 300px !important;
+        height: 300px !important;
     }
 }
 
