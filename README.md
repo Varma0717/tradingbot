@@ -71,13 +71,21 @@ TAKE_PROFIT_PERCENTAGE=0.05
 
 ## 🚀 Quick Start
 
-### Option 1: Windows Batch Script (Recommended)
+### 1. Start the Web Dashboard
+```bash
+# Navigate to project directory
+cd tradingbot
 
-Double-click `start_bot.bat` to start the entire system.
+# Start the dashboard
+python run_dashboard.py
+```
 
-### Option 2: PowerShell Script
+### 2. Or use Windows Batch Files
+- **Dashboard**: Double-click `start_dashboard.bat`
+- **Trading Bot**: Double-click `start_bot.bat`
 
-Right-click `start_bot.ps1` and select "Run with PowerShell".
+### 3. Access the Dashboard
+Open your browser and go to: `http://localhost:8080`
 
 ### Option 3: Manual Startup
 
@@ -215,16 +223,25 @@ git push -u origin main
 ## 🏗️ Project Structure
 
 ```
-src/
-├── core/           # Core bot logic and configuration
-├── dashboard/      # Web dashboard and API
-├── data/          # Data management and database
-├── execution/     # Order and portfolio management
-├── strategies/    # Trading strategies
-├── risk/          # Risk management
-├── notifications/ # Alerts and notifications
-├── backtesting/   # Strategy backtesting
-└── utils/         # Utilities and helpers
+tradingbot/
+├── main.py                 # Main trading bot entry point
+├── run_dashboard.py        # Web dashboard launcher
+├── requirements.txt        # Python dependencies
+├── .env.example           # Environment variables template
+├── config/                # Configuration files
+├── src/
+│   ├── core/              # Core bot logic and configuration
+│   ├── dashboard/         # Web dashboard and API
+│   ├── data/             # Data management and database
+│   ├── execution/        # Order and portfolio management
+│   ├── strategies/       # Trading strategies
+│   ├── risk/             # Risk management
+│   ├── notifications/    # Alerts and notifications
+│   ├── backtesting/      # Strategy backtesting
+│   └── utils/            # Utilities and helpers
+├── setup_env.bat         # Windows environment setup
+├── start_bot.bat         # Start trading bot (Windows)
+└── start_dashboard.bat   # Start web dashboard (Windows)
 ```
 
 ## 🚀 Deployment Options
