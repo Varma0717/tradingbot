@@ -1,6 +1,19 @@
 """
 Main entry point for the Crypto Trading Bot.
 Handles command-line arguments and starts the appropriate bot mode.
+
+Quick Start Examples:
+    # Start dashboard (easiest way)
+    python main.py --mode dashboard
+
+    # Start dashboard on custom port
+    python main.py --mode dashboard --port 8080
+
+    # Paper trading
+    python main.py --mode paper --strategy grid_dca
+
+    # Live trading (be careful!)
+    python main.py --mode live --strategy grid_dca
 """
 
 import asyncio
@@ -25,17 +38,22 @@ def parse_arguments() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Paper trading with MA crossover strategy
+  # Start web dashboard (most common usage)
+  python main.py --mode dashboard
+  python main.py --mode dashboard --port 8080
+  
+  # Paper trading with strategies
   python main.py --mode paper --strategy ma_crossover --symbol BTC/USDT
+  python main.py --mode paper --strategy grid_dca --symbol ETH/USDT
 
-  # Live trading with RSI strategy
+  # Live trading (use with caution!)
   python main.py --mode live --strategy rsi_strategy --symbol ETH/USDT --exchange binance
 
-  # Start web dashboard interface
-  python main.py --mode dashboard
+  # Run backtest
+  python main.py --mode backtest --strategy grid_dca
 
-  # Run with custom config
-  python main.py --config config/custom_config.yaml
+  # Custom config
+  python main.py --config config/custom_config.yaml --mode dashboard
         """,
     )
 
@@ -93,7 +111,7 @@ Examples:
     )
 
     parser.add_argument(
-        "--port", type=int, default=8000, help="Port for dashboard mode (default: 8000)"
+        "--port", type=int, default=8002, help="Port for dashboard mode (default: 8002)"
     )
 
     return parser.parse_args()
@@ -105,34 +123,61 @@ def run_dashboard_mode(args):
     setup_logging(level=args.log_level, verbose=args.verbose)
     logger = logging.getLogger(__name__)
 
-    logger.info("Starting Crypto Trading Bot Dashboard...")
+    print("🚀 Starting Crypto Trading Bot Dashboard...")
     logger.info("Starting dashboard web interface...")
 
     try:
         # Load configuration
+        config_path = Path(args.config)
+        if not config_path.exists():
+            print(f"❌ Configuration file not found: {config_path}")
+            print("Please create a configuration file first.")
+            return
+
         config = Config(args.config)
         config.trading.mode = args.mode
         config.validate()
+        print("✅ Configuration loaded")
 
         # Create trading bot instance for dashboard
-        trading_bot = TradingBot(config)
+        trading_bot = None
+        try:
+            trading_bot = TradingBot(config)
+            print("✅ Trading bot created")
+        except Exception as e:
+            print(f"⚠️  Trading bot creation failed: {e}")
+            print("Dashboard will run without bot connection")
 
         from src.dashboard.main import DashboardApp
         import uvicorn
 
         dashboard = DashboardApp(config, trading_bot)
         app = dashboard.app  # Get the FastAPI app from the dashboard instance
+        print("✅ Dashboard app created")
+
+        if trading_bot:
+            print("✅ Trading bot connected to dashboard")
+
+        print(f"\n🌐 Dashboard starting at http://127.0.0.1:{args.port}")
+        print(f"📊 Access your trading dashboard in your web browser")
+        print("🛑 Press Ctrl+C to stop the dashboard\n")
 
         logger.info(f"Dashboard starting on http://localhost:{args.port}")
         logger.info(f"Access the web interface at: http://localhost:{args.port}")
 
         # Run the FastAPI server (this will block)
-        uvicorn.run(app, host="0.0.0.0", port=args.port, log_level="info", reload=False)
+        uvicorn.run(
+            app, host="127.0.0.1", port=args.port, log_level="info", reload=False
+        )
     except ImportError as e:
-        logger.error(f"Dashboard dependencies not available: {e}")
-        logger.error("Please install: pip install fastapi uvicorn jinja2")
+        print(f"❌ Dashboard dependencies not available: {e}")
+        print("Please install: pip install fastapi uvicorn jinja2")
         sys.exit(1)
     except Exception as e:
+        print(f"❌ Error starting dashboard: {e}")
+        import traceback
+
+        traceback.print_exc()
         logger.error(f"Dashboard error: {e}", exc_info=True)
         sys.exit(1)
 
@@ -201,9 +246,9 @@ if __name__ == "__main__":
         try:
             run_dashboard_mode(args)
         except KeyboardInterrupt:
-            print("\nDashboard shutdown requested... exiting gracefully")
+            print("\n🛑 Dashboard stopped by user")
         except Exception as e:
-            print(f"Dashboard fatal error: {e}")
+            print(f"❌ Dashboard fatal error: {e}")
             sys.exit(1)
     else:
         # Run other modes in async context

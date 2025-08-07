@@ -24,13 +24,15 @@ async def health_check():
     return {"status": "ok", "message": "Dashboard is running"}
 
 
-@router.get("/", response_class=HTMLResponse)
-async def dashboard_home(request: Request):
+async def dashboard_home(request: Request, templates_obj=None, trading_bot=None):
     """Main dashboard home page."""
     try:
         logger.info("Dashboard route hit - starting")
         logger.info(f"Templates directory: {templates_dir}")
         logger.info(f"Templates directory exists: {templates_dir.exists()}")
+
+        # Use passed templates object if available, otherwise use module-level
+        template_engine = templates_obj if templates_obj else templates
 
         # Minimal static data - JavaScript will load real-time data via API
         bot_data = {
@@ -72,7 +74,7 @@ async def dashboard_home(request: Request):
             "pending_orders": bot_data["orders"]["pending"],
         }
 
-        return templates.TemplateResponse(
+        return template_engine.TemplateResponse(
             "dashboard.html",
             {
                 "request": request,
@@ -126,8 +128,21 @@ async def portfolio_page(request: Request):
         )
     except Exception as e:
         logger.error(f"Error rendering portfolio page: {e}")
-        return templates.TemplateResponse(
-            "error.html", {"request": request, "error": str(e)}
+        # Use simple HTML response for errors to avoid template loading issues
+        from fastapi.responses import HTMLResponse
+
+        return HTMLResponse(
+            content=f"""
+            <html>
+                <head><title>Portfolio Error</title></head>
+                <body>
+                    <h1>Portfolio Error</h1>
+                    <p>Error: {str(e)}</p>
+                    <a href="/">Back to Dashboard</a>
+                </body>
+            </html>
+            """,
+            status_code=500,
         )
 
 
@@ -152,8 +167,20 @@ async def trades_page(request: Request):
         )
     except Exception as e:
         logger.error(f"Error rendering trades page: {e}")
-        return templates.TemplateResponse(
-            "error.html", {"request": request, "error": str(e)}
+        from fastapi.responses import HTMLResponse
+
+        return HTMLResponse(
+            content=f"""
+            <html>
+                <head><title>Trades Error</title></head>
+                <body>
+                    <h1>Trades Error</h1>
+                    <p>Error: {str(e)}</p>
+                    <a href="/">Back to Dashboard</a>
+                </body>
+            </html>
+            """,
+            status_code=500,
         )
 
 
@@ -177,8 +204,20 @@ async def strategies_page(request: Request):
         )
     except Exception as e:
         logger.error(f"Error rendering strategies page: {e}")
-        return templates.TemplateResponse(
-            "error.html", {"request": request, "error": str(e)}
+        from fastapi.responses import HTMLResponse
+
+        return HTMLResponse(
+            content=f"""
+            <html>
+                <head><title>Strategies Error</title></head>
+                <body>
+                    <h1>Strategies Error</h1>
+                    <p>Error: {str(e)}</p>
+                    <a href="/">Back to Dashboard</a>
+                </body>
+            </html>
+            """,
+            status_code=500,
         )
 
 
@@ -192,8 +231,20 @@ async def grid_dca_page(request: Request):
         )
     except Exception as e:
         logger.error(f"Error rendering Grid DCA page: {e}")
-        return templates.TemplateResponse(
-            "error.html", {"request": request, "error": str(e)}
+        from fastapi.responses import HTMLResponse
+
+        return HTMLResponse(
+            content=f"""
+            <html>
+                <head><title>Grid DCA Error</title></head>
+                <body>
+                    <h1>Grid DCA Error</h1>
+                    <p>Error: {str(e)}</p>
+                    <a href="/">Back to Dashboard</a>
+                </body>
+            </html>
+            """,
+            status_code=500,
         )
 
 
@@ -248,8 +299,20 @@ async def settings_page(request: Request):
         )
     except Exception as e:
         logger.error(f"Error rendering settings page: {e}")
-        return templates.TemplateResponse(
-            "error.html", {"request": request, "error": str(e)}
+        from fastapi.responses import HTMLResponse
+
+        return HTMLResponse(
+            content=f"""
+            <html>
+                <head><title>Settings Error</title></head>
+                <body>
+                    <h1>Settings Error</h1>
+                    <p>Error: {str(e)}</p>
+                    <a href="/">Back to Dashboard</a>
+                </body>
+            </html>
+            """,
+            status_code=500,
         )
 
 
