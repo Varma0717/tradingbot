@@ -48,9 +48,9 @@ Examples:
 
     parser.add_argument(
         "--strategy",
-        choices=["ma_crossover", "rsi_strategy", "ml_strategy"],
-        default="ma_crossover",
-        help="Trading strategy to use (default: ma_crossover)",
+        choices=["ma_crossover", "rsi_strategy", "ml_strategy", "grid_dca"],
+        default="grid_dca",
+        help="Trading strategy to use (default: grid_dca)",
     )
 
     parser.add_argument(
@@ -114,10 +114,13 @@ def run_dashboard_mode(args):
         config.trading.mode = args.mode
         config.validate()
 
+        # Create trading bot instance for dashboard
+        trading_bot = TradingBot(config)
+
         from src.dashboard.main import DashboardApp
         import uvicorn
 
-        dashboard = DashboardApp(config)
+        dashboard = DashboardApp(config, trading_bot)
         app = dashboard.app  # Get the FastAPI app from the dashboard instance
 
         logger.info(f"Dashboard starting on http://localhost:{args.port}")

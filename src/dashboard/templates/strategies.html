@@ -541,10 +541,15 @@ function loadStrategies() {
     fetch('/api/strategies')
         .then(response => response.json())
         .then(data => {
-            strategies = data;
-            updateStrategiesTable(data);
-            updateStrategyComparison(data);
-            updateStrategySelects(data);
+            if (data.success) {
+                const strategiesData = data.strategies || [];
+                strategies = strategiesData;
+                updateStrategiesTable(strategiesData);
+                updateStrategyComparison(strategiesData);
+                updateStrategySelects(strategiesData);
+            } else {
+                throw new Error('Failed to load strategies');
+            }
         })
         .catch(error => {
             console.error('Error loading strategies:', error);

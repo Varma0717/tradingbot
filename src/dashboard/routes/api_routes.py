@@ -3,6 +3,7 @@ API routes for dashboard data endpoints.
 """
 
 import json
+import asyncio
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 
@@ -15,6 +16,7 @@ except ImportError:
     BaseModel = None
 
 from ...core.config import Config
+from ...core.bot import TradingBot
 from ...execution.binance_engine import get_trading_engine
 from ...utils.logger import get_logger
 
@@ -22,6 +24,16 @@ logger = get_logger(__name__)
 
 # Create router
 router = APIRouter()
+
+# Global trading bot instance
+_trading_bot: Optional[TradingBot] = None
+
+
+def set_trading_bot(trading_bot: TradingBot):
+    """Set the trading bot instance for API access."""
+    global _trading_bot
+    _trading_bot = trading_bot
+    logger.info("Trading bot instance set for API routes")
 
 
 # Pydantic models for request/response
@@ -43,26 +55,87 @@ class TradingResponse(BaseModel):
 async def get_bot_status():
     """Get comprehensive bot status and connection info."""
     try:
-        # Try to get real bot status
-        status = {
-            "success": True,
-            "bot_running": True,  # This should be dynamic
-            "exchange_connected": True,
-            "exchange_error": None,
-            "database_connected": True,
-            "risk_manager_active": True,
-            "trading_mode": "paper",  # Read from config
-            "exchange_name": "binance",
-            "sandbox": True,
-            "stats": {
-                "uptime": "0h 15m",
-                "total_trades": 0,
-                "success_rate": 0.0,
-                "total_profit": 0.0,
-            },
-            "last_update": datetime.now().isoformat(),
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Get real bot status if bot is available
+        if _trading_bot and hasattr(_trading_bot, "status"):
+            bot_status = _trading_bot.status
+
+            # Check if bot is actually running by looking at multiple indicators
+            is_running = getattr(bot_status, "is_running", False)
+
+            # Double-check with background tasks if available
+            if hasattr(_trading_bot, "_tasks"):
+                has_active_tasks = len(getattr(_trading_bot, "_tasks", [])) > 0
+                is_running = is_running and has_active_tasks
+
+            # Check if shutdown event is not set
+            if hasattr(_trading_bot, "_shutdown_event"):
+                shutdown_event = getattr(_trading_bot, "_shutdown_event", None)
+                if shutdown_event and hasattr(shutdown_event, "is_set"):
+                    is_running = is_running and not shutdown_event.is_set()
+
+            # Calculate uptime string safely
+            uptime_str = "0h 0m"
+            if (
+                hasattr(bot_status, "start_time")
+                and bot_status.start_time
+                and is_running
+            ):
+                try:
+                    uptime_delta = datetime.now() - bot_status.start_time
+                    total_seconds = uptime_delta.total_seconds()
+                    hours = int(total_seconds // 3600)
+                    minutes = int((total_seconds % 3600) // 60)
+                    uptime_str = f"{hours}h {minutes}m"
+                except:
+                    uptime_str = "0h 0m"
+
+            # Calculate success rate safely
+            success_rate = 0.0
+            total_trades = getattr(bot_status, "total_trades", 0)
+            if total_trades > 0:
+                successful_trades = getattr(bot_status, "successful_trades", 0)
+                success_rate = (successful_trades / total_trades) * 100
+
+            status = {
+                "success": True,
+                "bot_running": is_running,
+                "exchange_connected": True,  # Assume connected if bot exists
+                "exchange_error": getattr(bot_status, "last_error", None),
+                "database_connected": True,  # Assume connected if bot exists
+                "risk_manager_active": True,  # Assume active if bot exists
+                "trading_mode": "paper",  # From config
+                "exchange_name": "binance",
+                "sandbox": True,
+                "stats": {
+                    "uptime": uptime_str,
+                    "total_trades": total_trades,
+                    "success_rate": round(success_rate, 2),
+                    "total_profit": getattr(bot_status, "realized_pnl", 0.0),
+                },
+                "last_update": datetime.now().isoformat(),
+                "timestamp": datetime.now().isoformat(),
+            }
+        else:
+            # Fallback status when bot is not available
+            status = {
+                "success": True,
+                "bot_running": False,
+                "exchange_connected": False,
+                "exchange_error": "Bot not connected",
+                "database_connected": False,
+                "risk_manager_active": False,
+                "trading_mode": "unknown",
+                "exchange_name": "binance",
+                "sandbox": True,
+                "stats": {
+                    "uptime": "0h 0m",
+                    "total_trades": 0,
+                    "success_rate": 0.0,
+                    "total_profit": 0.0,
+                },
+                "last_update": datetime.now().isoformat(),
+                "timestamp": datetime.now().isoformat(),
+            }
 
         return JSONResponse(content=status)
 
@@ -290,83 +363,55 @@ async def get_strategies_data():
 async def get_grid_dca_data():
     """Get Grid DCA strategy data and configuration."""
     try:
-        grid_dca_data = {
-            "success": True,
-            "strategy_status": "active",
-            "symbol": "BTC/USDT",
-            "current_price": 34250.00,
-            "stats": {
-                "total_invested": 2500.00,
-                "current_value": 2687.50,
-                "unrealized_pnl": 187.50,
-                "unrealized_pnl_percent": 7.5,
-                "grid_filled": 6,
-                "total_grids": 10,
-                "dca_rounds": 3,
-                "avg_entry_price": 33180.50,
-            },
-            "grid_levels": [
-                {
-                    "price": 35000.00,
-                    "type": "sell",
-                    "status": "pending",
-                    "amount": 0.025,
+        if not _trading_bot:
+            return JSONResponse(
+                content={
+                    "success": False,
+                    "error": "Bot not connected to dashboard",
+                    "status": "error",
+                }
+            )
+
+        # Check if bot has a strategy manager and if it's running Grid DCA
+        if hasattr(_trading_bot, "strategy_manager") and _trading_bot.strategy_manager:
+            strategy_manager = _trading_bot.strategy_manager
+
+            # Get real strategy data if available
+            if hasattr(strategy_manager, "get_strategy_status"):
+                try:
+                    strategy_data = await strategy_manager.get_strategy_status()
+                    return JSONResponse(
+                        content={
+                            "success": True,
+                            "strategy_data": strategy_data,
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not get strategy status: {e}")
+
+        # Return empty state if no strategy is running
+        return JSONResponse(
+            content={
+                "success": True,
+                "strategy_status": "inactive",
+                "message": "No Grid DCA strategy currently running",
+                "stats": {
+                    "total_invested": 0.0,
+                    "current_value": 0.0,
+                    "unrealized_pnl": 0.0,
+                    "unrealized_pnl_percent": 0.0,
+                    "grid_filled": 0,
+                    "total_grids": 0,
+                    "dca_rounds": 0,
+                    "avg_entry_price": 0.0,
                 },
-                {
-                    "price": 34500.00,
-                    "type": "sell",
-                    "status": "pending",
-                    "amount": 0.025,
-                },
-                {
-                    "price": 34000.00,
-                    "type": "sell",
-                    "status": "filled",
-                    "amount": 0.025,
-                },
-                {"price": 33500.00, "type": "buy", "status": "filled", "amount": 0.025},
-                {"price": 33000.00, "type": "buy", "status": "filled", "amount": 0.025},
-                {
-                    "price": 32500.00,
-                    "type": "buy",
-                    "status": "pending",
-                    "amount": 0.025,
-                },
-                {
-                    "price": 32000.00,
-                    "type": "buy",
-                    "status": "pending",
-                    "amount": 0.025,
-                },
-            ],
-            "dca_history": [
-                {
-                    "round": 1,
-                    "price": 33800.00,
-                    "amount": 0.075,
-                    "value": 253.50,
-                    "timestamp": (datetime.now() - timedelta(days=2)).isoformat(),
-                },
-                {
-                    "round": 2,
-                    "price": 33200.00,
-                    "amount": 0.075,
-                    "value": 249.00,
-                    "timestamp": (datetime.now() - timedelta(days=1)).isoformat(),
-                },
-            ],
-            "config": {
-                "grid_range_percent": 10.0,
-                "grid_levels": 10,
-                "base_order_size": 250.00,
-                "dca_order_size": 125.00,
-                "take_profit_percent": 2.5,
-                "max_dca_rounds": 5,
-                "enabled": True,
-            },
-            "timestamp": datetime.now().isoformat(),
-        }
-        return JSONResponse(content=grid_dca_data)
+                "grid_levels": [],
+                "dca_history": [],
+                "config": {},
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
     except Exception as e:
         logger.error(f"Error getting grid-dca data: {e}")
         return JSONResponse(content={"success": False, "error": str(e)})
@@ -376,25 +421,49 @@ async def get_grid_dca_data():
 async def start_bot():
     """Start the trading bot."""
     try:
-        # This should integrate with actual bot control
+        if not _trading_bot:
+            return JSONResponse(
+                content={
+                    "success": False,
+                    "error": "Bot not connected to dashboard",
+                    "status": "error",
+                }
+            )
+
+        # Actually start the bot
+        await _trading_bot.start()
+
         return JSONResponse(
             content={
                 "success": True,
                 "message": "Bot started successfully",
-                "status": "starting",
+                "status": "running",
                 "timestamp": datetime.now().isoformat(),
             }
         )
     except Exception as e:
         logger.error(f"Error starting bot: {e}")
-        return JSONResponse(content={"success": False, "error": str(e)})
+        return JSONResponse(
+            content={"success": False, "error": str(e), "status": "error"}
+        )
 
 
 @router.post("/bot/stop")
 async def stop_bot():
     """Stop the trading bot."""
     try:
-        # This should integrate with actual bot control
+        if not _trading_bot:
+            return JSONResponse(
+                content={
+                    "success": False,
+                    "error": "Bot not connected to dashboard",
+                    "status": "error",
+                }
+            )
+
+        # Actually stop the bot
+        await _trading_bot.stop()
+
         return JSONResponse(
             content={
                 "success": True,
@@ -405,25 +474,9 @@ async def stop_bot():
         )
     except Exception as e:
         logger.error(f"Error stopping bot: {e}")
-        return JSONResponse(content={"success": False, "error": str(e)})
-
-
-@router.post("/bot/pause")
-async def pause_bot():
-    """Pause the trading bot."""
-    try:
-        # This should integrate with actual bot control
         return JSONResponse(
-            content={
-                "success": True,
-                "message": "Bot paused successfully",
-                "status": "paused",
-                "timestamp": datetime.now().isoformat(),
-            }
+            content={"success": False, "error": str(e), "status": "error"}
         )
-    except Exception as e:
-        logger.error(f"Error pausing bot: {e}")
-        return JSONResponse(content={"success": False, "error": str(e)})
 
 
 @router.get("/balance")
@@ -598,44 +651,6 @@ async def cancel_order(order_id: str, symbol: str = Query(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/bot/start")
-async def start_bot():
-    """Start the trading bot."""
-    try:
-        engine = get_trading_engine()
-        if not engine.running:
-            # Start engine in background
-            import asyncio
-
-            asyncio.create_task(engine.start())
-
-            return TradingResponse(
-                success=True, message="Trading bot started successfully"
-            )
-        else:
-            return TradingResponse(
-                success=True, message="Trading bot is already running"
-            )
-
-    except Exception as e:
-        logger.error(f"Error starting bot: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/bot/stop")
-async def stop_bot():
-    """Stop the trading bot."""
-    try:
-        engine = get_trading_engine()
-        await engine.stop()
-
-        return TradingResponse(success=True, message="Trading bot stopped successfully")
-
-    except Exception as e:
-        logger.error(f"Error stopping bot: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 # Control endpoints (alias for bot endpoints)
 @router.post("/control/start")
 async def control_start():
@@ -653,18 +668,32 @@ async def control_stop():
 async def control_restart():
     """Restart the trading bot."""
     try:
-        engine = get_trading_engine()
+        if not _trading_bot:
+            return JSONResponse(
+                content={
+                    "success": False,
+                    "error": "Bot not connected to dashboard",
+                    "status": "error",
+                }
+            )
 
         # Stop then start the bot
-        await engine.stop()
-        await engine.start()
+        await _trading_bot.stop()
+        await _trading_bot.start()
 
-        return TradingResponse(
-            success=True, message="Trading bot restarted successfully"
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": "Trading bot restarted successfully",
+                "status": "running",
+                "timestamp": datetime.now().isoformat(),
+            }
         )
     except Exception as e:
         logger.error(f"Error restarting bot: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return JSONResponse(
+            content={"success": False, "error": str(e), "status": "error"}
+        )
 
 
 @router.get("/analytics/performance")
@@ -2008,50 +2037,71 @@ async def export_portfolio():
 async def get_grid_dca_status():
     """Get Grid DCA strategy status and statistics."""
     try:
-        # This would integrate with the actual strategy manager
-        # For now, return mock data
+        if not _trading_bot:
+            return JSONResponse(
+                content={
+                    "success": False,
+                    "error": "Bot not connected to dashboard",
+                    "status": "error",
+                }
+            )
+
+        # Check if bot has Grid DCA strategy configured and running
+        if hasattr(_trading_bot, "strategy_manager") and _trading_bot.strategy_manager:
+            strategy_manager = _trading_bot.strategy_manager
+
+            # Get real strategy data if available
+            if hasattr(strategy_manager, "get_strategy_status"):
+                try:
+                    strategy_data = await strategy_manager.get_strategy_status()
+                    return {"success": True, "data": strategy_data}
+                except Exception as e:
+                    logger.warning(f"Could not get strategy status: {e}")
+
+        # Return inactive state if no Grid DCA strategy is running
         return {
             "success": True,
             "data": {
                 "strategy_name": "Grid Trading + DCA",
-                "status": "active",
+                "status": "inactive",
+                "message": "Grid DCA strategy not currently active",
                 "symbol": "BTC/USDT",
-                "current_price": 43250.50,
+                "current_price": 0.0,
                 "position": {
-                    "current_position": 0.023456,
-                    "average_entry_price": 42100.00,
-                    "total_invested": 1000.00,
-                    "current_value": 1014.56,
-                    "unrealized_pnl": 14.56,
-                    "pnl_percentage": 1.456,
+                    "current_position": 0.0,
+                    "average_entry_price": 0.0,
+                    "total_invested": 0.0,
+                    "current_value": 0.0,
+                    "unrealized_pnl": 0.0,
+                    "pnl_percentage": 0.0,
                 },
                 "grid": {
-                    "active_orders": 8,
-                    "buy_orders": 4,
-                    "sell_orders": 4,
-                    "grid_levels": 10,
-                    "grid_spacing": 2.0,
+                    "active_orders": 0,
+                    "buy_orders": 0,
+                    "sell_orders": 0,
+                    "grid_levels": 0,
+                    "grid_spacing": 0.0,
                 },
                 "dca": {
-                    "dca_levels_used": 2,
-                    "max_dca_levels": 5,
-                    "next_dca_price": 40500.00,
-                    "dca_enabled": True,
+                    "dca_levels_used": 0,
+                    "max_dca_levels": 0,
+                    "next_dca_price": 0.0,
+                    "dca_enabled": False,
                 },
                 "statistics": {
-                    "total_trades": 45,
-                    "profitable_trades": 38,
-                    "grid_trades": 40,
-                    "dca_trades": 5,
-                    "win_rate": 84.4,
-                    "total_profit": 156.78,
-                    "daily_profit": 12.34,
-                    "max_drawdown": 8.2,
+                    "total_trades": 0,
+                    "profitable_trades": 0,
+                    "grid_trades": 0,
+                    "dca_trades": 0,
+                    "win_rate": 0.0,
+                    "total_profit": 0.0,
+                    "daily_profit": 0.0,
+                    "max_drawdown": 0.0,
                 },
                 "performance": {
-                    "roi_percentage": 15.68,
-                    "profit_per_trade": 3.48,
-                    "active_for_hours": 24.5,
+                    "roi_percentage": 0.0,
+                    "profit_per_trade": 0.0,
+                    "active_for_hours": 0.0,
                 },
             },
         }

@@ -143,6 +143,21 @@ body {
     padding: 1rem;
     width: 100%;
     max-width: 100%;
+    position: relative;
+    z-index: 1001;
+    /* Higher than connection status */
+}
+
+/* Dropdown specific fixes */
+.main-content .navbar .dropdown-menu {
+    z-index: 1002;
+    /* Ensure dropdowns appear above everything */
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-md);
+}
+
+.main-content .navbar .dropdown {
+    position: relative;
 }
 
 /* === RESPONSIVE DESIGN === */
@@ -176,6 +191,16 @@ body {
 
     .main-content .navbar {
         padding: 0.5rem 1rem;
+        z-index: 1001;
+    }
+
+    /* Move connection status further down on mobile */
+    .connection-status {
+        top: 70px;
+        right: 15px;
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+        max-width: 150px;
     }
 }
 
@@ -343,13 +368,17 @@ body {
 /* === CONNECTION STATUS === */
 .connection-status {
     position: fixed;
-    top: 20px;
+    top: 80px;
+    /* Move below the navbar */
     right: 20px;
-    z-index: 1000;
+    z-index: 999;
+    /* Lower z-index to not interfere with dropdowns */
     padding: 0.5rem 1rem;
     border-radius: var(--border-radius-sm);
     font-weight: 600;
     font-size: 0.875rem;
+    max-width: 200px;
+    /* Limit width to prevent overlap */
 }
 
 .connection-connected {

@@ -474,9 +474,10 @@ function loadPositions() {
     fetch('/api/portfolio/positions')
         .then(response => response.json())
         .then(data => {
-            currentPositions = data;
-            updatePositionsTable(data);
-            updateAllocationChart(data);
+            const positions = data.positions || [];
+            currentPositions = positions;
+            updatePositionsTable(positions);
+            updateAllocationChart(positions);
         })
         .catch(error => {
             console.error('Error loading positions:', error);

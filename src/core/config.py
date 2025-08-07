@@ -131,6 +131,22 @@ class StrategyConfig:
         }
     )
 
+    # Grid DCA Strategy
+    grid_dca: Dict[str, Any] = field(
+        default_factory=lambda: {
+            "grid_levels": 10,
+            "grid_spacing": 2.0,  # percentage
+            "base_investment": 100.0,
+            "max_investment": 1000.0,
+            "dca_enabled": True,
+            "dca_percentage": 5.0,  # price drop percentage to trigger DCA
+            "dca_multiplier": 1.5,
+            "max_dca_levels": 5,
+            "take_profit_percentage": 3.0,
+            "stop_loss_percentage": 15.0,
+        }
+    )
+
 
 @dataclass
 class DatabaseConfig:
@@ -316,6 +332,8 @@ class Config:
             config.rsi_strategy.update(strategy_data["rsi_strategy"])
         if "ml_strategy" in strategy_data:
             config.ml_strategy.update(strategy_data["ml_strategy"])
+        if "grid_dca" in strategy_data:
+            config.grid_dca.update(strategy_data["grid_dca"])
 
         return config
 

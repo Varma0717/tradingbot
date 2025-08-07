@@ -454,7 +454,8 @@ function loadSymbols() {
 function loadOpenOrders() {
     fetch('/api/trades/orders/open')
         .then(response => response.json())
-        .then(orders => {
+        .then(data => {
+            const orders = data.orders || [];
             updateOpenOrdersTable(orders);
         })
         .catch(error => {

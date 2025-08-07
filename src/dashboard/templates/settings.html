@@ -26,7 +26,12 @@
             <div class="row g-3">
               <div class="col-md-3">
                 <div class="text-center">
-                  <div class="badge bg-primary fs-6 d-block mb-1" id="botStatusBadge">Loading...</div>
+                  <div class="d-flex align-items-center justify-content-center mb-1">
+                    <div class="badge bg-primary fs-6" id="botStatusBadge">Loading...</div>
+                    <button class="btn btn-sm btn-outline-secondary ms-2 py-0 px-1" onclick="loadBotStatus()" title="Refresh Status">
+                      <i class="fas fa-sync-alt" style="font-size: 10px;"></i>
+                    </button>
+                  </div>
                   <small class="text-muted">Bot Status</small>
                 </div>
               </div>
@@ -299,7 +304,9 @@
     })
     
     function loadBotStatus() {
-      fetch('/api/status')
+      // Add cache-busting parameter to ensure fresh data
+      const cacheBuster = new Date().getTime();
+      fetch(`/api/status?_t=${cacheBuster}`)
         .then((response) => response.json())
         .then((data) => {
           updateStatusBadges(data)
@@ -307,16 +314,23 @@
         .catch((error) => {
           console.error('Error loading bot status:', error)
           document.getElementById('botStatusBadge').textContent = 'Error'
-          document.getElementById('botStatusBadge').className = 'badge bg-danger fs-6 d-block mb-1'
+          document.getElementById('botStatusBadge').className = 'badge bg-danger fs-6'
         })
     }
     
     function updateStatusBadges(statusData) {
+      // Debug: Log the received status data
+      console.log('Settings page received status data:', statusData);
+      
       // Bot status
       const botStatusBadge = document.getElementById('botStatusBadge')
-      const status = statusData.status || 'unknown'
+      const isRunning = statusData.bot_running || false
+      const status = isRunning ? 'running' : 'stopped'
+      
+      console.log('Settings page: isRunning =', isRunning, 'status =', status);
+      
       botStatusBadge.textContent = status.charAt(0).toUpperCase() + status.slice(1)
-      botStatusBadge.className = `badge fs-6 d-block mb-1 ${
+      botStatusBadge.className = `badge fs-6 ${
         status === 'running' ? 'bg-success' : 
         status === 'stopped' ? 'bg-secondary' : 
         status === 'error' ? 'bg-danger' : 'bg-warning'

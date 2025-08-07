@@ -18,13 +18,16 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_DOWN
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 import json
+
+from ..core.config import Config
+from .base_strategy import BaseStrategy
 
 logger = logging.getLogger(__name__)
 
 
-class GridDCAStrategy:
+class GridDCAStrategy(BaseStrategy):
     """
     Grid Trading + DCA Strategy Implementation
 
@@ -32,43 +35,47 @@ class GridDCAStrategy:
     creating a "grid" of orders. When crypto dips, it uses DCA to average down.
     """
 
-    def __init__(self, exchange, config: Dict):
+    def __init__(self, strategy_config: Dict[str, Any], config: Config):
         """Initialize the Grid DCA strategy."""
-        self.exchange = exchange
-        self.config = config
-        self.symbol = config.get("symbol", "BTC/USDT")
+        super().__init__(strategy_config, config)
+
+        self.symbol = strategy_config.get("symbol", "BTC/USDT")
         self.base_asset = self.symbol.split("/")[0]
         self.quote_asset = self.symbol.split("/")[1]
 
         # Grid Configuration
-        self.grid_size = config.get("grid_size", 10)  # Number of grid levels
-        self.grid_spacing = config.get("grid_spacing", 0.02)  # 2% between levels
-        self.initial_investment = Decimal(str(config.get("initial_investment", 1000)))
-        self.max_investment = Decimal(str(config.get("max_investment", 5000)))
+        self.grid_size = strategy_config.get("grid_size", 10)  # Number of grid levels
+        self.grid_spacing = strategy_config.get(
+            "grid_spacing", 0.02
+        )  # 2% between levels
+        self.initial_investment = Decimal(
+            str(strategy_config.get("initial_investment", 1000))
+        )
+        self.max_investment = Decimal(str(strategy_config.get("max_investment", 5000)))
 
         # DCA Configuration
-        self.dca_enabled = config.get("dca_enabled", True)
-        self.dca_percentage = config.get(
+        self.dca_enabled = strategy_config.get("dca_enabled", True)
+        self.dca_percentage = strategy_config.get(
             "dca_percentage", 0.05
         )  # 5% price drop triggers DCA
-        self.dca_multiplier = config.get(
+        self.dca_multiplier = strategy_config.get(
             "dca_multiplier", 1.5
         )  # Increase position size by 50%
-        self.max_dca_levels = config.get("max_dca_levels", 5)
+        self.max_dca_levels = strategy_config.get("max_dca_levels", 5)
 
         # Take Profit Configuration
-        self.take_profit_percentage = config.get(
+        self.take_profit_percentage = strategy_config.get(
             "take_profit_percentage", 0.03
         )  # 3% profit target
-        self.partial_profit_levels = config.get(
+        self.partial_profit_levels = strategy_config.get(
             "partial_profit_levels", [0.02, 0.04, 0.06]
         )  # 2%, 4%, 6%
 
         # Risk Management
         self.max_position_size = Decimal(
-            str(config.get("max_position_size", 0.1))
+            str(strategy_config.get("max_position_size", 0.1))
         )  # 10% of portfolio
-        self.stop_loss_percentage = config.get(
+        self.stop_loss_percentage = strategy_config.get(
             "stop_loss_percentage", 0.15
         )  # 15% stop loss
 
@@ -591,6 +598,74 @@ class GridDCAStrategy:
                 "win_rate": self.stats["win_rate"],
             },
         }
+
+    # Abstract method implementations
+    @property
+    def name(self) -> str:
+        """Return the strategy name."""
+        return "Grid DCA Strategy"
+
+    @property
+    def description(self) -> str:
+        """Return the strategy description."""
+        return "Grid Trading + DCA strategy that places buy/sell orders at predetermined price levels and averages down during dips"
+
+    @property
+    def required_indicators(self) -> List[str]:
+        """Return list of required technical indicators."""
+        return ["sma", "rsi", "volume"]  # Basic indicators for market analysis
+
+    async def generate_signals(self, market_data) -> List:
+        """
+        Generate trading signals based on market data.
+
+        For Grid DCA, signals are generated based on grid levels and DCA triggers.
+        """
+        signals = []
+
+        if market_data is None or len(market_data) == 0:
+            return signals
+
+        try:
+            current_price = float(market_data.iloc[-1]["close"])
+
+            # Check if we need to trigger DCA
+            if self.should_trigger_dca(current_price):
+                signals.append(
+                    {
+                        "action": "dca_buy",
+                        "price": current_price,
+                        "timestamp": datetime.now(),
+                    }
+                )
+
+            # Check grid levels for buy/sell signals
+            grid_signals = self.check_grid_signals(current_price)
+            signals.extend(grid_signals)
+
+        except Exception as e:
+            logger.error(f"Error generating signals: {e}")
+
+        return signals
+
+    def should_trigger_dca(self, current_price: float) -> bool:
+        """Check if DCA should be triggered."""
+        if not self.dca_enabled or len(self.dca_levels) >= self.max_dca_levels:
+            return False
+
+        if self.average_entry_price > 0:
+            price_drop = (
+                self.average_entry_price - current_price
+            ) / self.average_entry_price
+            return price_drop >= self.dca_percentage
+
+        return False
+
+    def check_grid_signals(self, current_price: float) -> List:
+        """Check for grid-based trading signals."""
+        signals = []
+        # Implementation would check grid levels and generate appropriate signals
+        return signals
 
 
 # Strategy Configuration Template

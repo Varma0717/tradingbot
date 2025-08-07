@@ -52,6 +52,7 @@ class RiskManager:
         self.start_of_day_balance = 0.0
         self.peak_balance = 0.0
         self.current_positions = []
+        self.open_positions = {}  # Dictionary to track open positions
         self.risk_violations = []
 
         self.logger.info("Risk Manager initialized")
@@ -370,3 +371,61 @@ class RiskManager:
 
         except Exception as e:
             self.logger.error(f"Error resetting daily metrics: {e}")
+
+    async def check_risk_limits(self) -> Dict[str, Any]:
+        """
+        Check all risk limits and return risk status.
+        This method is called by the bot's risk monitoring tasks.
+
+        Returns:
+            Dict containing risk status information
+        """
+        try:
+            risk_status = {
+                "status": "ok",
+                "violations": [],
+                "metrics": self.get_risk_metrics(),
+                "emergency_stop": False,
+            }
+
+            # Check daily loss limit
+            if self.daily_pnl < -abs(self.config.get("max_daily_loss", 1000)):
+                risk_status["violations"].append("Daily loss limit exceeded")
+                risk_status["status"] = "warning"
+
+            # Check drawdown limit
+            current_drawdown = self.get_risk_metrics().get("max_drawdown", 0)
+            max_allowed_drawdown = self.config.get("max_drawdown_percent", 10)
+            if current_drawdown > max_allowed_drawdown:
+                risk_status["violations"].append(
+                    f"Drawdown limit exceeded: {current_drawdown:.2f}%"
+                )
+                risk_status["status"] = "critical"
+
+            # Check portfolio exposure
+            total_exposure = sum(
+                abs(pos.get("size", 0)) for pos in self.open_positions.values()
+            )
+            max_exposure = self.config.get("max_portfolio_exposure", 100000)
+            if total_exposure > max_exposure:
+                risk_status["violations"].append("Portfolio exposure limit exceeded")
+                risk_status["status"] = "warning"
+
+            # Log risk check results
+            if risk_status["violations"]:
+                self.logger.warning(
+                    f"Risk violations detected: {risk_status['violations']}"
+                )
+            else:
+                self.logger.debug("Risk limits check passed")
+
+            return risk_status
+
+        except Exception as e:
+            self.logger.error(f"Error checking risk limits: {e}")
+            return {
+                "status": "error",
+                "violations": [f"Risk check error: {str(e)}"],
+                "metrics": {},
+                "emergency_stop": False,
+            }

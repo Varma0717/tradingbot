@@ -5,7 +5,7 @@ Supports multiple notification channels and message types.
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Protocol
 from dataclasses import dataclass
 from enum import Enum
@@ -124,7 +124,8 @@ class NotificationManager:
 
             if (
                 hasattr(notification_config, "email")
-                and notification_config.email.enabled
+                and isinstance(notification_config.email, dict)
+                and notification_config.email.get("enabled", False)
             ):
                 from .email_notifier import EmailNotifier
 
@@ -135,7 +136,8 @@ class NotificationManager:
 
             if (
                 hasattr(notification_config, "telegram")
-                and notification_config.telegram.enabled
+                and isinstance(notification_config.telegram, dict)
+                and notification_config.telegram.get("enabled", False)
             ):
                 from .telegram_notifier import TelegramNotifier
 
@@ -146,7 +148,8 @@ class NotificationManager:
 
             if (
                 hasattr(notification_config, "webhook")
-                and notification_config.webhook.enabled
+                and isinstance(notification_config.webhook, dict)
+                and notification_config.webhook.get("enabled", False)
             ):
                 from .webhook_notifier import WebhookNotifier
 

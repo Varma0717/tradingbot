@@ -291,9 +291,9 @@
     
     function updateBotStatus(statusData) {
         const statusElement = document.getElementById('botStatus');
-        const status = statusData.status || 'stopped';
+        const isRunning = statusData.bot_running || false;
         
-        if (status === 'running') {
+        if (isRunning) {
             statusElement.innerHTML = `
                 <span class="status-running">
                     <i class="bi bi-play-circle-fill"></i> Running

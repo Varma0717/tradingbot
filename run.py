@@ -38,25 +38,30 @@ def main():
         config = Config(str(config_path))
         print("✅ Configuration loaded")
 
-        # Create dashboard app
-        dashboard_app = create_app(config)
-        print("✅ Dashboard app created")
-
         # Optional: Initialize trading bot
+        trading_bot = None
         try:
             trading_bot = TradingBot(config)
-            dashboard_app.set_trading_bot(trading_bot)
-            print("✅ Trading bot connected to dashboard")
+            print("✅ Trading bot created")
         except Exception as e:
-            print(f"⚠️  Trading bot connection failed: {e}")
+            print(f"⚠️  Trading bot creation failed: {e}")
             print("Dashboard will run without bot connection")
 
+        # Create dashboard app with bot
+        dashboard_app = create_app(config, trading_bot)
+        print("✅ Dashboard app created")
+
+        # Connect bot to dashboard if available
+        if trading_bot:
+            dashboard_app.set_trading_bot(trading_bot)
+            print("✅ Trading bot connected to dashboard")
+
         # Start the dashboard
-        print("\n🌐 Dashboard starting at http://127.0.0.1:8000")
+        print("\n🌐 Dashboard starting at http://127.0.0.1:8001")
         print("📊 Access your trading dashboard in your web browser")
         print("🛑 Press Ctrl+C to stop the dashboard\n")
 
-        dashboard_app.run(host="127.0.0.1", port=8000, debug=True)
+        dashboard_app.run(host="127.0.0.1", port=8001, debug=True)
 
     except KeyboardInterrupt:
         print("\n🛑 Dashboard stopped by user")

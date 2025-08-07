@@ -17,6 +17,7 @@ from ..data.websocket_client import WebSocketClient
 from ..strategies.base_strategy import BaseStrategy
 from ..strategies.ma_crossover import MovingAverageCrossover
 from ..strategies.rsi_strategy import RSIStrategy
+from ..strategies.grid_dca_strategy import GridDCAStrategy
 from ..strategies.strategy_manager import StrategyManager
 from ..execution.order_manager import OrderManager
 from ..execution.portfolio_manager import PortfolioManager
@@ -124,14 +125,14 @@ class TradingBot:
             self.portfolio_manager = PortfolioManager(self.config)
 
             # Initialize risk manager
-            self.risk_manager = RiskManager(self.config)
+            self.risk_manager = RiskManager(self.config._config_data)
 
             # Initialize notification manager
             self.notification_manager = NotificationManager(self.config)
 
             # Initialize backtest engine if needed
             if self.config.trading.mode == "backtest":
-                self.backtest_engine = BacktestEngine(self.config)
+                self.backtest_engine = BacktestEngine(self.config._config_data)
 
             self.logger.info("All components initialized successfully")
 
@@ -146,7 +147,7 @@ class TradingBot:
         strategy_map = {
             "ma_crossover": MovingAverageCrossover,
             "rsi_strategy": RSIStrategy,
-            "grid_dca": "strategy_manager",  # Special case for strategy manager
+            "grid_dca": GridDCAStrategy,
             # Add more strategies as they are implemented
         }
 
@@ -211,6 +212,16 @@ class TradingBot:
 
         if self.order_manager:
             await self.order_manager.close()
+
+        # Close exchanges
+        if hasattr(self, "exchanges") and self.exchanges:
+            for exchange_name, exchange in self.exchanges.items():
+                try:
+                    if hasattr(exchange, "close"):
+                        await exchange.close()
+                        self.logger.info(f"Closed {exchange_name} exchange")
+                except Exception as e:
+                    self.logger.warning(f"Error closing {exchange_name} exchange: {e}")
 
         # Send shutdown notification
         await self.notification_manager.send_notification(

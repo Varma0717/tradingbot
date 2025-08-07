@@ -53,6 +53,10 @@ class DashboardApp:
         self._setup_templates()
         self._setup_routes()
 
+        # If trading bot is provided, set it up for API routes
+        if trading_bot:
+            self.set_trading_bot(trading_bot)
+
     def _create_app(self) -> FastAPI:
         """Create FastAPI application."""
         app = FastAPI(
@@ -137,6 +141,23 @@ class DashboardApp:
     def set_trading_bot(self, trading_bot: TradingBot):
         """Set the trading bot instance."""
         self.trading_bot = trading_bot
+
+        # Set bot for WebSocket routes
+        try:
+            from .routes import websocket_routes
+
+            websocket_routes.set_trading_bot(trading_bot)
+        except Exception as e:
+            self.logger.error(f"Error setting bot for WebSocket routes: {e}")
+
+        # Set bot for API routes
+        try:
+            from .routes import api_routes
+
+            api_routes.set_trading_bot(trading_bot)
+        except Exception as e:
+            self.logger.error(f"Error setting bot for API routes: {e}")
+
         self.logger.info("Trading bot instance connected to dashboard")
 
     async def broadcast_update(self, message: dict):
@@ -291,3 +312,9 @@ def create_app(
         Dashboard application instance
     """
     return DashboardApp(config, trading_bot)
+
+
+# Create app instance for uvicorn
+config = Config()
+dashboard_app = create_app(config)
+app = dashboard_app.app

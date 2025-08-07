@@ -39,7 +39,7 @@
                         <div>
                             <p class="text-muted mb-1">Strategy Status</p>
                             <h5 class="mb-0" id="strategyStatus">
-                                <span class="badge bg-success">Active</span>
+                                <span class="badge bg-secondary">Loading...</span>
                             </h5>
                         </div>
                         <i class="bi bi-activity text-success" style="font-size: 2rem;"></i>
@@ -53,8 +53,8 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <p class="text-muted mb-1">Current Position</p>
-                            <h5 class="mb-0" id="currentPosition">0.023456 BTC</h5>
-                            <small class="text-muted" id="positionValue">$1,014.56</small>
+                            <h5 class="mb-0 text-muted" id="currentPosition">Loading...</h5>
+                            <small class="text-muted" id="positionValue">--</small>
                         </div>
                         <i class="bi bi-coin text-warning" style="font-size: 2rem;"></i>
                     </div>
@@ -67,10 +67,10 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <p class="text-muted mb-1">Total P&L</p>
-                            <h5 class="mb-0 text-success" id="totalPnl">+$156.78</h5>
-                            <small class="text-success" id="pnlPercentage">+15.68%</small>
+                            <h5 class="mb-0 text-muted" id="totalPnl">Loading...</h5>
+                            <small class="text-muted" id="pnlPercentage">--</small>
                         </div>
-                        <i class="bi bi-graph-up text-success" style="font-size: 2rem;"></i>
+                        <i class="bi bi-graph-up text-muted" style="font-size: 2rem;"></i>
                     </div>
                 </div>
             </div>
@@ -81,10 +81,10 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <p class="text-muted mb-1">Win Rate</p>
-                            <h5 class="mb-0" id="winRate">84.4%</h5>
-                            <small class="text-muted" id="totalTrades">45 trades</small>
+                            <h5 class="mb-0 text-muted" id="winRate">Loading...</h5>
+                            <small class="text-muted" id="totalTrades">-- trades</small>
                         </div>
-                        <i class="bi bi-bullseye text-info" style="font-size: 2rem;"></i>
+                        <i class="bi bi-bullseye text-muted" style="font-size: 2rem;"></i>
                     </div>
                 </div>
             </div>
@@ -104,19 +104,19 @@
                         <div class="col-md-6">
                             <h6>Grid Configuration</h6>
                             <ul class="list-unstyled">
-                                <li><strong>Symbol:</strong> <span id="tradingSymbol">BTC/USDT</span></li>
-                                <li><strong>Grid Levels:</strong> <span id="gridLevels">10</span></li>
-                                <li><strong>Grid Spacing:</strong> <span id="gridSpacing">2.0%</span></li>
-                                <li><strong>Active Orders:</strong> <span id="activeOrders">8</span></li>
+                                <li><strong>Symbol:</strong> <span id="tradingSymbol">--</span></li>
+                                <li><strong>Grid Levels:</strong> <span id="gridLevels">--</span></li>
+                                <li><strong>Grid Spacing:</strong> <span id="gridSpacing">--</span></li>
+                                <li><strong>Active Orders:</strong> <span id="activeOrders">--</span></li>
                             </ul>
                         </div>
                         <div class="col-md-6">
                             <h6>DCA Configuration</h6>
                             <ul class="list-unstyled">
-                                <li><strong>DCA Enabled:</strong> <span id="dcaEnabled" class="badge bg-success">Yes</span></li>
-                                <li><strong>DCA Levels Used:</strong> <span id="dcaLevelsUsed">2 / 5</span></li>
-                                <li><strong>Next DCA Price:</strong> <span id="nextDcaPrice">$40,500.00</span></li>
-                                <li><strong>DCA Trigger:</strong> <span id="dcaTrigger">5% drop</span></li>
+                                <li><strong>DCA Enabled:</strong> <span id="dcaEnabled" class="badge bg-secondary">--</span></li>
+                                <li><strong>DCA Levels Used:</strong> <span id="dcaLevelsUsed">--</span></li>
+                                <li><strong>Next DCA Price:</strong> <span id="nextDcaPrice">--</span></li>
+                                <li><strong>DCA Trigger:</strong> <span id="dcaTrigger">--</span></li>
                             </ul>
                         </div>
                     </div>
@@ -201,12 +201,12 @@
                         </div>
                         <div class="col-6">
                             <div class="border-end">
-                                <h4 class="text-success mb-0" id="profitPerTrade">$3.48</h4>
+                                <h4 class="text-muted mb-0" id="profitPerTrade">--</h4>
                                 <small class="text-muted">Avg Profit/Trade</small>
                             </div>
                         </div>
                         <div class="col-6">
-                            <h4 class="text-info mb-0" id="maxDrawdown">8.2%</h4>
+                            <h4 class="text-muted mb-0" id="maxDrawdown">--</h4>
                             <small class="text-muted">Max Drawdown</small>
                         </div>
                     </div>

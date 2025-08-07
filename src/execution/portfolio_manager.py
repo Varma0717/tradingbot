@@ -177,6 +177,8 @@ class PortfolioManager:
         self.total_unrealized_pnl = 0.0
         self.max_balance = 0.0
         self.max_drawdown = 0.0
+        self.daily_pnl = 0.0
+        self.daily_start_balance = 0.0
 
         # Risk metrics
         self.risk_per_trade = config.risk.risk_per_trade
@@ -240,6 +242,7 @@ class PortfolioManager:
                 )
 
             self.max_balance = self.current_balance
+            self.daily_start_balance = self.current_balance
 
             # Record initial state
             self.balance_history.append((datetime.now(), self.current_balance))
@@ -276,6 +279,9 @@ class PortfolioManager:
             # Update current balance
             self.current_balance = self.get_total_balance()
 
+            # Update daily P&L (difference from initial balance)
+            self.daily_pnl = self.current_balance - self.initial_balance
+
             # Update max balance and drawdown
             if self.current_balance > self.max_balance:
                 self.max_balance = self.current_balance
@@ -298,6 +304,32 @@ class PortfolioManager:
 
         except Exception as e:
             self.logger.error(f"Error updating positions: {e}")
+
+    async def update_portfolio(self):
+        """
+        Update the entire portfolio with latest market data.
+        This method is called by the bot's monitoring tasks.
+        """
+        try:
+            # If we have an exchange connection, get latest market data
+            if hasattr(self, "exchange") and self.exchange:
+                # Get current positions and update with latest prices
+                market_data = {}
+                for symbol in self.positions.keys():
+                    try:
+                        # This would normally fetch from exchange
+                        # For now, just update with existing data
+                        pass
+                    except Exception as e:
+                        self.logger.warning(
+                            f"Could not update market data for {symbol}: {e}"
+                        )
+
+                await self.update_positions(market_data)
+
+            self.logger.debug("Portfolio updated successfully")
+        except Exception as e:
+            self.logger.error(f"Error updating portfolio: {e}")
 
     async def process_filled_order(self, order: Order):
         """
@@ -607,6 +639,48 @@ class PortfolioManager:
         """Get all balances."""
         return self.balances.copy()
 
+    def get_portfolio(self) -> Dict[str, Any]:
+        """
+        Get complete portfolio information.
+        This method is called by the bot's monitoring tasks.
+
+        Returns:
+            Dict containing portfolio information
+        """
+        try:
+            portfolio_info = {
+                "positions": {
+                    symbol: pos.to_dict() for symbol, pos in self.positions.items()
+                },
+                "balances": {
+                    currency: balance.to_dict()
+                    for currency, balance in self.balances.items()
+                },
+                "total_balance": self.get_total_balance(),
+                "total_pnl": self.get_total_pnl(),
+                "current_balance": self.current_balance,
+                "max_balance": self.max_balance,
+                "max_drawdown": self.max_drawdown,
+                "daily_pnl": self.daily_pnl,
+                "balance_history_length": len(self.balance_history),
+                "pnl_history_length": len(self.pnl_history),
+            }
+            return portfolio_info
+        except Exception as e:
+            self.logger.error(f"Error getting portfolio: {e}")
+            return {
+                "positions": {},
+                "balances": {},
+                "total_balance": 0.0,
+                "total_pnl": 0.0,
+                "current_balance": self.current_balance,
+                "max_balance": self.max_balance,
+                "max_drawdown": self.max_drawdown,
+                "daily_pnl": self.daily_pnl,
+                "balance_history_length": 0,
+                "pnl_history_length": 0,
+            }
+
     def get_total_balance(self) -> float:
         """Get total portfolio balance in base currency."""
         total = 0.0
@@ -780,7 +854,10 @@ class PortfolioManager:
 
     def reset_daily_metrics(self):
         """Reset daily metrics (call at start of each trading day)."""
+        # Store the current balance as the new daily starting point
+        self.daily_start_balance = self.current_balance
         self.daily_loss = 0.0
+        self.daily_pnl = 0.0
         self.logger.info("Daily metrics reset")
 
     def get_portfolio_summary(self) -> Dict[str, Any]:

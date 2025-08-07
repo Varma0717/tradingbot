@@ -12,6 +12,9 @@ let dataRefreshInterval = null;
 document.addEventListener('DOMContentLoaded', function () {
     console.log('Dashboard initialized');
 
+    // Initialize Bootstrap components
+    initializeBootstrapComponents();
+
     // Initialize WebSocket connection
     connectWebSocket();
 
@@ -24,6 +27,31 @@ document.addEventListener('DOMContentLoaded', function () {
     // Setup page-specific functionality
     setupPageSpecificFeatures();
 });
+
+// === BOOTSTRAP INITIALIZATION ===
+function initializeBootstrapComponents() {
+    try {
+        // Initialize all dropdowns
+        const dropdownElements = document.querySelectorAll('[data-bs-toggle="dropdown"]');
+        dropdownElements.forEach(dropdownToggle => {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Dropdown) {
+                new bootstrap.Dropdown(dropdownToggle);
+            }
+        });
+
+        // Initialize tooltips if any
+        const tooltipElements = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipElements.forEach(tooltipElement => {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                new bootstrap.Tooltip(tooltipElement);
+            }
+        });
+
+        console.log('Bootstrap components initialized');
+    } catch (error) {
+        console.error('Error initializing Bootstrap components:', error);
+    }
+}
 
 // === DATA LOADING FUNCTIONS ===
 function loadAllData() {

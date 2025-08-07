@@ -5,6 +5,7 @@
 trading:
   mode: paper  # paper or live
   exchange: binance
+  strategy: grid_dca  # strategy to use: grid_dca, ma_crossover, rsi_strategy
   base_currency: USDT
   paper_balance: 10000.0
   symbols:
@@ -57,8 +58,19 @@ risk:
 
 # Strategy Configuration
 strategies:
-  ma_crossover:
+  grid_dca:
     enabled: true
+    symbol: BTC/USDT
+    timeframe: 1h
+    grid_range_percent: 10.0  # Grid range as percentage from current price
+    grid_levels: 10           # Number of grid levels
+    base_order_size: 50.0     # Base order size in USDT
+    dca_order_size: 25.0      # DCA order size in USDT  
+    take_profit_percent: 2.5  # Take profit percentage
+    max_dca_rounds: 5         # Maximum DCA rounds
+    
+  ma_crossover:
+    enabled: false
     symbol: BTC/USDT
     timeframe: 1h
     fast_ma: 20
@@ -67,7 +79,7 @@ strategies:
     trend_filter: true
   
   rsi_strategy:
-    enabled: true
+    enabled: false
     symbol: ETH/USDT
     timeframe: 1h
     rsi_period: 14
