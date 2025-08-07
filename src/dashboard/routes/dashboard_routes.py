@@ -196,43 +196,6 @@ async def trades_page(request: Request):
         )
 
 
-@router.get("/strategies", response_class=HTMLResponse)
-async def strategies_page(request: Request):
-    """Trading strategies page."""
-    try:
-        strategies_data = {
-            "active_strategies": ["SMA Crossover"],
-            "available_strategies": ["SMA Crossover", "RSI", "MACD"],
-            "strategy_performance": {},
-        }
-
-        return templates.TemplateResponse(
-            "strategies.html",
-            {
-                "request": request,
-                "title": "Trading Strategies",
-                "strategies_data": strategies_data,
-            },
-        )
-    except Exception as e:
-        logger.error(f"Error rendering strategies page: {e}")
-        from fastapi.responses import HTMLResponse
-
-        return HTMLResponse(
-            content=f"""
-            <html>
-                <head><title>Strategies Error</title></head>
-                <body>
-                    <h1>Strategies Error</h1>
-                    <p>Error: {str(e)}</p>
-                    <a href="/">Back to Dashboard</a>
-                </body>
-            </html>
-            """,
-            status_code=500,
-        )
-
-
 @router.get("/strategies/grid-dca", response_class=HTMLResponse)
 async def strategies_grid_dca(request: Request):
     """Grid DCA strategy page."""
