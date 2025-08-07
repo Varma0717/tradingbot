@@ -2283,3 +2283,177 @@ async def test_exchange_connection():
             "status": "error",
             "timestamp": datetime.now().isoformat(),
         }
+
+
+# Additional endpoints for trades page functionality
+@router.get("/trades/summary")
+async def get_trades_summary():
+    """Get trading summary statistics."""
+    try:
+        # Mock data for now - replace with real data when trading bot is connected
+        return {
+            "total_trades": 0,
+            "win_rate": 0,
+            "total_pnl": 0,
+            "avg_trade_size": 0,
+            "today_trades": 0,
+            "win_rate_change": 0,
+            "total_pnl_change": 0,
+            "max_trade_size": 0,
+        }
+    except Exception as e:
+        logger.error(f"Error getting trades summary: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@router.get("/trades/history")
+async def get_trade_history(
+    period: str = Query("30d"),
+    page: int = Query(1),
+    limit: int = Query(50),
+    symbol: Optional[str] = Query(None),
+):
+    """Get trade history with pagination and filtering."""
+    try:
+        # Mock data for now
+        return {"trades": [], "total_pages": 1, "current_page": page, "total_trades": 0}
+    except Exception as e:
+        logger.error(f"Error getting trade history: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@router.get("/trades/orders/open")
+async def get_open_orders():
+    """Get open orders."""
+    try:
+        # Mock data for now
+        return {"orders": []}
+    except Exception as e:
+        logger.error(f"Error getting open orders: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@router.get("/trades/performance")
+async def get_performance_chart(type: str = Query("pnl")):
+    """Get performance chart data."""
+    try:
+        # Mock data for now
+        return {"timestamps": [], "values": []}
+    except Exception as e:
+        logger.error(f"Error getting performance chart: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@router.post("/trades/manual")
+async def submit_manual_trade(order_data: dict):
+    """Submit a manual trade order."""
+    try:
+        # Mock response for now
+        return {"success": False, "error": "Manual trading not implemented yet"}
+    except Exception as e:
+        logger.error(f"Error submitting manual trade: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@router.get("/trades/quote")
+async def get_trade_quote(
+    symbol: str = Query(...), amount: float = Query(...), side: str = Query(...)
+):
+    """Get a trade quote."""
+    try:
+        # Mock response for now
+        return {"success": False, "error": "Quote service not implemented yet"}
+    except Exception as e:
+        logger.error(f"Error getting quote: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@router.get("/trades/orders/{order_id}")
+async def get_order_details(order_id: str):
+    """Get order details."""
+    try:
+        # Mock response for now
+        return {
+            "id": order_id,
+            "symbol": "BTC/USDT",
+            "side": "buy",
+            "amount": 0.001,
+            "type": "limit",
+            "price": 50000,
+        }
+    except Exception as e:
+        logger.error(f"Error getting order details: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@router.post("/trades/orders/{order_id}/cancel")
+async def cancel_order_by_id(order_id: str):
+    """Cancel an order by ID."""
+    try:
+        # Mock response for now
+        return {"success": False, "error": "Order cancellation not implemented yet"}
+    except Exception as e:
+        logger.error(f"Error cancelling order: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@router.get("/trades/{trade_id}")
+async def get_trade_details(trade_id: str):
+    """Get trade details."""
+    try:
+        # Mock response for now
+        return {
+            "id": trade_id,
+            "symbol": "BTC/USDT",
+            "side": "buy",
+            "amount": 0.001,
+            "entry_price": 50000,
+            "exit_price": None,
+            "pnl": 0,
+            "pnl_percent": 0,
+            "duration": "5m",
+            "strategy": "Manual",
+            "created_at": datetime.now().isoformat(),
+            "exit_date": None,
+            "fees": 0.1,
+            "risk_score": "Low",
+            "notes": "",
+        }
+    except Exception as e:
+        logger.error(f"Error getting trade details: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@router.post("/trades/{trade_id}/notes")
+async def save_trade_notes(trade_id: str, notes_data: dict):
+    """Save trade notes."""
+    try:
+        # Mock response for now
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Error saving trade notes: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@router.get("/trades/export")
+async def export_trades(
+    period: str = Query("30d"), symbol: Optional[str] = Query(None)
+):
+    """Export trades to CSV."""
+    try:
+        # Mock response for now
+        return {"success": False, "error": "Export not implemented yet"}
+    except Exception as e:
+        logger.error(f"Error exporting trades: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@router.get("/symbols")
+async def get_symbols():
+    """Get available trading symbols."""
+    try:
+        # Mock data for now
+        return ["BTC/USDT", "ETH/USDT", "ADA/USDT", "DOT/USDT", "SOL/USDT"]
+    except Exception as e:
+        logger.error(f"Error getting symbols: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)

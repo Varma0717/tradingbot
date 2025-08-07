@@ -297,6 +297,39 @@ class DashboardApp:
             self.logger.error(f"Error running dashboard: {e}")
             raise
 
+    async def run_async(
+        self, host: str = "127.0.0.1", port: int = 8000, debug: bool = True
+    ):
+        """
+        Run the dashboard application asynchronously.
+
+        Args:
+            host: Host to bind to
+            port: Port to bind to
+            debug: Enable debug mode
+        """
+        try:
+            import uvicorn
+            from uvicorn import Config, Server
+
+            self.logger.info(f"Starting dashboard on http://{host}:{port}")
+
+            # Create config and server for async operation
+            config = Config(
+                app=self.app,
+                host=host,
+                port=port,
+                log_level="info",
+            )
+            server = Server(config)
+
+            # Start the server asynchronously
+            await server.serve()
+
+        except Exception as e:
+            self.logger.error(f"Error running dashboard: {e}")
+            raise
+
 
 def create_app(
     config: Config, trading_bot: Optional[TradingBot] = None

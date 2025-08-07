@@ -24,6 +24,18 @@ async def health_check():
     return {"status": "ok", "message": "Dashboard is running"}
 
 
+@router.get("/", response_class=HTMLResponse)
+async def dashboard_root(request: Request):
+    """Root dashboard route - redirects to main dashboard."""
+    return await dashboard_home(request)
+
+
+@router.get("/dashboard", response_class=HTMLResponse)
+async def dashboard_main(request: Request):
+    """Main dashboard page."""
+    return await dashboard_home(request)
+
+
 async def dashboard_home(request: Request, templates_obj=None, trading_bot=None):
     """Main dashboard home page."""
     try:
@@ -218,6 +230,23 @@ async def strategies_page(request: Request):
             </html>
             """,
             status_code=500,
+        )
+
+
+@router.get("/strategies/grid-dca", response_class=HTMLResponse)
+async def strategies_grid_dca(request: Request):
+    """Grid DCA strategy page."""
+    try:
+        context = {
+            "request": request,
+            "title": "Grid DCA Strategy",
+            "strategy_name": "Grid DCA",
+        }
+        return templates.TemplateResponse("grid_dca.html", context)
+    except Exception as e:
+        logger.error(f"Error rendering strategies/grid-dca page: {e}")
+        return templates.TemplateResponse(
+            "error.html", {"request": request, "error": str(e)}
         )
 
 

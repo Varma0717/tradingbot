@@ -146,8 +146,15 @@ class BaseStrategy(ABC):
             "max_drawdown": 0.0,
         }
 
-        # Initialize strategy
-        self.initialize()
+        # Initialize strategy - check if it's async
+        if asyncio.iscoroutinefunction(self.initialize):
+            # For async initialize methods, create a task or warn user
+            self.logger.warning(
+                f"{self.__class__.__name__} has async initialize method - call await strategy.initialize() manually"
+            )
+            # Don't call async method here
+        else:
+            self.initialize()
 
     def initialize(self):
         """Initialize the strategy. Override in subclasses if needed."""

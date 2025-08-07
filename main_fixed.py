@@ -178,7 +178,7 @@ async def run_dashboard_mode(args):
                 print(f"Trading bot creation failed: {e}")
 
         # Create dashboard app
-        dashboard = DashboardApp(config=config, trading_bot=bot)
+        dashboard = DashboardApp(config=config, bot=bot)
         print("Dashboard application created")
 
         # Set up host and port
@@ -192,8 +192,7 @@ async def run_dashboard_mode(args):
         try:
             import uvicorn
 
-            # Use the asynchronous run method
-            await dashboard.run_async(host=host, port=port)
+            await dashboard.start_async(host=host, port=port)
         except ImportError:
             print("uvicorn not installed. Please install: pip install uvicorn")
             return

@@ -167,6 +167,227 @@
     <script src="/static/js/paper-trading.js"></script>
     <script src="/static/js/dashboard.js"></script>
 
+    <!-- Essential Utility Functions -->
+    <script>
+        // Formatting functions used across all pages
+        function formatCurrency(value) {
+            if (value === null || value === undefined || isNaN(value)) {
+                return '$0.00';
+            }
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(value);
+        }
+
+        function formatNumber(value, decimals = 2) {
+            if (value === null || value === undefined || isNaN(value)) {
+                return '0';
+            }
+            return new Intl.NumberFormat('en-US', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            }).format(value);
+        }
+
+        function formatPercentage(value) {
+            if (value === null || value === undefined || isNaN(value)) {
+                return '0.00%';
+            }
+            return new Intl.NumberFormat('en-US', {
+                style: 'percent',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(value);
+        }
+
+        function formatDateTime(dateString) {
+            if (!dateString) return '-';
+            try {
+                const date = new Date(dateString);
+                return new Intl.DateTimeFormat('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                }).format(date);
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        function formatTimeAgo(dateString) {
+            if (!dateString) return '-';
+            try {
+                const date = new Date(dateString);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMins / 60);
+                const diffDays = Math.floor(diffHours / 24);
+
+                if (diffMins < 1) return 'Just now';
+                if (diffMins < 60) return `${diffMins}m ago`;
+                if (diffHours < 24) return `${diffHours}h ago`;
+                return `${diffDays}d ago`;
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        // Toast notification system
+        function showToast(message, type = 'info') {
+            // Remove any existing toasts
+            const existingToasts = document.querySelectorAll('.toast-container .toast');
+            existingToasts.forEach(toast => {
+                toast.remove();
+            });
+
+            // Create toast container if it doesn't exist
+            let toastContainer = document.querySelector('.toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                toastContainer.style.zIndex = '9999';
+                document.body.appendChild(toastContainer);
+            }
+
+            // Create toast element
+            const toastId = 'toast-' + Date.now();
+            const bgClass = {
+                'success': 'bg-success',
+                'error': 'bg-danger',
+                'warning': 'bg-warning',
+                'info': 'bg-info'
+            }[type] || 'bg-info';
+
+            const iconClass = {
+                'success': 'bi-check-circle-fill',
+                'error': 'bi-exclamation-triangle-fill',
+                'warning': 'bi-exclamation-triangle-fill',
+                'info': 'bi-info-circle-fill'
+            }[type] || 'bi-info-circle-fill';
+
+            const toastHtml = `
+                <div class="toast ${bgClass} text-white" id="${toastId}" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header ${bgClass} text-white border-0">
+                        <i class="bi ${iconClass} me-2"></i>
+                        <strong class="me-auto">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+
+            // Initialize and show toast
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, {
+                autohide: true,
+                delay: type === 'error' ? 5000 : 3000
+            });
+            toast.show();
+
+            // Remove from DOM after hiding
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
+
+        // Metric change update function
+        function updateMetricChange(elementId, value) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+
+            const isPositive = value > 0;
+            const isNegative = value < 0;
+
+            // Update classes
+            element.parentElement.classList.remove('positive', 'negative');
+            if (isPositive) {
+                element.parentElement.classList.add('positive');
+            } else if (isNegative) {
+                element.parentElement.classList.add('negative');
+            }
+
+            // Update icon
+            const icon = element.parentElement.querySelector('i');
+            if (icon) {
+                icon.className = isPositive ? 'fas fa-arrow-up' : 
+                                isNegative ? 'fas fa-arrow-down' : 'fas fa-minus';
+            }
+
+            // Update text
+            const sign = isPositive ? '+' : '';
+            element.textContent = `${sign}${formatPercentage(value / 100)}`;
+        }
+
+        // WebSocket connection manager
+        function initializeWebSocket() {
+            if (window.location.protocol === 'https:') {
+                window.ws = new WebSocket(`wss://${window.location.host}/ws/realtime`);
+            } else {
+                window.ws = new WebSocket(`ws://${window.location.host}/ws/realtime`);
+            }
+
+            window.ws.onopen = function() {
+                console.log('WebSocket connected');
+            };
+
+            window.ws.onclose = function() {
+                console.log('WebSocket disconnected');
+                // Reconnect after 5 seconds
+                setTimeout(initializeWebSocket, 5000);
+            };
+
+            window.ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        // Initialize WebSocket on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeWebSocket();
+        });
+
+        // Paper trading indicator functions
+        function showPaperTradingIndicatorOnTrades() {
+            // This function is called from individual pages
+            const indicator = document.getElementById('paperTradingIndicator');
+            if (indicator) {
+                indicator.style.display = 'inline-block';
+            }
+        }
+
+        // Global error handler for fetch requests
+        function handleFetchError(error, context = '') {
+            console.error(`Error in ${context}:`, error);
+            showToast(`Error: ${error.message || 'Network request failed'}`, 'error');
+        }
+
+        // Safe fetch wrapper
+        function safeFetch(url, options = {}) {
+            return fetch(url, options)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .catch(error => {
+                    handleFetchError(error, url);
+                    throw error;
+                });
+        }
+    </script>
+
     {% block scripts %}
 
     {% endblock %}
