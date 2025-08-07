@@ -34,11 +34,25 @@
 }
 
 /* === GLOBAL STYLES === */
+html {
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: inherit;
+}
+
 body {
     background-color: var(--light-color);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.6;
     color: var(--dark-color);
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
 }
 
 /* === SIDEBAR STYLES === */
@@ -100,14 +114,26 @@ body {
     background-color: var(--light-color);
     display: flex;
     flex-direction: column;
+    width: calc(100% - var(--sidebar-width));
+    max-width: calc(100% - var(--sidebar-width));
+    overflow-x: hidden;
 }
 
 /* Content wrapper for proper spacing */
 .content-wrapper {
     flex: 1;
-    padding: 1rem;
+    padding: 0;
     overflow-x: hidden;
     overflow-y: auto;
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Container within content wrapper */
+.content-wrapper .container-fluid {
+    padding: 1rem;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 /* Navbar in main content */
@@ -115,6 +141,8 @@ body {
     flex-shrink: 0;
     margin: 0;
     padding: 1rem;
+    width: 100%;
+    max-width: 100%;
 }
 
 /* === RESPONSIVE DESIGN === */
@@ -131,6 +159,7 @@ body {
     .main-content {
         margin-left: 0;
         width: 100%;
+        max-width: 100%;
     }
 
     .mobile-menu-toggle {
@@ -138,6 +167,10 @@ body {
     }
 
     .content-wrapper {
+        padding: 0;
+    }
+
+    .content-wrapper .container-fluid {
         padding: 0.5rem;
     }
 
@@ -476,17 +509,21 @@ body {
     padding: 0;
     overflow-x: hidden;
     max-width: 100%;
+    width: 100%;
 }
 
 .row.g-0 {
     margin: 0;
     overflow-x: hidden;
+    max-width: 100%;
 }
 
 /* Main content container fixes */
 .content-wrapper .container-fluid {
-    padding: 0 1rem;
+    padding: 1rem;
     max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 
 /* Ensure proper table responsiveness */
@@ -499,46 +536,98 @@ body {
 /* Fix for wide content */
 .card,
 .chart-container,
-.metric-card {
+.metric-card,
+.status-card {
     max-width: 100%;
     overflow: hidden;
     word-wrap: break-word;
+    box-sizing: border-box;
+}
+
+/* Ensure tables are responsive */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 0;
+    max-width: 100%;
+}
+
+.table {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Fix button groups */
+.btn-group {
+    flex-wrap: wrap;
+}
+
+/* Ensure forms don't overflow */
+.form-control,
+.form-select {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Fix charts and canvas elements */
+canvas {
+    max-width: 100% !important;
+    height: auto !important;
+}
+
+/* Fix dropdown menus */
+.dropdown-menu {
+    max-width: calc(100vw - 2rem);
 }
 
 /* Ensure rows don't overflow */
-.row {
+.content-wrapper .row {
     margin-left: 0;
     margin-right: 0;
+    max-width: 100%;
 }
 
-.col,
-.col-1,
-.col-2,
-.col-3,
-.col-4,
-.col-5,
-.col-6,
-.col-7,
-.col-8,
-.col-9,
-.col-10,
-.col-11,
-.col-12,
-.col-md,
-.col-md-1,
-.col-md-2,
-.col-md-3,
-.col-md-4,
-.col-md-5,
-.col-md-6,
-.col-md-7,
-.col-md-8,
-.col-md-9,
-.col-md-10,
-.col-md-11,
-.col-md-12 {
+/* Fix Bootstrap column spacing */
+.content-wrapper .col,
+.content-wrapper .col-1,
+.content-wrapper .col-2,
+.content-wrapper .col-3,
+.content-wrapper .col-4,
+.content-wrapper .col-5,
+.content-wrapper .col-6,
+.content-wrapper .col-7,
+.content-wrapper .col-8,
+.content-wrapper .col-9,
+.content-wrapper .col-10,
+.content-wrapper .col-11,
+.content-wrapper .col-12,
+.content-wrapper .col-md,
+.content-wrapper .col-md-1,
+.content-wrapper .col-md-2,
+.content-wrapper .col-md-3,
+.content-wrapper .col-md-4,
+.content-wrapper .col-md-5,
+.content-wrapper .col-md-6,
+.content-wrapper .col-md-7,
+.content-wrapper .col-md-8,
+.content-wrapper .col-md-9,
+.content-wrapper .col-md-10,
+.content-wrapper .col-md-11,
+.content-wrapper .col-md-12 {
     padding-left: 0.75rem;
     padding-right: 0.75rem;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* Responsive column adjustments */
+@media (max-width: 768px) {
+
+    .content-wrapper .col,
+    .content-wrapper [class*="col-"] {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
 }
 
 /* Ensure forms don't overflow */
