@@ -20,7 +20,8 @@
     <link href="/static/css/dashboard.css" rel="stylesheet" />
     <link href="/static/css/common.css" rel="stylesheet" />
 
-    {% block head %}{% endblock %}
+    {% block head %}
+    {% endblock %}
   </head>
   <body>
     <!-- Connection Status -->
@@ -31,11 +32,7 @@
     <div class="container-fluid p-0">
       <div class="row g-0">
         <!-- Mobile Menu Toggle -->
-        <button class="mobile-menu-toggle btn btn-primary d-md-none position-fixed" 
-                style="top: 1rem; left: 1rem; z-index: 1001; display: none;"
-                onclick="toggleSidebar()">
-          <i class="bi bi-list"></i>
-        </button>
+        <button class="mobile-menu-toggle btn btn-primary d-md-none position-fixed" style="top: 1rem; left: 1rem; z-index: 1001; display: none;" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
 
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
@@ -89,27 +86,31 @@
                     Account
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="/settings"><i class="bi bi-gear me-2"></i>Settings</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </nav>
-                  <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
-                  <ul class="dropdown-menu">
                     <li>
-                      <a class="dropdown-item" href="#" onclick="refreshData()"><i class="bi bi-arrow-clockwise"></i> Refresh</a>
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="/api/docs" target="_blank"><i class="bi bi-code-square"></i> API Docs</a>
+                      <a class="dropdown-item" href="/settings"><i class="bi bi-gear me-2"></i>Settings</a>
                     </li>
                     <li>
                       <hr class="dropdown-divider" />
                     </li>
                     <li>
-                      <a class="dropdown-item text-danger" href="#" onclick="confirmAction('stop')"><i class="bi bi-stop-circle"></i> Stop Bot</a>
+                      <a class="dropdown-item" href="#"><i class="bi bi-box-arrow-right me-2"></i>Logout</a>
+                    </li>
+                  </ul>
+                </div>
+                <div class="dropdown ms-2">
+                  <button class="btn btn-outline-secondary dropdown-toggle btn-sm" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                  <ul class="dropdown-menu">
+                    <li>
+                      <a class="dropdown-item" href="#" onclick="refreshData()"><i class="bi bi-arrow-clockwise me-2"></i> Refresh</a>
+                    </li>
+                    <li>
+                      <a class="dropdown-item" href="/api/docs" target="_blank"><i class="bi bi-code-square me-2"></i> API Docs</a>
+                    </li>
+                    <li>
+                      <hr class="dropdown-divider" />
+                    </li>
+                    <li>
+                      <a class="dropdown-item text-danger" href="#" onclick="confirmAction('stop')"><i class="bi bi-stop-circle me-2"></i> Stop Bot</a>
                     </li>
                   </ul>
                 </div>
@@ -118,7 +119,7 @@
           </nav>
 
           <!-- Page Content -->
-          <div class="main-content">
+          <div class="content-wrapper">
             {% block content %}
 
             {% endblock %}
@@ -130,197 +131,8 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- WebSocket Connection -->
-    <script>
-      let ws = null
-      let reconnectInterval = null
-      
-      function connectWebSocket() {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-        const wsUrl = `${protocol}//${window.location.host}/ws/realtime`
-      
-        ws = new WebSocket(wsUrl)
-      
-        ws.onopen = function () {
-          console.log('WebSocket connected')
-          updateConnectionStatus(true)
-          if (reconnectInterval) {
-            clearInterval(reconnectInterval)
-            reconnectInterval = null
-          }
-        }
-      
-        ws.onmessage = function (event) {
-          const data = JSON.parse(event.data)
-          handleWebSocketMessage(data)
-        }
-      
-        ws.onclose = function () {
-          console.log('WebSocket disconnected')
-          updateConnectionStatus(false)
-          // Attempt to reconnect every 5 seconds
-          if (!reconnectInterval) {
-            reconnectInterval = setInterval(connectWebSocket, 5000)
-          }
-        }
-      
-        ws.onerror = function (error) {
-          console.error('WebSocket error:', error)
-          updateConnectionStatus(false)
-        }
-      }
-      
-      function updateConnectionStatus(connected) {
-        const statusEl = document.getElementById('connectionStatus')
-        if (connected) {
-          statusEl.className = 'connection-status connection-connected'
-          statusEl.innerHTML = '<i class="bi bi-wifi"></i> Connected'
-        } else {
-          statusEl.className = 'connection-status connection-disconnected'
-          statusEl.innerHTML = '<i class="bi bi-wifi-off"></i> Disconnected'
-        }
-      }
-      
-      function handleWebSocketMessage(data) {
-        // Handle different message types
-        switch (data.type) {
-          case 'initial_data':
-          case 'periodic_update':
-            updateDashboardData(data.data)
-            break
-          case 'broadcast_update':
-            updateDashboardData(data.data)
-            break
-          case 'error':
-            console.error('WebSocket error:', data.message)
-            break
-        }
-      }
-      
-      function updateDashboardData(data) {
-        // Update dashboard elements with real-time data
-        if (typeof updatePortfolioData === 'function') {
-          updatePortfolioData(data.portfolio)
-        }
-        if (typeof updateOrdersData === 'function') {
-          updateOrdersData(data.orders)
-        }
-        if (typeof updateStrategiesData === 'function') {
-          updateStrategiesData(data.strategies)
-        }
-      }
-      
-      function refreshData() {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(
-            JSON.stringify({
-              type: 'request_data',
-              data_type: 'all'
-            })
-          )
-        } else {
-          location.reload()
-        }
-      }
-      
-      function confirmAction(action) {
-        if (confirm(`Are you sure you want to ${action} the trading bot?`)) {
-          fetch(`/api/control/${action}`, { method: 'POST' })
-            .then((response) => {
-              if (response.ok) {
-                showNotification(`Bot ${action} command executed successfully`, 'success')
-                // Reload page after a short delay to show notification
-                setTimeout(() => location.reload(), 1000)
-              } else {
-                response
-                  .json()
-                  .then((data) => {
-                    showNotification(`Action failed: ${data.detail || 'Unknown error'}`, 'error')
-                  })
-                  .catch(() => {
-                    showNotification('Action failed. Please try again.', 'error')
-                  })
-              }
-            })
-            .catch((error) => {
-              console.error('Error:', error)
-              showNotification('Network error. Please check your connection.', 'error')
-            })
-        }
-      }
-      
-      // Notification system
-      function showNotification(message, type = 'info') {
-        const notification = document.createElement('div')
-        notification.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} alert-dismissible fade show position-fixed`
-        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;'
-        notification.innerHTML = `
-                      ${message}
-                      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    `
-        document.body.appendChild(notification)
-      
-        // Auto-remove after 4 seconds
-        setTimeout(() => {
-          if (notification.parentNode) {
-            notification.remove()
-          }
-        }, 4000)
-      }
-      
-      // Utility functions
-      function formatCurrency(value) {
-        return new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        }).format(value)
-      }
-      
-      function formatPercentage(value) {
-        return new Intl.NumberFormat('en-US', {
-          style: 'percent',
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-          signDisplay: 'always'
-        }).format(value / 100)
-      }
-      
-      function formatNumber(value, decimals = 2) {
-        return new Intl.NumberFormat('en-US', {
-          minimumFractionDigits: decimals,
-          maximumFractionDigits: decimals
-        }).format(value)
-      }
-      
-      // Mobile sidebar toggle
-      function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        sidebar.classList.toggle('show');
-      }
-      
-      // Close sidebar when clicking outside on mobile
-      document.addEventListener('click', function(event) {
-        const sidebar = document.getElementById('sidebar');
-        const toggle = document.querySelector('.mobile-menu-toggle');
-        
-        if (window.innerWidth <= 768 && 
-            !sidebar.contains(event.target) && 
-            !toggle.contains(event.target) && 
-            sidebar.classList.contains('show')) {
-          sidebar.classList.remove('show');
-        }
-      });
-      
-      // Initialize WebSocket connection when page loads
-      document.addEventListener('DOMContentLoaded', function () {
-        connectWebSocket()
-      })
-    </script>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JavaScript -->
+    <script src="/static/js/dashboard.js"></script>
 
     {% block scripts %}
 
