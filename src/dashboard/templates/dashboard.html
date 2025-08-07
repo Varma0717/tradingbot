@@ -346,31 +346,41 @@
     }
     
     function updatePortfolioSummary(summary) {
-        if (summary) {
-            // Update portfolio balance
+        // Get paper trading data for integration
+        const paperTradingData = getPaperTradingData();
+        
+        if (summary || paperTradingData) {
+            // Update portfolio balance with paper trading data
             const balanceElement = document.getElementById('portfolioBalance');
             if (balanceElement) {
-                balanceElement.textContent = formatCurrency(summary.total_balance || 0);
+                const balance = paperTradingData ? paperTradingData.position.current_value : (summary?.total_balance || 0);
+                balanceElement.textContent = formatCurrency(balance);
             }
             
-            // Update P&L
+            // Update P&L with paper trading profit
             const pnlElement = document.getElementById('totalPnl');
             if (pnlElement) {
-                const pnl = summary.total_pnl || 0;
+                const pnl = paperTradingData ? paperTradingData.statistics.total_profit : (summary?.total_pnl || 0);
                 pnlElement.innerHTML = `<span class="${pnl >= 0 ? 'profit' : 'loss'}">${formatCurrency(pnl)}</span>`;
             }
             
-            // Update P&L percentage
+            // Update P&L percentage with paper trading ROI
             const pnlPercentElement = document.getElementById('pnlPercentage');
             if (pnlPercentElement) {
-                const pnlPct = summary.daily_change || 0;
+                const pnlPct = paperTradingData ? paperTradingData.performance.roi_percentage : (summary?.daily_change || 0);
                 pnlPercentElement.textContent = formatPercentage(pnlPct / 100);
             }
             
-            // Update positions count
+            // Update positions count (include paper trading position)
             const positionsElement = document.getElementById('activePositions');
             if (positionsElement) {
-                positionsElement.textContent = summary.positions_count || 0;
+                const positions = (summary?.positions_count || 0) + (paperTradingData ? 1 : 0);
+                positionsElement.textContent = positions;
+            }
+            
+            // Show paper trading indicator on dashboard
+            if (paperTradingData) {
+                showPaperTradingStatusOnDashboard();
             }
         }
     }
@@ -580,5 +590,48 @@
                 `;
             });
     }
+
+    // Helper functions for paper trading integration
+    function getPaperTradingData() {
+        return window.paperTradingManager ? window.paperTradingManager.getData() : null;
+    }
+
+    function showPaperTradingStatusOnDashboard() {
+        // Update the strategies section to show paper trading status
+        const strategiesElement = document.getElementById('strategiesSummary');
+        if (strategiesElement && !document.getElementById('paperTradingStatus')) {
+            const paperTradingData = getPaperTradingData();
+            if (paperTradingData) {
+                const paperTradingStatus = document.createElement('div');
+                paperTradingStatus.id = 'paperTradingStatus';
+                paperTradingStatus.className = 'alert alert-success mt-2';
+                paperTradingStatus.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>🎯 Paper Trading Active</strong><br>
+                            <small>Grid DCA on BTC/USDT: +$${paperTradingData.statistics.total_profit.toFixed(2)} (+${paperTradingData.performance.roi_percentage.toFixed(2)}%)</small>
+                        </div>
+                        <a href="/grid-dca" class="btn btn-sm btn-outline-success">View Details</a>
+                    </div>
+                `;
+                strategiesElement.appendChild(paperTradingStatus);
+            }
+        }
+    }
+    
+    // Listen for real-time paper trading updates
+    window.addEventListener('paperTradingUpdate', function(event) {
+        console.log('📊 Dashboard received paper trading update:', event.detail);
+        updatePortfolioSummary(null); // Refresh with latest paper trading data
+        
+        // Update paper trading status if it exists
+        const statusElement = document.getElementById('paperTradingStatus');
+        if (statusElement && event.detail) {
+            const small = statusElement.querySelector('small');
+            if (small) {
+                small.textContent = `Grid DCA on BTC/USDT: ${event.detail.formatted.profit} (${event.detail.formatted.roi})`;
+            }
+        }
+    });
 </script>
 {% endblock %}

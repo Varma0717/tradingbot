@@ -380,14 +380,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Auto refresh every 30 seconds for live feel
     setInterval(loadStrategyData, 30000);
     
-    // Periodic profit updates to simulate live trading
-    setInterval(() => {
-        if (Math.random() > 0.6) { // 40% chance every interval
-            const profits = ['+$1.89', '+$2.24', '+$1.67', '+$2.41', '+$1.93'];
-            const profit = profits[Math.floor(Math.random() * profits.length)];
-            showToast(`💰 Grid trade completed: ${profit} profit!`, 'success');
+    // Listen for real-time paper trading updates
+    window.addEventListener('paperTradingUpdate', function(event) {
+        console.log('🎯 Grid DCA received paper trading update:', event.detail);
+        updateUI(); // Refresh with latest data
+        
+        // Show trade notifications occasionally
+        if (Math.random() > 0.8) {
+            showToast(`💰 New trade: ${event.detail.formatted.profit} total profit!`, 'success');
         }
-    }, 45000);
+    });
 });
 
 function setupEventListeners() {
@@ -429,41 +431,15 @@ async function loadStrategyData() {
 }
 
 function updateUI() {
-    // Simulate live paper trading data - Professional trader setup
-    const paperTradeData = {
-        status: 'active',
-        symbol: 'BTC/USDT',
-        position: {
-            current_position: 0.03524,  // Professional position size
-            current_value: 2387.50,      // Current portfolio value
-            unrealized_pnl: 47.50        // Active profit
-        },
-        statistics: {
-            total_profit: 147.80,        // Total session profit
-            win_rate: 92.3,              // Excellent win rate
-            total_trades: 28,            // Active trading
-            grid_trades: 26,
-            dca_trades: 2,
-            max_drawdown: -2.1           // Controlled risk
-        },
-        performance: {
-            roi_percentage: 5.91,        // Strong ROI
-            profit_per_trade: 1.89       // Consistent profits
-        },
-        grid: {
-            grid_levels: 12,             // Professional setup
-            grid_spacing: 1.5,           // Tight but effective
-            active_orders: 8             // Multiple active positions
-        },
-        dca: {
-            dca_enabled: true,
-            dca_levels_used: 1,
-            max_dca_levels: 4,
-            next_dca_price: 66240        // Strategic DCA level
-        }
-    };
+    // Get real-time paper trading data from shared manager
+    const paperTradingData = window.paperTradingManager ? window.paperTradingManager.getData() : null;
     
-    const data = paperTradeData;
+    if (!paperTradingData) {
+        console.warn('No paper trading data available');
+        return;
+    }
+    
+    const data = paperTradingData;
     
     // Update status cards with live trading data
     document.getElementById('strategyStatus').innerHTML = 
@@ -499,16 +475,25 @@ function updateUI() {
         `$${data.dca.next_dca_price.toLocaleString()}`;
     document.getElementById('dcaTrigger').textContent = '4.0% drawdown';
     
+    // Update statistics in sidebar
+    document.getElementById('gridTrades').textContent = data.statistics.grid_trades;
+    document.getElementById('dcaTrades').textContent = data.statistics.dca_trades;
+    document.getElementById('profitPerTrade').textContent = 
+        `$${data.performance.profit_per_trade.toFixed(2)}`;
+    document.getElementById('maxDrawdown').textContent = 
+        `${data.statistics.max_drawdown.toFixed(1)}%`;
+    
     // Update button states for active trading
     document.getElementById('startStrategyBtn').style.display = 'none';
     document.getElementById('stopStrategyBtn').style.display = 'inline-block';
     
     // Show additional trading info
-    console.log('📊 Paper Trade Update:', {
+    console.log('📊 Grid DCA Update:', {
         profit: `+$${data.statistics.total_profit}`,
         roi: `+${data.performance.roi_percentage}%`,
         trades: data.statistics.total_trades,
-        winRate: `${data.statistics.win_rate}%`
+        winRate: `${data.statistics.win_rate}%`,
+        runtime: window.paperTradingManager ? window.paperTradingManager.getRuntime() : 'N/A'
     });
 }
 
