@@ -17,10 +17,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Custom CSS -->
     <link href="/static/css/style.css" rel="stylesheet" />
-    <link href="/static/css/dashboard.css" rel="stylesheet" />
-    <link href="/static/css/common.css" rel="stylesheet" />
 
     {% block head %}
+
     {% endblock %}
   </head>
   <body>
@@ -120,9 +119,11 @@
 
           <!-- Page Content -->
           <div class="content-wrapper">
-            {% block content %}
+            <div class="container-fluid">
+              {% block content %}
 
-            {% endblock %}
+              {% endblock %}
+            </div>
           </div>
         </div>
       </div>

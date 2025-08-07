@@ -96,15 +96,32 @@ body {
 /* === MAIN CONTENT === */
 .main-content {
     margin-left: var(--sidebar-width);
-    padding: 1rem;
     min-height: 100vh;
     background-color: var(--light-color);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Content wrapper for proper spacing */
+.content-wrapper {
+    flex: 1;
+    padding: 1rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+/* Navbar in main content */
+.main-content .navbar {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 1rem;
 }
 
 /* === RESPONSIVE DESIGN === */
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(-100%);
+        z-index: 1050;
     }
 
     .sidebar.show {
@@ -113,10 +130,19 @@ body {
 
     .main-content {
         margin-left: 0;
+        width: 100%;
     }
 
     .mobile-menu-toggle {
         display: block !important;
+    }
+
+    .content-wrapper {
+        padding: 0.5rem;
+    }
+
+    .main-content .navbar {
+        padding: 0.5rem 1rem;
     }
 }
 
@@ -441,6 +467,92 @@ body {
 
     .status-card {
         padding: 1rem;
+        text-align: center;
+    }
+}
+
+/* === LAYOUT FIXES === */
+.container-fluid {
+    padding: 0;
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
+.row.g-0 {
+    margin: 0;
+    overflow-x: hidden;
+}
+
+/* Main content container fixes */
+.content-wrapper .container-fluid {
+    padding: 0 1rem;
+    max-width: 100%;
+}
+
+/* Ensure proper table responsiveness */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 0;
+}
+
+/* Fix for wide content */
+.card,
+.chart-container,
+.metric-card {
+    max-width: 100%;
+    overflow: hidden;
+    word-wrap: break-word;
+}
+
+/* Ensure rows don't overflow */
+.row {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.col,
+.col-1,
+.col-2,
+.col-3,
+.col-4,
+.col-5,
+.col-6,
+.col-7,
+.col-8,
+.col-9,
+.col-10,
+.col-11,
+.col-12,
+.col-md,
+.col-md-1,
+.col-md-2,
+.col-md-3,
+.col-md-4,
+.col-md-5,
+.col-md-6,
+.col-md-7,
+.col-md-8,
+.col-md-9,
+.col-md-10,
+.col-md-11,
+.col-md-12 {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+}
+
+/* Ensure forms don't overflow */
+.form-control,
+.form-select {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Additional mobile fixes */
+@media (max-width: 576px) {
+    .status-card {
+        padding: 1rem;
+        text-align: center;
     }
 
     .chart-container {
