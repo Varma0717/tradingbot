@@ -5,7 +5,7 @@
 
 class PaperTradingManager {
     constructor() {
-        this.isActive = true;
+        this.isActive = false; // Changed to false - don't auto-start paper trading
         this.startTime = new Date();
         this.data = {
             symbol: 'BTC/USDT',

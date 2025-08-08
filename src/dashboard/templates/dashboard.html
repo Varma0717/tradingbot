@@ -22,6 +22,12 @@
                                 <i class="bi bi-hourglass-split"></i> Loading...
                             </span>
                         </span>
+                        
+                        <!-- Paper Trading Toggle -->
+                        <button id="paperTradingToggle" class="btn btn-outline-info btn-sm me-2" onclick="togglePaperTrading()">
+                            <i class="bi bi-play-circle"></i> Paper Trading
+                        </button>
+                        
                         <div class="btn-group">
                             <button class="btn btn-success btn-custom btn-sm" onclick="confirmAction('start')">
                                 <i class="bi bi-play-fill"></i> Start
@@ -346,36 +352,56 @@
     }
     
     function updatePortfolioSummary(summary) {
-        // Get paper trading data for integration
+        // Priority: Real data first, then paper trading data as fallback
         const paperTradingData = getPaperTradingData();
         
+        // Fetch and display real balance data
+        loadRealBalanceData();
+        
         if (summary || paperTradingData) {
-            // Update portfolio balance with paper trading data
+            // Update portfolio balance - prioritize real data
             const balanceElement = document.getElementById('portfolioBalance');
-            if (balanceElement) {
-                const balance = paperTradingData ? paperTradingData.position.current_value : (summary?.total_balance || 0);
-                balanceElement.textContent = formatCurrency(balance);
+            if (balanceElement && summary?.total_balance) {
+                // Use real balance data when available
+                balanceElement.textContent = formatCurrency(summary.total_balance);
+            } else if (balanceElement && paperTradingData) {
+                // Fallback to paper trading data
+                balanceElement.textContent = formatCurrency(paperTradingData.position.current_value);
+                balanceElement.innerHTML += ' <small class="text-warning">(Paper)</small>';
             }
             
-            // Update P&L with paper trading profit
+            // Update P&L - prioritize real data  
             const pnlElement = document.getElementById('totalPnl');
-            if (pnlElement) {
-                const pnl = paperTradingData ? paperTradingData.statistics.total_profit : (summary?.total_pnl || 0);
+            if (pnlElement && summary?.total_pnl !== undefined) {
+                // Use real P&L data
+                const pnl = summary.total_pnl;
                 pnlElement.innerHTML = `<span class="${pnl >= 0 ? 'profit' : 'loss'}">${formatCurrency(pnl)}</span>`;
+            } else if (pnlElement && paperTradingData) {
+                // Fallback to paper trading profit
+                const pnl = paperTradingData.statistics.total_profit;
+                pnlElement.innerHTML = `<span class="${pnl >= 0 ? 'profit' : 'loss'}">${formatCurrency(pnl)} <small class="text-warning">(Paper)</small></span>`;
             }
             
-            // Update P&L percentage with paper trading ROI
+            // Update P&L percentage - prioritize real data
             const pnlPercentElement = document.getElementById('pnlPercentage');
-            if (pnlPercentElement) {
-                const pnlPct = paperTradingData ? paperTradingData.performance.roi_percentage : (summary?.daily_change || 0);
-                pnlPercentElement.textContent = formatPercentage(pnlPct / 100);
+            if (pnlPercentElement && summary?.daily_change !== undefined) {
+                // Use real percentage change
+                pnlPercentElement.textContent = formatPercentage(summary.daily_change / 100);
+            } else if (pnlPercentElement && paperTradingData) {
+                // Fallback to paper trading ROI
+                pnlPercentElement.textContent = formatPercentage(paperTradingData.performance.roi_percentage / 100) + ' (Paper)';
             }
             
-            // Update positions count (include paper trading position)
+            // Update positions count - prioritize real data
             const positionsElement = document.getElementById('activePositions');
             if (positionsElement) {
-                const positions = (summary?.positions_count || 0) + (paperTradingData ? 1 : 0);
-                positionsElement.textContent = positions;
+                const realPositions = summary?.positions_count || 0;
+                const paperPosition = paperTradingData ? 1 : 0;
+                const totalPositions = realPositions + paperPosition;
+                positionsElement.textContent = totalPositions;
+                if (paperPosition > 0 && realPositions === 0) {
+                    positionsElement.innerHTML += ' <small class="text-warning">(Paper)</small>';
+                }
             }
             
             // Show paper trading indicator on dashboard
@@ -386,16 +412,67 @@
     }
     
     function updateBalanceDisplay(balanceData) {
-        if (balanceData && balanceData.balance) {
-            const total = balanceData.balance.total || {};
-            const usdtBalance = total.USDT || 0;
+        if (balanceData) {
+            console.log('Real balance data received:', balanceData);
             
-            // Update main balance display
+            // Handle different response formats
+            let balance = balanceData.balance || balanceData;
+            let total = balance.total || balance;
+            
+            // Calculate total balance in USD
+            let totalBalance = 0;
+            if (total.USDT) {
+                totalBalance += parseFloat(total.USDT) || 0;
+            }
+            if (total.BTC) {
+                // For demonstration, assume BTC price ~$67000
+                totalBalance += (parseFloat(total.BTC) || 0) * 67000;
+            }
+            if (total.ETH) {
+                // For demonstration, assume ETH price ~$2600
+                totalBalance += (parseFloat(total.ETH) || 0) * 2600;
+            }
+            
+            // Update main balance display with real data
             const balanceElement = document.getElementById('portfolioBalance');
-            if (balanceElement && usdtBalance > 0) {
-                balanceElement.textContent = formatCurrency(usdtBalance);
+            if (balanceElement && totalBalance > 0) {
+                balanceElement.innerHTML = `${formatCurrency(totalBalance)} <small class="text-success">(Live)</small>`;
+                console.log(`Real balance displayed: $${totalBalance.toFixed(2)}`);
+            } else if (balanceElement) {
+                // Show message if no balance
+                balanceElement.innerHTML = '<span class="text-muted">$0.00 <small>(No balance)</small></span>';
+            }
+            
+            // Update additional balance info if available
+            if (total.USDT || total.BTC || total.ETH) {
+                const balanceBreakdown = [];
+                if (total.USDT && parseFloat(total.USDT) > 0) {
+                    balanceBreakdown.push(`USDT: ${parseFloat(total.USDT).toFixed(2)}`);
+                }
+                if (total.BTC && parseFloat(total.BTC) > 0) {
+                    balanceBreakdown.push(`BTC: ${parseFloat(total.BTC).toFixed(6)}`);
+                }
+                if (total.ETH && parseFloat(total.ETH) > 0) {
+                    balanceBreakdown.push(`ETH: ${parseFloat(total.ETH).toFixed(6)}`);
+                }
+                
+                if (balanceBreakdown.length > 0) {
+                    console.log('Balance breakdown:', balanceBreakdown.join(', '));
+                }
             }
         }
+    }
+    
+    function loadRealBalanceData() {
+        fetch('/api/balance')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Fetching real balance data...');
+                updateBalanceDisplay(data);
+            })
+            .catch(error => {
+                console.error('Error loading real balance:', error);
+            });
     }
     
     function updatePositionsDisplay(positions) {
@@ -618,6 +695,43 @@
             }
         }
     }
+    
+    // Paper Trading Controls
+    function togglePaperTrading() {
+        const manager = window.paperTradingManager;
+        const toggleButton = document.getElementById('paperTradingToggle');
+        
+        if (manager.isActive) {
+            // Stop paper trading
+            manager.stop();
+            toggleButton.innerHTML = '<i class="bi bi-play-circle"></i> Paper Trading';
+            toggleButton.className = 'btn btn-outline-info btn-sm me-2';
+            showToast('📊 Paper trading stopped. Showing real data.', 'info');
+        } else {
+            // Start paper trading
+            manager.restart();
+            toggleButton.innerHTML = '<i class="bi bi-stop-circle"></i> Stop Paper';
+            toggleButton.className = 'btn btn-outline-warning btn-sm me-2';
+            showToast('🎯 Paper trading started! Grid DCA simulation active.', 'success');
+        }
+        
+        // Refresh dashboard data
+        loadDashboardData();
+    }
+    
+    // Update paper trading toggle on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const manager = window.paperTradingManager;
+        const toggleButton = document.getElementById('paperTradingToggle');
+        
+        if (manager && manager.isActive) {
+            toggleButton.innerHTML = '<i class="bi bi-stop-circle"></i> Stop Paper';
+            toggleButton.className = 'btn btn-outline-warning btn-sm me-2';
+        } else {
+            toggleButton.innerHTML = '<i class="bi bi-play-circle"></i> Paper Trading';
+            toggleButton.className = 'btn btn-outline-info btn-sm me-2';
+        }
+    });
     
     // Listen for real-time paper trading updates
     window.addEventListener('paperTradingUpdate', function(event) {
