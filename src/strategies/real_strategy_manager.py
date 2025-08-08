@@ -10,10 +10,11 @@ class RealStrategyManager:
         self.exchange = RealBinanceExchange()
         self.is_running = False
         self.strategies = {}
-        self.trading_pair = "DOGEUSDT"  # Default pair for small balances
+        self.trading_pair = "BTCUSDT"  # Default pair (will be overridden by settings)
 
         # Default configurable settings
         self.settings = {
+            "trading_pair": "BTCUSDT",  # Default trading pair
             "order_size": 2.0,  # Default $2 per order
             "grid_levels": 3,  # Conservative default
             "max_open_orders": 5,
@@ -39,12 +40,18 @@ class RealStrategyManager:
             default_strategy = RealUniversalGridDCAStrategy()
 
             # Apply current settings to strategy
-            default_strategy.order_size_usd = self.settings["order_size"]
-            default_strategy.grid_levels = self.settings["grid_levels"]
-            default_strategy.grid_spacing = self.settings["grid_spacing"]
+            default_strategy.order_size_usd = self.settings.get("order_size", 10.0)
+            default_strategy.grid_levels = self.settings.get("grid_levels", 5)
+            default_strategy.grid_spacing = self.settings.get("grid_spacing", 0.02)
+
+            # Set trading pair from settings
+            trading_pair = self.settings.get("trading_pair", "BTCUSDT")
+            default_strategy.trading_pair = trading_pair
+            self.trading_pair = trading_pair  # Set manager's trading pair too
+            print(f"📊 Strategy trading pair set to: {trading_pair}")
 
             print(
-                f"📊 Strategy configured: ${self.settings['order_size']}/order, {self.settings['grid_levels']} levels, {self.settings['grid_spacing']*100:.1f}% spacing"
+                f"📊 Strategy configured: ${self.settings.get('order_size', 10.0)}/order, {self.settings.get('grid_levels', 5)} levels, {self.settings.get('grid_spacing', 0.02)*100:.1f}% spacing"
             )
 
             # Add to strategies
@@ -61,15 +68,36 @@ class RealStrategyManager:
 
             # Update settings
             for key, value in new_settings.items():
-                if key in self.settings:
+                # Handle trading_pair separately since it's not in self.settings initially
+                if key == "trading_pair":
+                    self.trading_pair = value
+                    self.settings[key] = value
+                    print(f"✅ Updated {key}: {value}")
+                elif key in self.settings or key in [
+                    "take_profit",
+                    "stop_loss",
+                    "enable_notifications",
+                    "paper_balance",
+                    "real_investment",
+                    "max_daily_loss",
+                ]:
                     # Convert to appropriate types
-                    if key in ["order_size"]:
+                    if key in [
+                        "order_size",
+                        "take_profit",
+                        "stop_loss",
+                        "grid_spacing",
+                    ]:
                         self.settings[key] = float(value)
-                    elif key in ["grid_levels", "max_open_orders"]:
+                    elif key in [
+                        "grid_levels",
+                        "max_open_orders",
+                        "paper_balance",
+                        "real_investment",
+                        "max_daily_loss",
+                    ]:
                         self.settings[key] = int(value)
-                    elif key in ["grid_spacing"]:
-                        self.settings[key] = float(value)
-                    elif key in ["auto_restart"]:
+                    elif key in ["auto_restart", "enable_notifications"]:
                         self.settings[key] = bool(value)
                     else:
                         self.settings[key] = value
@@ -137,13 +165,16 @@ class RealStrategyManager:
             # Get current balance
             balance = self.exchange.get_balance()
 
-            # Choose trading pair based on balance
-            if balance >= 50:
-                self.trading_pair = "BTCUSDT"
-                print(f"💰 Large balance detected (${balance:.2f}), using BTC/USDT")
+            # Use the trading pair from settings (user's choice)
+            if "trading_pair" in self.settings:
+                self.trading_pair = self.settings["trading_pair"]
+                print(f"� Using trading pair from settings: {self.trading_pair}")
             else:
-                self.trading_pair = "DOGEUSDT"
-                print(f"💡 Small balance detected (${balance:.2f}), using DOGE/USDT")
+                # Fallback to default if no setting
+                self.trading_pair = "BTCUSDT"
+                print(f"� Using default trading pair: {self.trading_pair}")
+
+            print(f"💰 Current balance: ${balance:.2f}")
 
             # Start all strategies
             started_count = 0

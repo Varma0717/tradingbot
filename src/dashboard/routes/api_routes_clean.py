@@ -635,9 +635,7 @@ async def save_settings(settings: dict):
             try:
                 grid_spacing = float(settings["grid_spacing"])
                 if 0.1 <= grid_spacing <= 10.0:
-                    strategy_settings["grid_spacing"] = (
-                        grid_spacing / 100.0
-                    )  # Convert percentage to decimal
+                    strategy_settings["grid_spacing"] = grid_spacing / 100.0  # Convert percentage to decimal
                     logger.info(f"✅ Updated grid spacing: {grid_spacing}%")
                 else:
                     logger.warning(f"Grid spacing out of range: {grid_spacing}")
@@ -654,9 +652,7 @@ async def save_settings(settings: dict):
                 else:
                     logger.warning(f"Max open orders out of range: {max_orders}")
             except (ValueError, TypeError):
-                logger.warning(
-                    f"Invalid max open orders: {settings['max_open_orders']}"
-                )
+                logger.warning(f"Invalid max open orders: {settings['max_open_orders']}")
 
         # Handle take profit
         if "take_profit" in settings:
@@ -681,15 +677,13 @@ async def save_settings(settings: dict):
         # Handle boolean settings
         boolean_settings = {
             "auto_restart": "auto_restart",
-            "enable_notifications": "enable_notifications",
+            "enable_notifications": "enable_notifications"
         }
-
+        
         for key, setting_key in boolean_settings.items():
             if key in settings:
                 strategy_settings[setting_key] = settings[key] in ["true", True, 1, "1"]
-                logger.info(
-                    f"✅ Updated {setting_key}: {strategy_settings[setting_key]}"
-                )
+                logger.info(f"✅ Updated {setting_key}: {strategy_settings[setting_key]}")
 
         # Update strategy manager settings if we have any valid settings
         if strategy_settings:
@@ -700,31 +694,16 @@ async def save_settings(settings: dict):
             if manager and hasattr(manager, "update_settings"):
                 manager.update_settings(strategy_settings)
                 logger.info("Strategy settings updated successfully")
-
-                # If trading pair changed, also update the real strategies
+                
+                # If trading pair changed, also update the real strategy
                 if "trading_pair" in strategy_settings:
-                    # Update trading pair for all real strategies in the manager
-                    if hasattr(manager, "strategies"):
-                        for strategy_name, strategy in manager.strategies.items():
-                            if hasattr(strategy, "set_trading_pair"):
-                                strategy.set_trading_pair(
-                                    strategy_settings["trading_pair"]
-                                )
-                                logger.info(
-                                    f"Strategy '{strategy_name}' trading pair updated to: {strategy_settings['trading_pair']}"
-                                )
-
-                    # Also update the manager's trading pair if it has one
-                    if hasattr(manager, "trading_pair"):
-                        manager.trading_pair = strategy_settings["trading_pair"]
-                        logger.info(
-                            f"Manager trading pair updated to: {strategy_settings['trading_pair']}"
-                        )
-
+                    real_strategy = manager.get_real_strategy()
+                    if real_strategy and hasattr(real_strategy, "set_trading_pair"):
+                        real_strategy.set_trading_pair(strategy_settings["trading_pair"])
+                        logger.info(f"Real strategy trading pair updated to: {strategy_settings['trading_pair']}")
+                    
             else:
-                logger.warning(
-                    "No active strategy manager or update_settings method not available"
-                )
+                logger.warning("No active strategy manager or update_settings method not available")
 
         return {
             "success": True,
@@ -737,111 +716,3 @@ async def save_settings(settings: dict):
         logger.error(f"Error saving settings: {e}")
         return {"success": False, "error": str(e)}
 
-
-@router.get("/settings")
-async def get_settings():
-    """Get current bot settings."""
-    try:
-        # Get current settings from strategy manager
-        manager = trading_mode_manager.get_active_strategy_manager()
-        current_settings = {}
-
-        if manager and hasattr(manager, "settings"):
-            # Map strategy manager settings to settings page format
-            strategy_settings = manager.settings
-            current_settings = {
-                "trading_pair": strategy_settings.get("trading_pair", "BTCUSDT"),
-                "order_size": strategy_settings.get("order_size", 10.0),
-                "grid_levels": strategy_settings.get("grid_levels", 5),
-                "grid_spacing": strategy_settings.get("grid_spacing", 0.02)
-                * 100,  # Convert to percentage
-                "max_open_orders": strategy_settings.get("max_open_orders", 10),
-                "take_profit": strategy_settings.get("take_profit", 0.02)
-                * 100,  # Convert to percentage
-                "stop_loss": strategy_settings.get("stop_loss", 0.08)
-                * 100,  # Convert to percentage
-                "auto_restart": strategy_settings.get("auto_restart", False),
-                "enable_notifications": strategy_settings.get(
-                    "enable_notifications", True
-                ),
-                "paper_balance": strategy_settings.get("paper_balance", 1000),
-                "real_investment": strategy_settings.get("real_investment", 50),
-                "max_daily_loss": strategy_settings.get("max_daily_loss", 100),
-            }
-
-            # Also get settings from real strategies if available
-            if hasattr(manager, "strategies"):
-                for strategy_name, strategy in manager.strategies.items():
-                    if hasattr(strategy, "trading_pair"):
-                        current_settings["trading_pair"] = getattr(
-                            strategy, "trading_pair", current_settings["trading_pair"]
-                        )
-                    if hasattr(strategy, "order_size_usd"):
-                        current_settings["order_size"] = getattr(
-                            strategy, "order_size_usd", current_settings["order_size"]
-                        )
-                    if hasattr(strategy, "grid_levels"):
-                        current_settings["grid_levels"] = getattr(
-                            strategy, "grid_levels", current_settings["grid_levels"]
-                        )
-                    if hasattr(strategy, "grid_spacing"):
-                        current_settings["grid_spacing"] = (
-                            getattr(
-                                strategy,
-                                "grid_spacing",
-                                current_settings["grid_spacing"] / 100,
-                            )
-                            * 100
-                        )
-                    break  # Just use the first strategy for now
-
-            # Also get trading pair from manager if available
-            if hasattr(manager, "trading_pair"):
-                current_settings["trading_pair"] = getattr(
-                    manager, "trading_pair", current_settings["trading_pair"]
-                )
-        else:
-            # Default settings if no manager available
-            current_settings = {
-                "trading_pair": "BTCUSDT",
-                "order_size": 10.0,
-                "grid_levels": 5,
-                "grid_spacing": 2.0,
-                "max_open_orders": 10,
-                "take_profit": 2.0,
-                "stop_loss": 8.0,
-                "auto_restart": False,
-                "enable_notifications": True,
-                "paper_balance": 1000,
-                "real_investment": 50,
-                "max_daily_loss": 100,
-            }
-
-        logger.info(f"Retrieved settings: {current_settings}")
-
-        return {
-            "success": True,
-            "data": current_settings,
-            "timestamp": datetime.now().isoformat(),
-        }
-
-    except Exception as e:
-        logger.error(f"Error getting settings: {e}")
-        return {
-            "success": False,
-            "error": str(e),
-            "data": {
-                "trading_pair": "BTCUSDT",
-                "order_size": 10.0,
-                "grid_levels": 5,
-                "grid_spacing": 2.0,
-                "max_open_orders": 10,
-                "take_profit": 2.0,
-                "stop_loss": 8.0,
-                "auto_restart": False,
-                "enable_notifications": True,
-                "paper_balance": 1000,
-                "real_investment": 50,
-                "max_daily_loss": 100,
-            },
-        }

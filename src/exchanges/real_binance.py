@@ -87,20 +87,50 @@ class RealBinanceExchange:
                 if filter_info["filterType"] == "PRICE_FILTER":
                     tick_size = float(filter_info["tickSize"])
                     # Calculate precision from tick size more accurately
-                    tick_str = f"{tick_size:.20f}".rstrip("0")
-                    if "." in tick_str:
-                        price_precision = len(tick_str.split(".")[1])
-                    else:
+                    if tick_size >= 1:
                         price_precision = 0
+                    elif tick_size >= 0.1:
+                        price_precision = 1
+                    elif tick_size >= 0.01:
+                        price_precision = 2
+                    elif tick_size >= 0.001:
+                        price_precision = 3
+                    elif tick_size >= 0.0001:
+                        price_precision = 4
+                    elif tick_size >= 0.00001:
+                        price_precision = 5
+                    elif tick_size >= 0.000001:
+                        price_precision = 6
+                    elif tick_size >= 0.0000001:
+                        price_precision = 7
+                    elif tick_size >= 0.00000001:
+                        price_precision = 8
+                    else:
+                        price_precision = 8  # Cap at 8 decimal places
 
                 elif filter_info["filterType"] == "LOT_SIZE":
                     step_size = float(filter_info["stepSize"])
                     # Calculate precision from step size more accurately
-                    step_str = f"{step_size:.20f}".rstrip("0")
-                    if "." in step_str:
-                        quantity_precision = len(step_str.split(".")[1])
-                    else:
+                    if step_size >= 1:
                         quantity_precision = 0
+                    elif step_size >= 0.1:
+                        quantity_precision = 1
+                    elif step_size >= 0.01:
+                        quantity_precision = 2
+                    elif step_size >= 0.001:
+                        quantity_precision = 3
+                    elif step_size >= 0.0001:
+                        quantity_precision = 4
+                    elif step_size >= 0.00001:
+                        quantity_precision = 5
+                    elif step_size >= 0.000001:
+                        quantity_precision = 6
+                    elif step_size >= 0.0000001:
+                        quantity_precision = 7
+                    elif step_size >= 0.00000001:
+                        quantity_precision = 8
+                    else:
+                        quantity_precision = 8  # Cap at 8 decimal places
 
             print(
                 f"Symbol {symbol} precision: price={price_precision}, quantity={quantity_precision}"
@@ -109,7 +139,7 @@ class RealBinanceExchange:
 
         except Exception as e:
             print(f"Error getting precision for {symbol}: {e}")
-            return 2, 2  # Default precision
+            return 2, 6  # Default precision for BTCUSDT-like pairs
 
     def place_limit_order(self, symbol, side, quantity, price):
         """Place a limit order on Binance"""

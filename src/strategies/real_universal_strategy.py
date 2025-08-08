@@ -9,14 +9,53 @@ class RealUniversalGridDCAStrategy:
         """Initialize real grid DCA strategy"""
         self.exchange = RealBinanceExchange()
         self.is_running = False
-        self.trading_pair = "DOGEUSDT"
+        self.trading_pair = "BTCUSDT"
         self.grid_levels = 5
         self.grid_spacing = 0.02  # 2% spacing between grid levels
-        self.order_size_usd = 2.0  # $2 per order
+        self.order_size_usd = 2.0  # $2 per order (small orders for testing)
         self.open_orders = {}
         self.thread = None
 
+        # Caching for API calls
+        self._orders_cache = []
+        self._orders_cache_time = 0
+        self._balance_cache = None
+        self._balance_cache_time = 0
+        self._cache_duration = 10  # Cache for 10 seconds
+
         print("✅ Real Universal Grid DCA Strategy initialized")
+
+    def update_settings(self, settings):
+        """Update strategy settings dynamically"""
+        try:
+            updated = []
+
+            if "trading_pair" in settings:
+                self.trading_pair = settings["trading_pair"]
+                updated.append(f"trading_pair: {self.trading_pair}")
+
+            if "order_size" in settings:
+                self.order_size_usd = float(settings["order_size"])
+                updated.append(f"order_size: ${self.order_size_usd}")
+
+            if "grid_levels" in settings:
+                self.grid_levels = int(settings["grid_levels"])
+                updated.append(f"grid_levels: {self.grid_levels}")
+
+            if "grid_spacing" in settings:
+                self.grid_spacing = float(settings["grid_spacing"])
+                updated.append(f"grid_spacing: {self.grid_spacing*100:.1f}%")
+
+            if updated:
+                print(f"✅ Strategy settings updated: {', '.join(updated)}")
+                return True
+            else:
+                print("⚠️ No valid settings provided for update")
+                return False
+
+        except Exception as e:
+            print(f"❌ Error updating strategy settings: {e}")
+            return False
 
     def set_trading_pair(self, pair):
         """Set the trading pair for this strategy"""
@@ -49,6 +88,39 @@ class RealUniversalGridDCAStrategy:
         """Calculate quantity based on order size in USD"""
         return self.order_size_usd / price
 
+    def adopt_existing_orders(self):
+        """Check for existing orders and add them to tracking"""
+        try:
+            print("🔍 Checking for existing orders to adopt...")
+
+            # Get all open orders for this symbol
+            open_orders = self.exchange.get_open_orders(self.trading_pair)
+
+            adopted_count = 0
+            for order in open_orders:
+                order_id = str(order["orderId"])
+
+                # Only adopt if not already tracking
+                if order_id not in self.open_orders:
+                    self.open_orders[order_id] = {
+                        "side": order["side"],
+                        "price": float(order["price"]),
+                        "quantity": float(order["origQty"]),
+                        "timestamp": datetime.fromtimestamp(order["time"] / 1000),
+                    }
+                    adopted_count += 1
+                    print(
+                        f"✅ Adopted existing order: {order['side']} {order['origQty']} @ ${order['price']}"
+                    )
+
+            if adopted_count > 0:
+                print(f"📋 Adopted {adopted_count} existing orders for monitoring")
+            else:
+                print("📋 No existing orders to adopt")
+
+        except Exception as e:
+            print(f"⚠️ Error adopting existing orders: {e}")
+
     def place_grid_orders(self):
         """Place initial grid orders - start with just one buy order"""
         try:
@@ -68,12 +140,69 @@ class RealUniversalGridDCAStrategy:
             buy_price = current_price * (
                 1 - self.grid_spacing
             )  # 2% below current price
+
+            # Calculate quantity based on order size
             quantity = self.calculate_quantity(buy_price)
 
-            if balance >= self.order_size_usd:
+            # Calculate actual order cost
+            order_cost = quantity * buy_price
+
+            # Add small buffer for fees and precision
+            required_balance = order_cost * 1.01  # 1% buffer
+
+            # If balance is tight, immediately use auto-adjustment
+            if balance < required_balance or balance < self.order_size_usd * 1.05:
+                # Auto-adjust order size to fit available balance
+                max_safe_order_size = balance * 0.95  # Use 95% of balance to be safe
+                adjusted_quantity = max_safe_order_size / buy_price
+
+                # Apply minimum quantity constraints
+                min_quantity = 0.00001  # Minimum BTC order size
+
+                if adjusted_quantity >= min_quantity:
+                    print(f"💡 Auto-adjusting order size to fit balance:")
+                    print(
+                        f"   Original: ${order_cost:.2f} → Adjusted: ${max_safe_order_size:.2f}"
+                    )
+                    print(
+                        f"🎯 Placing adjusted buy order: {adjusted_quantity:.6f} {self.trading_pair} @ ${buy_price:.6f}"
+                    )
+
+                    result = self.exchange.place_limit_order(
+                        symbol=self.trading_pair,
+                        side="BUY",
+                        quantity=adjusted_quantity,
+                        price=buy_price,
+                    )
+
+                    if result["success"]:
+                        self.open_orders[result["order_id"]] = {
+                            "side": "BUY",
+                            "price": buy_price,
+                            "quantity": adjusted_quantity,
+                            "timestamp": datetime.now(),
+                        }
+                        print(
+                            f"✅ Adjusted buy order placed: {adjusted_quantity:.6f} {self.trading_pair} @ ${buy_price:.6f}"
+                        )
+                        print(
+                            f"📊 Strategy will place sell order when this buy order fills"
+                        )
+                    else:
+                        print(
+                            f"❌ Failed to place adjusted order: {result.get('error', 'Unknown error')}"
+                        )
+                else:
+                    print(
+                        f"⚠️ Balance too small for minimum order: ${balance:.2f} (need ~${min_quantity * buy_price:.2f})"
+                    )
+                return
+
+            if balance >= required_balance:
                 print(
-                    f"🎯 Placing initial buy order: {quantity:.2f} {self.trading_pair} @ ${buy_price:.6f}"
+                    f"🎯 Placing initial buy order: {quantity:.6f} {self.trading_pair} @ ${buy_price:.6f}"
                 )
+                print(f"💵 Order cost: ${order_cost:.2f} (Available: ${balance:.2f})")
 
                 result = self.exchange.place_limit_order(
                     symbol=self.trading_pair,
@@ -90,7 +219,7 @@ class RealUniversalGridDCAStrategy:
                         "timestamp": datetime.now(),
                     }
                     print(
-                        f"✅ Initial buy order placed: {quantity:.2f} {self.trading_pair} @ ${buy_price:.6f}"
+                        f"✅ Initial buy order placed: {quantity:.6f} {self.trading_pair} @ ${buy_price:.6f}"
                     )
                     print(
                         f"📊 Strategy will place sell order when this buy order fills"
@@ -101,7 +230,7 @@ class RealUniversalGridDCAStrategy:
                     )
             else:
                 print(
-                    f"⚠️ Insufficient balance for any orders: ${balance:.2f} < ${self.order_size_usd}"
+                    f"⚠️ Insufficient balance: ${balance:.2f} < ${required_balance:.2f}"
                 )
 
         except Exception as e:
@@ -109,12 +238,18 @@ class RealUniversalGridDCAStrategy:
 
     def monitor_and_replace_orders(self):
         """Monitor filled orders and replace them"""
+        print(f"🔍 Starting order monitoring thread for {self.trading_pair}")
+
         while self.is_running:
             try:
+                print(f"🔄 Checking {len(self.open_orders)} tracked orders...")
+
                 # Check open orders
                 for order_id in list(self.open_orders.keys()):
                     if not self.is_running:
                         break
+
+                    print(f"📋 Checking order {order_id}...")
 
                     # Check if order is still open
                     open_orders = self.exchange.get_open_orders(self.trading_pair)
@@ -123,6 +258,8 @@ class RealUniversalGridDCAStrategy:
                     if str(order_id) not in open_order_ids:
                         # Order was filled, remove from tracking
                         filled_order = self.open_orders.pop(order_id)
+
+                        print(f"🎉 Order {order_id} was filled!")
 
                         # Get actual filled quantity from Binance
                         try:
@@ -136,7 +273,7 @@ class RealUniversalGridDCAStrategy:
                             )
                             filled_order["quantity"] = actual_filled_qty
                             print(
-                                f"🎯 Order filled: {filled_order['side']} {actual_filled_qty:.2f} @ ${filled_order['price']:.6f}"
+                                f"🎯 Order filled: {filled_order['side']} {actual_filled_qty:.6f} @ ${filled_order['price']:.6f}"
                             )
                         except Exception as e:
                             print(f"⚠️ Could not get actual filled quantity: {e}")
@@ -146,7 +283,10 @@ class RealUniversalGridDCAStrategy:
 
                         # Place replacement order on opposite side
                         self.place_replacement_order(filled_order)
+                    else:
+                        print(f"⏳ Order {order_id} still open, waiting...")
 
+                print(f"😴 Sleeping for 30 seconds before next check...")
                 # Check every 30 seconds
                 time.sleep(30)
 
@@ -167,19 +307,19 @@ class RealUniversalGridDCAStrategy:
                 # Use the exact quantity that was bought, not recalculated
                 quantity = filled_order["quantity"]
 
-                # Get actual DOGE balance to verify we have enough to sell
+                # Get actual BTC balance to verify we have enough to sell
                 account = self.exchange.client.get_account()
-                doge_balance = 0.0
+                btc_balance = 0.0
                 for balance in account["balances"]:
-                    if balance["asset"] == "DOGE":
-                        doge_balance = float(balance["free"])
+                    if balance["asset"] == "BTC":
+                        btc_balance = float(balance["free"])
                         break
 
-                print(f"💰 DOGE balance available: {doge_balance:.2f}")
+                print(f"💰 BTC balance available: {btc_balance:.6f}")
 
-                if doge_balance < quantity:
+                if btc_balance < quantity:
                     print(
-                        f"⚠️ Insufficient DOGE balance: {doge_balance:.2f} < {quantity:.2f}"
+                        f"⚠️ Insufficient BTC balance: {btc_balance:.6f} < {quantity:.6f}"
                     )
                     return
 
@@ -213,7 +353,7 @@ class RealUniversalGridDCAStrategy:
                     "timestamp": datetime.now(),
                 }
                 print(
-                    f"🔄 Replacement order: {new_side} {quantity:.2f} @ ${new_price:.6f}"
+                    f"🔄 Replacement order: {new_side} {quantity:.6f} @ ${new_price:.6f}"
                 )
             else:
                 print(
@@ -234,8 +374,17 @@ class RealUniversalGridDCAStrategy:
         self.is_running = True
         print(f"🚀 Starting Real Grid DCA Strategy for {self.trading_pair}")
 
-        # Place initial grid orders
-        self.place_grid_orders()
+        # First, adopt any existing orders for this symbol
+        self.adopt_existing_orders()
+
+        # Only place new orders if we don't have any existing ones
+        if len(self.open_orders) == 0:
+            print("📋 No existing orders found, placing initial grid orders")
+            self.place_grid_orders()
+        else:
+            print(
+                f"📋 Found {len(self.open_orders)} existing orders, will monitor them instead of placing new ones"
+            )
 
         # Start monitoring thread
         self.thread = threading.Thread(target=self.monitor_and_replace_orders)
@@ -371,8 +520,14 @@ class RealUniversalGridDCAStrategy:
             }
 
     def get_active_orders(self):
-        """Get all currently active orders from Binance"""
+        """Get all currently active orders from Binance with caching"""
         try:
+            current_time = time.time()
+
+            # Return cached data if still valid
+            if (current_time - self._orders_cache_time) < self._cache_duration:
+                return self._orders_cache
+
             active_orders = []
 
             # Get all open orders from Binance for all symbols
@@ -396,11 +551,21 @@ class RealUniversalGridDCAStrategy:
                     }
                 )
 
+            # Update cache
+            self._orders_cache = active_orders
+            self._orders_cache_time = current_time
+
             print(f"📊 Found {len(active_orders)} active orders on Binance")
             return active_orders
 
         except Exception as e:
             print(f"❌ Error getting active orders from Binance: {e}")
+
+            # Return cached data if available, even if stale
+            if self._orders_cache:
+                print("📊 Returning cached orders due to API error")
+                return self._orders_cache
+
             # Fallback to internal tracking
             try:
                 active_orders = []
