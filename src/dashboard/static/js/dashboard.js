@@ -103,10 +103,8 @@ class TradingDashboard {
                 this.currentMode = result.current_mode;
                 this.showSuccess(result.message);
 
-                // Reload page to refresh all data
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
+                // Update dashboard data instead of reloading
+                this.loadDashboardData();
             } else {
                 this.showError(result.error || 'Failed to switch trading mode');
             }
@@ -120,6 +118,19 @@ class TradingDashboard {
 
     async startTrading() {
         try {
+            // Check if already starting/running
+            const startBtn = document.getElementById('start-btn');
+            if (startBtn && startBtn.disabled) {
+                console.log('Start trading already in progress, ignoring request');
+                return;
+            }
+
+            // Disable button to prevent multiple clicks
+            if (startBtn) {
+                startBtn.disabled = true;
+                startBtn.textContent = 'Starting...';
+            }
+
             this.showLoading('Starting trading...');
 
             const response = await fetch('/api/start', {
@@ -143,6 +154,15 @@ class TradingDashboard {
             this.showError('Network error while starting trading');
         } finally {
             this.hideLoading();
+
+            // Re-enable button after a delay
+            setTimeout(() => {
+                const startBtn = document.getElementById('start-btn');
+                if (startBtn) {
+                    startBtn.disabled = false;
+                    startBtn.textContent = 'Start Trading';
+                }
+            }, 2000); // 2 second delay before allowing another start
         }
     }
 
@@ -347,6 +367,17 @@ class TradingDashboard {
 
     setupWebSocket() {
         try {
+            // Don't create multiple WebSocket connections
+            if (this.websocket && this.websocket.readyState === WebSocket.CONNECTING) {
+                console.log('WebSocket already connecting, skipping...');
+                return;
+            }
+
+            if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                console.log('WebSocket already connected, skipping...');
+                return;
+            }
+
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws/realtime`;
 
@@ -354,6 +385,7 @@ class TradingDashboard {
 
             this.websocket.onopen = () => {
                 console.log('🔌 WebSocket connected');
+                this.isConnected = true;
             };
 
             this.websocket.onmessage = (event) => {
@@ -367,12 +399,18 @@ class TradingDashboard {
 
             this.websocket.onclose = () => {
                 console.log('🔌 WebSocket disconnected');
-                // Reconnect after 5 seconds
-                setTimeout(() => this.setupWebSocket(), 5000);
+                this.isConnected = false;
+                // Reconnect after 10 seconds (increased from 5 to reduce frequency)
+                setTimeout(() => {
+                    if (!this.isConnected) {
+                        this.setupWebSocket();
+                    }
+                }, 10000);
             };
 
             this.websocket.onerror = (error) => {
                 console.error('WebSocket error:', error);
+                this.isConnected = false;
             };
         } catch (error) {
             console.error('Failed to setup WebSocket:', error);
@@ -443,6 +481,13 @@ class TradingDashboard {
 
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    // Prevent multiple dashboard instances
+    if (window.tradingDashboard) {
+        console.log('Dashboard already exists, skipping initialization');
+        return;
+    }
+
+    console.log('Creating new trading dashboard instance');
     window.tradingDashboard = new TradingDashboard();
 });
 

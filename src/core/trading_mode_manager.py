@@ -172,6 +172,13 @@ class TradingModeManager:
         """Get balance based on current trading mode"""
         try:
             if self._current_mode == TradingMode.PAPER:
+                # Get dynamic balance from paper trading simulator
+                manager = self._get_paper_strategy_manager()
+                if manager and hasattr(manager, "paper_simulator"):
+                    simulator = manager.paper_simulator
+                    if hasattr(simulator, "get_total_balance"):
+                        return simulator.get_total_balance()
+                # Fallback to static paper balance
                 return self._paper_balance
             else:
                 # Get real balance from real strategy manager
@@ -200,11 +207,27 @@ class TradingModeManager:
         """Get comprehensive trading mode status"""
         manager = self.get_active_strategy_manager()
 
+        # Get detailed balance information for paper trading
+        balance_details = {"total": self.get_balance()}
+        if self._current_mode == TradingMode.PAPER and manager:
+            if hasattr(manager, "paper_simulator"):
+                simulator = manager.paper_simulator
+                if hasattr(simulator, "get_available_balance"):
+                    balance_details.update(
+                        {
+                            "available": simulator.get_available_balance(),
+                            "locked": simulator.get_locked_balance(),
+                            "btc_holdings": getattr(simulator, "btc_holdings", 0),
+                            "btc_price": getattr(simulator, "current_btc_price", 0),
+                        }
+                    )
+
         return {
             "mode": self._current_mode.value,
             "is_paper_trading": self.is_paper_trading,
             "is_real_trading": self.is_real_trading,
             "balance": self.get_balance(),
+            "balance_details": balance_details,
             "paper_balance": self._paper_balance,
             "manager_status": (
                 manager.get_status()

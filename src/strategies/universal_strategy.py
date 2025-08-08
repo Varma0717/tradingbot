@@ -66,6 +66,9 @@ class UniversalGridDCAStrategy(BaseStrategy):
         self.profitable_trades = 0
         self.total_profit = 0.0
 
+        # Strategy state
+        self.is_active = False
+
         self.logger = logging.getLogger(f"{__name__}.{symbol}")
 
     async def initialize(self):
@@ -80,6 +83,29 @@ class UniversalGridDCAStrategy(BaseStrategy):
         """Clean up strategy resources"""
         await self.cancel_all_grid_orders()
         await super().cleanup()
+
+    async def start(self):
+        """Start the strategy"""
+        if self.is_active:
+            self.logger.warning(
+                f"Strategy {self.name} is already active, skipping start"
+            )
+            return
+
+        self.is_active = True
+        self.logger.info(f"Started {self.name} for {self.symbol}")
+
+        # Initialize grid with a default price if no current price available
+        if self.grid_center_price is None:
+            # Use a default BTC price for simulation
+            default_price = 43000.0 if self.symbol == "BTCUSDT" else 1.0
+            await self._update_grid(default_price)
+
+    async def stop(self):
+        """Stop the strategy"""
+        self.is_active = False
+        await self.cancel_all_grid_orders()
+        self.logger.info(f"Stopped {self.name} for {self.symbol}")
 
     @property
     def name(self) -> str:
@@ -351,15 +377,25 @@ class StrategyManager:
 
         self.logger = logging.getLogger(__name__)
 
-        # Create default strategy
+        # Initialize paper trading simulator for paper mode
+        self.paper_simulator = None
+        try:
+            from ..simulation.paper_trading_simulator import PaperTradingSimulator
+
+            self.paper_simulator = PaperTradingSimulator(self)
+            self.logger.info("Paper trading simulator initialized")
+        except Exception as e:
+            self.logger.warning(f"Could not initialize paper trading simulator: {e}")
+
+        # Create optimized default strategy
         try:
             self.default_strategy = UniversalGridDCAStrategy(
                 symbol="BTCUSDT",  # Default symbol
-                grid_levels=5,
-                grid_spacing=0.02,
+                grid_levels=8,  # More levels for better coverage
+                grid_spacing=0.015,  # Tighter spacing (1.5%) for more frequent trades
                 order_size=min(
-                    200.0, initial_balance * 0.1
-                ),  # 10% of balance per order
+                    175.0, initial_balance * 0.12
+                ),  # 12% of balance per order, max $175
             )
             self.add_strategy("default_grid_dca", self.default_strategy)
         except Exception as e:
@@ -390,9 +426,18 @@ class StrategyManager:
     async def start_all(self):
         """Start all managed strategies"""
         self.is_running = True
+
+        # Start paper trading simulator if available
+        if self.paper_simulator:
+            self.paper_simulator.start_simulation()
+
         for name, strategy in self.strategies.items():
             try:
-                await strategy.start()
+                if hasattr(strategy, "start"):
+                    await strategy.start()
+                else:
+                    # Fallback: set strategy as active
+                    strategy.is_active = True
                 self.logger.info(f"Started strategy: {name}")
             except Exception as e:
                 self.logger.error(f"Error starting strategy {name}: {e}")
@@ -400,9 +445,18 @@ class StrategyManager:
     async def stop_all(self):
         """Stop all managed strategies"""
         self.is_running = False
+
+        # Stop paper trading simulator if available
+        if self.paper_simulator:
+            self.paper_simulator.stop_simulation()
+
         for name, strategy in self.strategies.items():
             try:
-                await strategy.stop()
+                if hasattr(strategy, "stop"):
+                    await strategy.stop()
+                else:
+                    # Fallback: set strategy as inactive
+                    strategy.is_active = False
                 self.logger.info(f"Stopped strategy: {name}")
             except Exception as e:
                 self.logger.error(f"Error stopping strategy {name}: {e}")
@@ -410,6 +464,18 @@ class StrategyManager:
     def get_total_balance(self) -> float:
         """Get total balance across all strategies"""
         return self.current_balance
+
+    def get_trades(self) -> List[Dict]:
+        """Get trades from paper trading simulator"""
+        if self.paper_simulator and hasattr(self.paper_simulator, "mock_trades"):
+            return self.paper_simulator.mock_trades
+        return []
+
+    def get_active_orders(self) -> List[Dict]:
+        """Get active orders from paper trading simulator"""
+        if self.paper_simulator and hasattr(self.paper_simulator, "mock_orders"):
+            return self.paper_simulator.mock_orders
+        return []
 
     def get_status(self) -> Dict[str, Any]:
         """Get status of all strategies"""
@@ -462,6 +528,11 @@ class StrategyManager:
 
     def get_trades(self) -> List[Dict[str, Any]]:
         """Get all trades from all strategies"""
+        # Return simulated trades if paper trading simulator is available
+        if self.paper_simulator:
+            return self.paper_simulator.get_trades()
+
+        # Fallback to strategy trade history
         all_trades = []
         for strategy in self.strategies.values():
             if hasattr(strategy, "trade_history"):
@@ -470,6 +541,11 @@ class StrategyManager:
 
     def get_active_orders(self) -> List[Dict[str, Any]]:
         """Get all active orders from all strategies"""
+        # Return simulated orders if paper trading simulator is available
+        if self.paper_simulator:
+            return self.paper_simulator.get_orders()
+
+        # Fallback to strategy active orders
         all_orders = []
         for strategy in self.strategies.values():
             if hasattr(strategy, "active_grid_orders"):
@@ -487,3 +563,8 @@ class StrategyManager:
                         }
                     )
         return all_orders
+
+    def update_simulation(self):
+        """Update simulation state (for paper trading)"""
+        if self.paper_simulator:
+            self.paper_simulator.update_simulation()

@@ -3,15 +3,21 @@ New API routes with proper trading mode separation.
 """
 
 import logging
+from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
+import time
 from ...core.trading_mode_manager import trading_mode_manager, TradingMode
 
 logger = logging.getLogger(__name__)
 
 # Create API router
 router = APIRouter(prefix="/api")
+
+# Rate limiting for start requests
+_last_start_request = 0
+_start_request_cooldown = 5  # 5 seconds cooldown between start requests
 
 
 class TradingModeRequest(BaseModel):
@@ -115,6 +121,25 @@ async def get_balance():
 async def start_strategy(request: Optional[TradingStartRequest] = None):
     """Start trading strategy based on current mode."""
     try:
+        global _last_start_request
+        current_time = time.time()
+
+        # Rate limiting: prevent rapid successive start requests
+        if current_time - _last_start_request < _start_request_cooldown:
+            remaining_time = _start_request_cooldown - (
+                current_time - _last_start_request
+            )
+            logger.warning(
+                f"Start request rate limited. Try again in {remaining_time:.1f} seconds"
+            )
+            return {
+                "success": False,
+                "error": f"Please wait {remaining_time:.1f} seconds before trying again",
+                "rate_limited": True,
+            }
+
+        _last_start_request = current_time
+
         manager = trading_mode_manager.get_active_strategy_manager()
         if not manager:
             return {"success": False, "error": "No strategy manager available"}
@@ -165,6 +190,39 @@ async def stop_strategy():
         return {"success": False, "error": str(e)}
 
 
+@router.post("/restart")
+async def restart_strategy():
+    """Restart trading strategy (stop all orders and start fresh)"""
+    try:
+        manager = trading_mode_manager.get_active_strategy_manager()
+        if not manager:
+            return {"success": False, "error": "No strategy manager available"}
+
+        # Restart trading with fresh setup
+        if hasattr(manager, "restart_trading"):
+            success = manager.restart_trading()
+        else:
+            # Fallback: stop then start
+            if hasattr(manager, "stop_trading"):
+                manager.stop_trading()
+            if hasattr(manager, "start_trading"):
+                success = manager.start_trading()
+            else:
+                success = False
+
+        mode = trading_mode_manager.current_mode.value
+        message = (
+            f"{'Real' if trading_mode_manager.is_real_trading else 'Paper'} trading restarted"
+            if success
+            else f"Failed to restart {mode} trading"
+        )
+
+        return {"success": success, "message": message, "mode": mode}
+    except Exception as e:
+        logger.error(f"Error restarting strategy: {e}")
+        return {"success": False, "error": str(e)}
+
+
 @router.get("/trades")
 async def get_trades():
     """Get trades based on current mode."""
@@ -205,6 +263,137 @@ async def get_active_orders():
         return {"success": False, "error": str(e), "data": []}
 
 
+@router.post("/orders/cancel")
+async def cancel_order(request_data: dict):
+    """Cancel a specific order."""
+    try:
+        order_id = request_data.get("order_id")
+        if not order_id:
+            return {"success": False, "error": "order_id is required"}
+
+        manager = trading_mode_manager.get_active_strategy_manager()
+        if not manager:
+            return {"success": False, "error": "No active strategy manager"}
+
+        # For real trading, cancel through the strategy manager
+        if trading_mode_manager.is_real_trading:
+            # Get the strategy that has this order
+            for strategy in manager.strategies.values():
+                if (
+                    hasattr(strategy, "open_orders")
+                    and str(order_id) in strategy.open_orders
+                ):
+                    # Cancel the order through Binance
+                    result = strategy.exchange.cancel_order(
+                        strategy.trading_pair, order_id
+                    )
+                    if result["success"]:
+                        # Remove from strategy tracking
+                        strategy.open_orders.pop(str(order_id), None)
+                        logger.info(f"Order {order_id} cancelled successfully")
+                        return {
+                            "success": True,
+                            "message": f"Order {order_id} cancelled",
+                        }
+                    else:
+                        return {
+                            "success": False,
+                            "error": result.get("error", "Failed to cancel order"),
+                        }
+
+            return {"success": False, "error": "Order not found in active orders"}
+        else:
+            # For paper trading, cancel through the manager
+            if hasattr(manager, "cancel_order"):
+                result = manager.cancel_order(order_id)
+                return {
+                    "success": result,
+                    "message": (
+                        f"Order {order_id} cancelled"
+                        if result
+                        else "Failed to cancel order"
+                    ),
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Cancel order not supported for this mode",
+                }
+
+    except Exception as e:
+        logger.error(f"Error cancelling order: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/orders/cancel-all")
+async def cancel_all_orders():
+    """Cancel all open orders."""
+    try:
+        manager = trading_mode_manager.get_active_strategy_manager()
+        if not manager:
+            return {"success": False, "error": "No active strategy manager"}
+
+        cancelled_count = 0
+
+        if trading_mode_manager.is_real_trading:
+            # For real trading, cancel all orders through strategies
+            for strategy in manager.strategies.values():
+                if hasattr(strategy, "open_orders"):
+                    for order_id in list(strategy.open_orders.keys()):
+                        try:
+                            result = strategy.exchange.cancel_order(
+                                strategy.trading_pair, order_id
+                            )
+                            if result["success"]:
+                                strategy.open_orders.pop(order_id, None)
+                                cancelled_count += 1
+                        except Exception as e:
+                            logger.warning(f"Failed to cancel order {order_id}: {e}")
+        else:
+            # For paper trading
+            if hasattr(manager, "cancel_all_orders"):
+                cancelled_count = manager.cancel_all_orders()
+
+        return {"success": True, "message": f"Cancelled {cancelled_count} orders"}
+
+    except Exception as e:
+        logger.error(f"Error cancelling all orders: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/analytics")
+async def get_analytics():
+    """Get trading analytics including win rate, profit/loss, etc."""
+    try:
+        manager = trading_mode_manager.get_active_strategy_manager()
+        if not manager:
+            return {
+                "success": True,
+                "data": {
+                    "total_trades": 0,
+                    "winning_trades": 0,
+                    "losing_trades": 0,
+                    "win_rate": 0.0,
+                    "total_profit": 0.0,
+                    "total_volume": 0.0,
+                    "average_profit_per_trade": 0.0,
+                    "active_orders_count": 0,
+                },
+            }
+
+        # Get analytics from strategy manager
+        analytics = manager.get_analytics() if hasattr(manager, "get_analytics") else {}
+
+        return {
+            "success": True,
+            "data": analytics,
+            "mode": trading_mode_manager.current_mode.value,
+        }
+    except Exception as e:
+        logger.error(f"Error getting analytics: {e}")
+        return {"success": False, "error": str(e), "data": {}}
+
+
 @router.get("/dashboard-data")
 async def get_dashboard_data():
     """Get comprehensive dashboard data based on current mode."""
@@ -212,6 +401,14 @@ async def get_dashboard_data():
         manager = trading_mode_manager.get_active_strategy_manager()
         mode_status = trading_mode_manager.get_status()
         current_balance = trading_mode_manager.get_balance()
+
+        # Update simulation for paper trading
+        if (
+            trading_mode_manager.is_paper_trading
+            and manager
+            and hasattr(manager, "update_simulation")
+        ):
+            manager.update_simulation()
 
         # Get data from active manager
         if manager:
@@ -222,12 +419,20 @@ async def get_dashboard_data():
                 if hasattr(manager, "get_active_orders")
                 else []
             )
+
+            # Ensure data types are correct
+            if not isinstance(trades, list):
+                logger.warning(f"API: trades is not a list, got {type(trades)}")
+                trades = []
+            if not isinstance(orders, list):
+                logger.warning(f"API: orders is not a list, got {type(orders)}")
+                orders = []
         else:
             status = {}
             trades = []
             orders = []
 
-        # For real trading, try to get real data
+        # For real trading, try to get real data (but reduce frequency)
         if trading_mode_manager.is_real_trading and hasattr(manager, "get_real_trades"):
             trades = manager.get_real_trades()
             orders = (
@@ -367,4 +572,105 @@ async def get_portfolio_summary():
         }
     except Exception as e:
         logger.error(f"Error getting portfolio summary: {e}")
+        return {"success": False, "error": str(e), "data": {}}
+
+
+@router.post("/settings/save")
+async def save_settings(settings: dict):
+    """Save bot settings."""
+    try:
+        logger.info(f"Settings received: {settings}")
+
+        # Map settings page fields to strategy manager settings
+        strategy_settings = {}
+
+        # Handle order size (note: the JS sends 'order_size', not 'order-size')
+        if "order_size" in settings:
+            try:
+                strategy_settings["order_size"] = float(settings["order_size"])
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid order size: {settings['order_size']}")
+
+        # Handle grid levels
+        if "grid_levels" in settings:
+            try:
+                strategy_settings["grid_levels"] = int(settings["grid_levels"])
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid grid levels: {settings['grid_levels']}")
+
+        # Handle max open orders
+        if "max_open_orders" in settings:
+            try:
+                strategy_settings["max_open_orders"] = int(settings["max_open_orders"])
+            except (ValueError, TypeError):
+                logger.warning(
+                    f"Invalid max open orders: {settings['max_open_orders']}"
+                )
+
+        # Handle auto restart
+        if "auto_restart" in settings:
+            strategy_settings["auto_restart"] = settings["auto_restart"] in [
+                "true",
+                True,
+                1,
+                "1",
+            ]
+
+        # Update strategy manager settings if we have any valid settings
+        if strategy_settings:
+            logger.info(f"Updating strategy settings: {strategy_settings}")
+
+            # Get current strategy manager and update settings
+            manager = trading_mode_manager.get_active_strategy_manager()
+            if manager and hasattr(manager, "update_settings"):
+                manager.update_settings(strategy_settings)
+                logger.info("Strategy settings updated successfully")
+            else:
+                logger.warning(
+                    "No active strategy manager or update_settings method not available"
+                )
+
+        return {
+            "success": True,
+            "message": "Settings saved successfully",
+            "settings_saved": list(strategy_settings.keys()),
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"Error saving settings: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/settings")
+async def get_settings():
+    """Get current bot settings."""
+    try:
+        # Get current settings from strategy manager
+        manager = trading_mode_manager.get_active_strategy_manager()
+        current_settings = {}
+
+        if manager and hasattr(manager, "settings"):
+            # Map strategy manager settings to settings page format
+            strategy_settings = manager.settings
+            current_settings = {
+                "order_size": strategy_settings.get("order_size", 2.0),
+                "grid_levels": strategy_settings.get("grid_levels", 3),
+                "max_open_orders": strategy_settings.get("max_open_orders", 5),
+                "auto_restart": strategy_settings.get("auto_restart", False),
+            }
+        else:
+            # Default settings if no manager available
+            current_settings = {
+                "order_size": 2.0,
+                "grid_levels": 3,
+                "max_open_orders": 5,
+                "auto_restart": False,
+            }
+
+        logger.info(f"Returning current settings: {current_settings}")
+        return {"success": True, "data": current_settings}
+
+    except Exception as e:
+        logger.error(f"Error getting settings: {e}")
         return {"success": False, "error": str(e), "data": {}}

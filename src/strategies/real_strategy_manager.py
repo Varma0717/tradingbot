@@ -12,11 +12,107 @@ class RealStrategyManager:
         self.strategies = {}
         self.trading_pair = "DOGEUSDT"  # Default pair for small balances
 
+        # Default configurable settings
+        self.settings = {
+            "order_size": 2.0,  # Default $2 per order
+            "grid_levels": 3,  # Conservative default
+            "max_open_orders": 5,
+            "grid_spacing": 0.02,  # 2%
+            "auto_restart": False,
+        }
+
         # Setup logging
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
+        # Auto-create default strategy
+        self._create_default_strategy()
+
         print("✅ Real Strategy Manager initialized")
+
+    def _create_default_strategy(self):
+        """Create and add default real trading strategy"""
+        try:
+            from .real_universal_strategy import RealUniversalGridDCAStrategy
+
+            # Create default strategy (no parameters needed)
+            default_strategy = RealUniversalGridDCAStrategy()
+
+            # Apply current settings to strategy
+            default_strategy.order_size_usd = self.settings["order_size"]
+            default_strategy.grid_levels = self.settings["grid_levels"]
+            default_strategy.grid_spacing = self.settings["grid_spacing"]
+
+            print(
+                f"📊 Strategy configured: ${self.settings['order_size']}/order, {self.settings['grid_levels']} levels, {self.settings['grid_spacing']*100:.1f}% spacing"
+            )
+
+            # Add to strategies
+            self.add_strategy("default_real_grid", default_strategy)
+
+        except Exception as e:
+            print(f"❌ Error creating default strategy: {e}")
+            self.logger.error(f"Error creating default strategy: {e}")
+
+    def update_settings(self, new_settings):
+        """Update trading settings and recreate strategies"""
+        try:
+            print(f"🔧 Updating settings: {new_settings}")
+
+            # Update settings
+            for key, value in new_settings.items():
+                if key in self.settings:
+                    # Convert to appropriate types
+                    if key in ["order_size"]:
+                        self.settings[key] = float(value)
+                    elif key in ["grid_levels", "max_open_orders"]:
+                        self.settings[key] = int(value)
+                    elif key in ["grid_spacing"]:
+                        self.settings[key] = float(value)
+                    elif key in ["auto_restart"]:
+                        self.settings[key] = bool(value)
+                    else:
+                        self.settings[key] = value
+
+                    print(f"✅ Updated {key}: {self.settings[key]}")
+
+            # If trading is running, restart with new settings
+            was_running = self.is_running
+            if was_running:
+                print("🔄 Restarting trading with new settings...")
+                self.stop_trading()
+                time.sleep(1)
+
+                # Recreate strategy with new settings
+                self._recreate_strategies()
+
+                # Restart trading
+                return self.start_trading()
+            else:
+                # Just recreate strategies for next start
+                self._recreate_strategies()
+                return True
+
+        except Exception as e:
+            print(f"❌ Error updating settings: {e}")
+            self.logger.error(f"Error updating settings: {e}")
+            return False
+
+    def _recreate_strategies(self):
+        """Recreate strategies with current settings"""
+        try:
+            # Clear existing strategies
+            self.strategies.clear()
+
+            # Recreate with new settings
+            self._create_default_strategy()
+
+        except Exception as e:
+            print(f"❌ Error recreating strategies: {e}")
+
+    def get_settings(self):
+        """Get current settings"""
+        return self.settings.copy()
 
     def add_strategy(self, strategy_name, strategy_instance):
         """Add a strategy to the manager"""
@@ -27,10 +123,15 @@ class RealStrategyManager:
         """Start real trading"""
         if self.is_running:
             print("⚠️ Trading is already running")
-            return
+            return True
+
+        print(f"🚀 Starting real trading with {len(self.strategies)} strategies...")
+
+        if not self.strategies:
+            print("❌ No strategies available to start")
+            return False
 
         self.is_running = True
-        print("🚀 Starting real trading...")
 
         try:
             # Get current balance
@@ -45,14 +146,31 @@ class RealStrategyManager:
                 print(f"💡 Small balance detected (${balance:.2f}), using DOGE/USDT")
 
             # Start all strategies
+            started_count = 0
             for name, strategy in self.strategies.items():
-                print(f"🎯 Starting strategy: {name}")
-                strategy.set_trading_pair(self.trading_pair)
-                strategy.start()
+                try:
+                    print(f"🎯 Starting strategy: {name}")
+                    strategy.set_trading_pair(self.trading_pair)
+                    strategy.start()
+                    started_count += 1
+                    print(f"✅ Strategy '{name}' started successfully")
+                except Exception as e:
+                    print(f"❌ Error starting strategy '{name}': {e}")
+
+            if started_count > 0:
+                print(
+                    f"🎉 Successfully started {started_count}/{len(self.strategies)} strategies"
+                )
+                return True
+            else:
+                print("❌ Failed to start any strategies")
+                self.is_running = False
+                return False
 
         except Exception as e:
             print(f"❌ Error starting trading: {e}")
             self.is_running = False
+            return False
 
     def stop_trading(self):
         """Stop real trading"""
@@ -72,13 +190,34 @@ class RealStrategyManager:
         except Exception as e:
             print(f"❌ Error stopping trading: {e}")
 
+    def restart_trading(self):
+        """Restart trading with fresh setup"""
+        print("🔄 Restarting trading...")
+
+        # Stop current trading
+        self.stop_trading()
+
+        # Wait a moment
+        time.sleep(2)
+
+        # Start fresh
+        return self.start_trading()
+
+    def get_balance(self):
+        """Get current balance (cached to reduce API calls)"""
+        try:
+            return self.exchange.get_balance()
+        except Exception as e:
+            self.logger.error(f"Error getting balance: {e}")
+            return 0.0
+
     def get_status(self):
         """Get current trading status"""
         return {
             "is_running": self.is_running,
             "status": "active" if self.is_running else "stopped",
             "trading_pair": self.trading_pair,
-            "balance": self.exchange.get_balance(),
+            "balance": self.get_balance(),
             "strategies": list(self.strategies.keys()),
         }
 
@@ -120,3 +259,70 @@ class RealStrategyManager:
         except Exception as e:
             print(f"❌ Error changing trading pair: {e}")
             return False
+
+    def get_real_trades(self):
+        """Get real trading trades (alias for get_trades)"""
+        return self.get_trades()
+
+    def get_real_orders(self):
+        """Get real trading orders (alias for get_active_orders)"""
+        return self.get_active_orders()
+
+    def get_analytics(self):
+        """Get comprehensive trading analytics"""
+        try:
+            all_analytics = {
+                "total_trades": 0,
+                "winning_trades": 0,
+                "losing_trades": 0,
+                "win_rate": 0.0,
+                "total_profit": 0.0,
+                "total_volume": 0.0,
+                "average_profit_per_trade": 0.0,
+                "active_orders_count": len(self.get_active_orders()),
+            }
+
+            # Aggregate analytics from all strategies
+            for strategy in self.strategies.values():
+                if hasattr(strategy, "get_analytics"):
+                    strategy_analytics = strategy.get_analytics()
+                    all_analytics["total_trades"] += strategy_analytics.get(
+                        "total_trades", 0
+                    )
+                    all_analytics["winning_trades"] += strategy_analytics.get(
+                        "winning_trades", 0
+                    )
+                    all_analytics["losing_trades"] += strategy_analytics.get(
+                        "losing_trades", 0
+                    )
+                    all_analytics["total_profit"] += strategy_analytics.get(
+                        "total_profit", 0.0
+                    )
+                    all_analytics["total_volume"] += strategy_analytics.get(
+                        "total_volume", 0.0
+                    )
+
+            # Calculate overall win rate
+            if all_analytics["total_trades"] > 0:
+                all_analytics["win_rate"] = round(
+                    (all_analytics["winning_trades"] / all_analytics["total_trades"])
+                    * 100,
+                    2,
+                )
+                all_analytics["average_profit_per_trade"] = round(
+                    all_analytics["total_profit"] / all_analytics["total_trades"], 4
+                )
+
+            return all_analytics
+        except Exception as e:
+            self.logger.error(f"Error getting analytics: {e}")
+            return {
+                "total_trades": 0,
+                "winning_trades": 0,
+                "losing_trades": 0,
+                "win_rate": 0.0,
+                "total_profit": 0.0,
+                "total_volume": 0.0,
+                "average_profit_per_trade": 0.0,
+                "active_orders_count": 0,
+            }

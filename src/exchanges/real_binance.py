@@ -1,5 +1,6 @@
 import os
 import logging
+import time
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
 from dotenv import load_dotenv
@@ -13,6 +14,11 @@ class RealBinanceExchange:
         """Initialize real Binance exchange with API credentials"""
         self.api_key = os.getenv("BINANCE_API_KEY")
         self.api_secret = os.getenv("BINANCE_SECRET_KEY")
+
+        # Balance caching to reduce API calls
+        self._cached_balance = 0.0
+        self._balance_cache_time = 0
+        self._balance_cache_duration = 30  # 30 seconds cache
 
         if not self.api_key or not self.api_secret:
             raise ValueError(
@@ -29,18 +35,36 @@ class RealBinanceExchange:
             raise
 
     def get_balance(self):
-        """Get current USDT balance from Binance"""
+        """Get current USDT balance from Binance (with caching)"""
         try:
+            current_time = time.time()
+
+            # Return cached balance if still valid
+            if (current_time - self._balance_cache_time) < self._balance_cache_duration:
+                return self._cached_balance
+
+            # Fetch fresh balance
             account = self.client.get_account()
             for balance in account["balances"]:
                 if balance["asset"] == "USDT":
                     free_balance = float(balance["free"])
-                    print(f"Real Binance USDT Balance: ${free_balance:.2f}")
+
+                    # Update cache
+                    self._cached_balance = free_balance
+                    self._balance_cache_time = current_time
+
+                    # Only print if balance changed or first time
+                    if (
+                        abs(self._cached_balance - free_balance) > 0.01
+                        or self._balance_cache_time == current_time
+                    ):
+                        print(f"Real Binance USDT Balance: ${free_balance:.2f}")
+
                     return free_balance
             return 0.0
         except Exception as e:
             print(f"Error getting balance: {e}")
-            return 0.0
+            return self._cached_balance  # Return cached balance on error
 
     def get_current_price(self, symbol):
         """Get current price for a symbol"""
@@ -156,4 +180,13 @@ class RealBinanceExchange:
             return orders
         except Exception as e:
             print(f"Error getting order history: {e}")
+            return []
+
+    def get_account_trades(self, symbol, limit=50):
+        """Get recent account trades (fills)"""
+        try:
+            trades = self.client.get_my_trades(symbol=symbol, limit=limit)
+            return trades
+        except Exception as e:
+            print(f"Error getting account trades: {e}")
             return []

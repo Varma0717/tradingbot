@@ -321,9 +321,9 @@
         const alertDiv = document.createElement('div')
         alertDiv.className = `alert alert-${type} alert-dismissible fade show`
         alertDiv.innerHTML = `
-                                        ${message}
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                    `
+                                                    ${message}
+                                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                                `
       
         const container = document.querySelector('.main-content')
         container.insertBefore(alertDiv, container.firstChild)
@@ -355,7 +355,11 @@
       
           if (data.success) {
             showAlert(`✅ Real trading started with $${amount}!`, 'success')
-            setTimeout(() => location.reload(), 2000)
+            // REMOVED: setTimeout(() => location.reload(), 2000)
+            // Let dashboard.js handle updates
+            if (window.tradingDashboard) {
+              window.tradingDashboard.loadDashboardData()
+            }
           } else {
             showAlert(`❌ Failed to start real trading: ${data.error}`, 'danger')
           }
@@ -378,7 +382,11 @@
       
           if (data.success) {
             showAlert('✅ Switched to paper trading mode. All real orders cancelled.', 'success')
-            setTimeout(() => location.reload(), 2000)
+            // REMOVED: setTimeout(() => location.reload(), 2000)
+            // Let dashboard.js handle updates
+            if (window.tradingDashboard) {
+              window.tradingDashboard.loadDashboardData()
+            }
           } else {
             showAlert(`❌ Failed to stop real trading: ${data.error}`, 'danger')
           }

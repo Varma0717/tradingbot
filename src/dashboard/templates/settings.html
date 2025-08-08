@@ -221,6 +221,42 @@
 
 {% block scripts %}
 <script>
+// Load current settings on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadCurrentSettings();
+});
+
+function loadCurrentSettings() {
+    fetch('/api/settings')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.data) {
+            const settings = data.data;
+            
+            // Update form fields with current settings
+            if (settings.order_size) {
+                document.getElementById('order-size').value = settings.order_size;
+            }
+            if (settings.grid_levels) {
+                document.getElementById('grid-levels').value = settings.grid_levels;
+            }
+            if (settings.max_open_orders) {
+                document.getElementById('max-open-orders').value = settings.max_open_orders;
+            }
+            if (settings.auto_restart !== undefined) {
+                document.getElementById('auto-restart').checked = settings.auto_restart;
+            }
+            
+            console.log('Settings loaded:', settings);
+        } else {
+            console.warn('Failed to load settings:', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error loading settings:', error);
+    });
+}
+
 function saveSettings() {
     const settings = {
         paper_balance: document.getElementById('paper-balance').value,
