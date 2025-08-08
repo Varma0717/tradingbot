@@ -31,17 +31,27 @@ A comprehensive cryptocurrency trading bot with web dashboard, real-time data pr
 - XAMPP with MySQL
 - Binance API keys (for live trading)
 
-## 🛠️ Installation
+## 🛠️ Quick Start
 
-### 1. Environment Setup (Already Complete)
+### 1. Start the Dashboard
 
-The virtual environment is already set up with all dependencies installed.
+```bash
+python start_dashboard.py
+```
 
-### 2. Setup MySQL Database
+The dashboard will be available at: http://127.0.0.1:8004
 
-1. Start XAMPP and ensure MySQL is running
-2. Open phpMyAdmin (http://localhost/phpmyadmin)
-3. Create a new database named `crypto_trading_bot`
+### 2. Start Trading Bot
+
+**Paper Trading (Safe Testing):**
+```bash
+python start_bot.py --mode paper --dashboard
+```
+
+**Real Trading (Live Money):**
+```bash
+python start_bot.py --mode live --dashboard
+```
 
 ### 3. Configure API Keys
 

@@ -1,35 +1,36 @@
 # Quick Start Guide
 
-## Starting the Dashboard (Easiest Way)
+## 🚀 Start Trading in 3 Steps
 
+### 1. Start Dashboard
 ```bash
-# Start the web dashboard (most common usage)
-python main.py --mode dashboard
+python start_dashboard.py
+```
+📊 Dashboard: http://127.0.0.1:8004
 
-# Start on custom port
-python main.py --mode dashboard --port 8080
+### 2. Choose Trading Mode
+
+**Paper Trading (Safe Testing):**
+```bash
+python start_bot.py --mode paper
 ```
 
-Then open your browser to: http://127.0.0.1:8002 (or your custom port)
-
-## Other Modes
-
+**Real Trading (Live Money):**
 ```bash
-# Paper trading (safe practice mode)
-python main.py --mode paper --strategy grid_dca
-
-# Live trading (real money - be careful!)
-python main.py --mode live --strategy grid_dca
-
-# Run backtest
-python main.py --mode backtest --strategy grid_dca
-
-# Get help
-python main.py --help
+python start_bot.py --mode live
 ```
 
-## Note
+### 3. Monitor & Control
+- Use the web dashboard to monitor trades
+- Start/stop strategies through the interface
+- View real-time portfolio performance
 
-- The old `run.py` file has been removed - everything is now in `main.py`
-- Dashboard mode is the recommended way to interact with the bot
+## 📈 Available Strategies
+- **Grid DCA**: Dollar-cost averaging with grid levels
+- **RSI**: Relative Strength Index based trades
+- **MA Crossover**: Moving average crossover signals
+
+## ⚠️ Important Notes
 - Always test with paper trading before using live mode
+- Ensure you have sufficient balance for live trading
+- Monitor your trades regularly

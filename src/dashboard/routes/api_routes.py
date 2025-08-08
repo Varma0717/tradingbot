@@ -162,13 +162,24 @@ async def get_active_orders():
 
 @router.post("/start")
 async def start_strategy():
-    """Start the universal strategy."""
+    """Start the real trading strategy."""
     try:
-        sm = await get_strategy_manager()
-        success = await sm.start_strategy()
+        # Use real trading integration instead of paper trading
+        from ..real_trading_integration import real_trading_integrator
+
+        # Initialize if needed
+        if not real_trading_integrator.is_initialized:
+            success = real_trading_integrator.initialize()
+            if not success:
+                return {"success": False, "error": "Failed to initialize real trading"}
+
+        # Start real trading
+        success = real_trading_integrator.start_trading()
         return {
             "success": success,
-            "message": "Strategy started" if success else "Failed to start strategy",
+            "message": (
+                "Real trading started" if success else "Failed to start real trading"
+            ),
         }
     except Exception as e:
         logger.error(f"Error starting strategy: {e}")
@@ -177,11 +188,22 @@ async def start_strategy():
 
 @router.post("/stop")
 async def stop_strategy():
-    """Stop the universal strategy."""
+    """Stop the real trading strategy."""
     try:
-        sm = await get_strategy_manager()
-        await sm.stop_strategy()
-        return {"success": True, "message": "Strategy stopped"}
+        # Use real trading integration instead of paper trading
+        from ..real_trading_integration import real_trading_integrator
+
+        if not real_trading_integrator.is_initialized:
+            return {"success": False, "error": "Real trading not initialized"}
+
+        # Stop real trading
+        success = real_trading_integrator.stop_trading()
+        return {
+            "success": success,
+            "message": (
+                "Real trading stopped" if success else "Failed to stop real trading"
+            ),
+        }
     except Exception as e:
         logger.error(f"Error stopping strategy: {e}")
         return {"success": False, "error": str(e)}
