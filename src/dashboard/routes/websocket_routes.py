@@ -263,17 +263,26 @@ async def broadcast_update(update_data: dict):
 
 
 async def get_dashboard_data() -> dict:
-    """Get comprehensive dashboard data for WebSocket."""
+    """Get comprehensive dashboard data for WebSocket using trading mode manager."""
     try:
-        if not _trading_bot:
+        from ...core.trading_mode_manager import trading_mode_manager
+
+        # Get current trading mode status
+        mode_status = trading_mode_manager.get_status()
+
+        # Get active strategy manager
+        manager = trading_mode_manager.get_active_strategy_manager()
+
+        if not manager:
             return {
                 "status": "disconnected",
                 "portfolio": {},
                 "orders": {},
                 "strategies": {},
+                "mode": mode_status,
             }
 
-        # Get all dashboard data
+        # Get all dashboard data from active manager
         portfolio_data = await get_portfolio_data()
         orders_data = await get_orders_data()
         strategies_data = await get_strategies_data()
@@ -283,6 +292,7 @@ async def get_dashboard_data() -> dict:
             "portfolio": portfolio_data,
             "orders": orders_data,
             "strategies": strategies_data,
+            "mode": mode_status,
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -292,26 +302,40 @@ async def get_dashboard_data() -> dict:
 
 
 async def get_portfolio_data() -> dict:
-    """Get portfolio data for WebSocket."""
+    """Get portfolio data for WebSocket using trading mode manager."""
     try:
-        if not _trading_bot or not hasattr(_trading_bot, "portfolio_manager"):
-            return {}
+        from ...core.trading_mode_manager import trading_mode_manager
 
-        performance = _trading_bot.portfolio_manager.get_portfolio_performance()
-        positions = _trading_bot.portfolio_manager.get_positions()
+        mode_status = trading_mode_manager.get_status()
+        balance = trading_mode_manager.get_balance()
+
+        manager = trading_mode_manager.get_active_strategy_manager()
+
+        if not manager:
+            return {
+                "balance": balance,
+                "mode": mode_status.get("mode", "paper"),
+                "performance": {},
+                "positions": {},
+            }
+
+        # Get trades for performance calculation
+        trades = manager.get_trades() if hasattr(manager, "get_trades") else []
+        total_profit = sum(
+            trade.get("profit", 0) for trade in trades if isinstance(trade, dict)
+        )
 
         return {
-            "performance": performance,
-            "positions": {
-                symbol: {
-                    "symbol": symbol,
-                    "side": position.side.value,
-                    "size": position.size,
-                    "unrealized_pnl": position.unrealized_pnl,
-                    "pnl_percentage": position.pnl_percentage(),
-                }
-                for symbol, position in positions.items()
+            "balance": balance,
+            "mode": mode_status.get("mode", "paper"),
+            "performance": {
+                "total_value": balance,
+                "total_profit": total_profit,
+                "profit_percentage": (
+                    (total_profit / balance * 100) if balance > 0 else 0
+                ),
             },
+            "positions": {},  # Could be extended to show actual positions
         }
 
     except Exception as e:
@@ -320,27 +344,32 @@ async def get_portfolio_data() -> dict:
 
 
 async def get_orders_data() -> dict:
-    """Get orders data for WebSocket."""
+    """Get orders data for WebSocket using trading mode manager."""
     try:
-        if not _trading_bot or not hasattr(_trading_bot, "order_manager"):
-            return {}
+        from ...core.trading_mode_manager import trading_mode_manager
 
-        active_orders = _trading_bot.order_manager.get_active_orders()
-        order_stats = _trading_bot.order_manager.get_order_stats()
+        manager = trading_mode_manager.get_active_strategy_manager()
+
+        if not manager or not hasattr(manager, "get_active_orders"):
+            return {"active_orders": {}, "stats": {"total": 0}}
+
+        orders = manager.get_active_orders()
 
         return {
             "active_orders": {
-                order_id: {
-                    "id": order.id,
-                    "symbol": order.symbol,
-                    "side": order.side,
-                    "amount": order.amount,
-                    "status": order.status.value,
-                    "created_at": order.created_at.isoformat(),
+                str(i): {
+                    "id": order.get("id", f"order_{i}"),
+                    "symbol": order.get("strategy", "BTCUSDT"),
+                    "side": order.get("type", "buy"),
+                    "amount": order.get("amount", 0),
+                    "price": order.get("price", 0),
+                    "status": "open",
+                    "created_at": order.get("created", datetime.now().isoformat()),
                 }
-                for order_id, order in active_orders.items()
+                for i, order in enumerate(orders)
+                if isinstance(order, dict)
             },
-            "stats": order_stats,
+            "stats": {"total": len(orders)},
         }
 
     except Exception as e:
@@ -349,25 +378,33 @@ async def get_orders_data() -> dict:
 
 
 async def get_trades_data() -> dict:
-    """Get trades data for WebSocket."""
+    """Get trades data for WebSocket using trading mode manager."""
     try:
-        if not _trading_bot or not hasattr(_trading_bot, "portfolio_manager"):
-            return {}
+        from ...core.trading_mode_manager import trading_mode_manager
+
+        manager = trading_mode_manager.get_active_strategy_manager()
+
+        if not manager or not hasattr(manager, "get_trades"):
+            return {"recent_trades": []}
+
+        trades = manager.get_trades()
 
         # Get recent trades (last 10)
-        recent_trades = _trading_bot.portfolio_manager.trades[-10:]
+        recent_trades = trades[-10:] if trades else []
 
         return {
             "recent_trades": [
                 {
-                    "id": trade.id,
-                    "symbol": trade.symbol,
-                    "side": trade.side,
-                    "amount": trade.amount,
-                    "price": trade.price,
-                    "timestamp": trade.timestamp.isoformat(),
+                    "id": trade.get("id", f"trade_{i}"),
+                    "symbol": trade.get("symbol", "BTCUSDT"),
+                    "side": trade.get("side", "buy"),
+                    "amount": trade.get("amount", 0),
+                    "price": trade.get("price", 0),
+                    "profit": trade.get("profit", 0),
+                    "timestamp": trade.get("timestamp", datetime.now().isoformat()),
                 }
-                for trade in recent_trades
+                for i, trade in enumerate(recent_trades)
+                if isinstance(trade, dict)
             ]
         }
 
@@ -377,20 +414,37 @@ async def get_trades_data() -> dict:
 
 
 async def get_strategies_data() -> dict:
-    """Get strategies data for WebSocket."""
+    """Get strategies data for WebSocket using trading mode manager."""
     try:
-        if not _trading_bot or not hasattr(_trading_bot, "strategies"):
-            return {}
+        from ...core.trading_mode_manager import trading_mode_manager
+
+        manager = trading_mode_manager.get_active_strategy_manager()
+        mode_status = trading_mode_manager.get_status()
+
+        if not manager:
+            return {
+                "strategies": {
+                    "inactive": {
+                        "name": "No Active Strategy",
+                        "enabled": False,
+                        "signals_count": 0,
+                        "last_signal": None,
+                    }
+                }
+            }
+
+        status = manager.get_status() if hasattr(manager, "get_status") else {}
 
         return {
             "strategies": {
-                name: {
-                    "name": name,
-                    "enabled": strategy.enabled,
-                    "signals_count": len(getattr(strategy, "signals", [])),
-                    "last_signal": getattr(strategy, "last_signal_time", None),
+                "grid_dca": {
+                    "name": f"Grid DCA ({mode_status.get('mode', 'paper')} mode)",
+                    "enabled": status.get("is_running", False),
+                    "signals_count": 0,  # Could be extended
+                    "last_signal": (
+                        datetime.now().isoformat() if status.get("is_running") else None
+                    ),
                 }
-                for name, strategy in _trading_bot.strategies.items()
             }
         }
 

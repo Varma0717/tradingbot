@@ -62,13 +62,9 @@
             <div id="total-pnl"
               class="metric-value"
               style="color: {% if portfolio_data.unrealized_pnl and portfolio_data.unrealized_pnl >= 0 %}
-                
                 var(--success-color)
-
               {% else %}
-                
                 var(--danger-color)
-
               {% endif %}">${{ '%.2f'|format(portfolio_data.unrealized_pnl or 0) }}</div>
             <div class="metric-label">Total P&L</div>
           </div>
@@ -118,13 +114,9 @@
                   </td>
                   <td>
                     <span class="badge {% if position.change_24h and position.change_24h >= 0 %}
-                        
                         bg-success
-
                       {% else %}
-                        
                         bg-danger
-
                       {% endif %}">
                       {% if position.change_24h and position.change_24h >= 0 %}+{% endif %}{{ '%.2f'|format(position.change_24h or 0) }}%
                     </span>

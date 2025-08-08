@@ -76,10 +76,27 @@ class RealStrategyManager:
         """Get current trading status"""
         return {
             "is_running": self.is_running,
+            "status": "active" if self.is_running else "stopped",
             "trading_pair": self.trading_pair,
             "balance": self.exchange.get_balance(),
             "strategies": list(self.strategies.keys()),
         }
+
+    def get_trades(self):
+        """Get all trades from strategies"""
+        all_trades = []
+        for strategy in self.strategies.values():
+            if hasattr(strategy, "get_trades"):
+                all_trades.extend(strategy.get_trades())
+        return all_trades
+
+    def get_active_orders(self):
+        """Get all active orders from strategies"""
+        all_orders = []
+        for strategy in self.strategies.values():
+            if hasattr(strategy, "get_active_orders"):
+                all_orders.extend(strategy.get_active_orders())
+        return all_orders
 
     def change_trading_pair(self, new_pair):
         """Change the trading pair"""

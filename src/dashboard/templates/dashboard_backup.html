@@ -28,6 +28,23 @@
         </div>
     </div>
     {% endif %}
+</div>tml" %}
+
+{% block title %}Dashboard - Trading Bot{% endblock %}
+
+{% block content %}
+<!-- Trading Mode Alert -->
+<div data-mode-alert>
+    <div class="alert alert-info border-0 shadow-sm mb-4">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
+            <div>
+                <h6 class="mb-1">� PAPER TRADING MODE</h6>
+                <small>All trades are simulated. No real money is being used.</small>
+            </div>
+            <span class="badge bg-info ms-auto">SIMULATION</span>
+        </div>
+    </div>
 </div>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -283,6 +300,7 @@
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}

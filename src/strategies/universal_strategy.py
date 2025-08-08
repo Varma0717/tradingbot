@@ -7,8 +7,9 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
+import pandas as pd
 
-from .base_strategy import BaseStrategy
+from .base_strategy import BaseStrategy, TradeSignal
 from ..data.data_manager import DataManager
 from ..execution.order_manager import OrderManager
 from ..risk.risk_manager import RiskManager
@@ -29,10 +30,28 @@ class UniversalGridDCAStrategy(BaseStrategy):
         grid_levels: int = 5,
         grid_spacing: float = 0.02,  # 2% spacing between levels
         order_size: float = 100.0,  # Base order size in quote currency
+        strategy_config: Optional[Dict[str, Any]] = None,
+        config=None,
         **kwargs,
     ):
-        super().__init__(symbol, **kwargs)
+        # Create a default config if none provided
+        if strategy_config is None:
+            strategy_config = {
+                "symbol": symbol,
+                "grid_levels": grid_levels,
+                "grid_spacing": grid_spacing,
+                "order_size": order_size,
+            }
 
+        # Import Config class if config not provided
+        if config is None:
+            from ..core.config import Config
+
+            config = Config()
+
+        super().__init__(strategy_config, config)
+
+        self.symbol = symbol
         self.grid_levels = grid_levels
         self.grid_spacing = grid_spacing
         self.order_size = order_size
@@ -61,6 +80,57 @@ class UniversalGridDCAStrategy(BaseStrategy):
         """Clean up strategy resources"""
         await self.cancel_all_grid_orders()
         await super().cleanup()
+
+    @property
+    def name(self) -> str:
+        """Get strategy name"""
+        return "Universal Grid DCA Strategy"
+
+    @property
+    def description(self) -> str:
+        """Get strategy description"""
+        return (
+            "A grid trading strategy with Dollar Cost Averaging (DCA) that places "
+            "buy and sell orders at predetermined price levels forming a grid around "
+            "the current market price. Automatically manages order placement and replacement."
+        )
+
+    @property
+    def required_indicators(self) -> List[str]:
+        """Get required technical indicators"""
+        return []  # Grid strategy doesn't require specific indicators
+
+    async def generate_signals(self, market_data: pd.DataFrame) -> List[TradeSignal]:
+        """Generate trading signals based on market data"""
+        signals = []
+
+        if market_data.empty:
+            return signals
+
+        try:
+            current_price = float(market_data.iloc[-1]["close"])
+
+            # Generate signals based on grid logic
+            if self._should_update_grid(current_price):
+                # Signal to update grid - this is more of an internal operation
+                # but we can generate signals for monitoring
+                signals.append(
+                    TradeSignal(
+                        symbol=self.symbol,
+                        side="buy",  # Placeholder - actual grid management is in process_market_data
+                        strength=0.5,
+                        price=current_price,
+                        reason="Grid update needed",
+                        metadata={
+                            "grid_center": self.grid_center_price,
+                            "current_price": current_price,
+                        },
+                    )
+                )
+        except Exception as e:
+            self.logger.error(f"Error generating signals: {e}")
+
+        return signals
 
     async def process_market_data(self, data: Dict[str, Any]):
         """Process incoming market data"""
@@ -235,7 +305,12 @@ class UniversalGridDCAStrategy(BaseStrategy):
 
     def get_strategy_state(self) -> Dict[str, Any]:
         """Get current strategy state"""
-        base_state = super().get_strategy_state()
+        # Base state information
+        base_state = {
+            "symbol": self.symbol,
+            "is_active": getattr(self, "is_active", False),
+            "timestamp": datetime.now().isoformat(),
+        }
 
         grid_state = {
             "grid_center_price": self.grid_center_price,
@@ -259,13 +334,47 @@ class StrategyManager:
     Strategy Manager for coordinating multiple strategies
     """
 
-    def __init__(self, initial_balance: float = 1000.0):
+    def __init__(self, exchange=None, db_manager=None, initial_balance: float = 1000.0):
+        # Handle both new signature (exchange, db_manager) and old signature (initial_balance)
+        if isinstance(exchange, (int, float)) and db_manager is None:
+            # Old signature: StrategyManager(initial_balance)
+            initial_balance = exchange
+            exchange = None
+            db_manager = None
+
+        self.exchange = exchange
+        self.db_manager = db_manager
         self.initial_balance = initial_balance
         self.current_balance = initial_balance
         self.strategies: Dict[str, BaseStrategy] = {}
         self.is_running = False
 
         self.logger = logging.getLogger(__name__)
+
+        # Create default strategy
+        try:
+            self.default_strategy = UniversalGridDCAStrategy(
+                symbol="BTCUSDT",  # Default symbol
+                grid_levels=5,
+                grid_spacing=0.02,
+                order_size=min(
+                    200.0, initial_balance * 0.1
+                ),  # 10% of balance per order
+            )
+            self.add_strategy("default_grid_dca", self.default_strategy)
+        except Exception as e:
+            self.logger.error(f"Error creating default strategy: {e}")
+
+    async def initialize(self):
+        """Initialize the strategy manager asynchronously"""
+        try:
+            for strategy in self.strategies.values():
+                if hasattr(strategy, "initialize"):
+                    await strategy.initialize()
+            self.logger.info("Strategy manager initialized successfully")
+        except Exception as e:
+            self.logger.error(f"Error initializing strategy manager: {e}")
+            raise
 
     def add_strategy(self, name: str, strategy: BaseStrategy):
         """Add a strategy to the manager"""
@@ -306,7 +415,9 @@ class StrategyManager:
         """Get status of all strategies"""
         return {
             "is_running": self.is_running,
+            "status": "active" if self.is_running else "stopped",
             "total_balance": self.current_balance,
+            "balance": self.current_balance,
             "initial_balance": self.initial_balance,
             "profit_loss": self.current_balance - self.initial_balance,
             "strategies": {
@@ -314,3 +425,65 @@ class StrategyManager:
                 for name, strategy in self.strategies.items()
             },
         }
+
+    def start_trading(self) -> bool:
+        """Start trading (synchronous wrapper)"""
+        try:
+            import asyncio
+
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Create a task if we're already in an event loop
+                asyncio.create_task(self.start_all())
+            else:
+                # Run the coroutine if no loop is running
+                loop.run_until_complete(self.start_all())
+            return True
+        except Exception as e:
+            self.logger.error(f"Error starting trading: {e}")
+            return False
+
+    def stop_trading(self) -> bool:
+        """Stop trading (synchronous wrapper)"""
+        try:
+            import asyncio
+
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Create a task if we're already in an event loop
+                asyncio.create_task(self.stop_all())
+            else:
+                # Run the coroutine if no loop is running
+                loop.run_until_complete(self.stop_all())
+            return True
+        except Exception as e:
+            self.logger.error(f"Error stopping trading: {e}")
+            return False
+
+    def get_trades(self) -> List[Dict[str, Any]]:
+        """Get all trades from all strategies"""
+        all_trades = []
+        for strategy in self.strategies.values():
+            if hasattr(strategy, "trade_history"):
+                all_trades.extend(strategy.trade_history)
+        return all_trades
+
+    def get_active_orders(self) -> List[Dict[str, Any]]:
+        """Get all active orders from all strategies"""
+        all_orders = []
+        for strategy in self.strategies.values():
+            if hasattr(strategy, "active_grid_orders"):
+                for order_id, order_data in strategy.active_grid_orders.items():
+                    all_orders.append(
+                        {
+                            "id": order_id,
+                            "strategy": strategy.symbol,
+                            "type": order_data.get("side", "unknown"),
+                            "amount": order_data.get("amount", 0),
+                            "price": order_data.get("price", 0),
+                            "created": order_data.get(
+                                "created_at", datetime.now().isoformat()
+                            ),
+                        }
+                    )
+        return all_orders

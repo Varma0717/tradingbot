@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings - Trading Bot{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-gear me-2 text-primary"></i>
+        Trading Bot Settings
+    </h1>
+    <div>
+        <button class="btn btn-outline-secondary me-2" onclick="resetSettings()">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            Reset
+        </button>
+        <button class="btn btn-success" onclick="saveSettings()">
+            <i class="bi bi-check2 me-1"></i>
+            Save Settings
+        </button>
+    </div>
+</div>
+
+<!-- Trading Mode Settings -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-toggle-on me-2"></i>
+                    Trading Mode Configuration
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Current Mode:</strong> 
+                    <span class="badge {% if mode_status and mode_status.mode == 'real' %}bg-warning text-dark{% else %}bg-info{% endif %} ms-2">
+                        {% if mode_status and mode_status.mode == 'real' %}REAL TRADING{% else %}PAPER TRADING{% endif %}
+                    </span>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Paper Trading Settings</h6>
+                        <div class="mb-3">
+                            <label for="paper-balance" class="form-label">Starting Paper Balance ($)</label>
+                            <input type="number" class="form-control" id="paper-balance" 
+                                   value="{{ settings_data.paper_balance or 1000 }}" min="100" max="100000">
+                            <small class="form-text text-muted">Virtual money for testing strategies</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Real Trading Settings</h6>
+                        <div class="mb-3">
+                            <label for="real-investment" class="form-label">Maximum Investment ($)</label>
+                            <input type="number" class="form-control" id="real-investment" 
+                                   value="{{ settings_data.real_investment or 50 }}" min="1" max="10000">
+                            <small class="form-text text-muted">Maximum amount to use for real trading</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- API Configuration -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-key me-2"></i>
+                    API Configuration
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Security Note:</strong> API keys are stored in your .env file for security.
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Binance API Key Status</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" 
+                                   value="{% if settings_data and settings_data.api_key_configured %}Configured{% else %}Not Set{% endif %}" 
+                                   readonly>
+                            <span class="input-group-text">
+                                {% if settings_data and settings_data.api_key_configured %}
+                                    <i class="bi bi-check-circle text-success"></i>
+                                {% else %}
+                                    <i class="bi bi-x-circle text-danger"></i>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <small class="form-text text-muted">Set BINANCE_API_KEY in .env file</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Binance API Secret Status</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" 
+                                   value="{% if settings_data and settings_data.api_secret_configured %}Configured{% else %}Not Set{% endif %}" 
+                                   readonly>
+                            <span class="input-group-text">
+                                {% if settings_data and settings_data.api_secret_configured %}
+                                    <i class="bi bi-check-circle text-success"></i>
+                                {% else %}
+                                    <i class="bi bi-x-circle text-danger"></i>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <small class="form-text text-muted">Set BINANCE_API_SECRET in .env file</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Strategy Settings -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-grid-3x3-gap me-2"></i>
+                    Grid DCA Strategy Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="default-symbol" class="form-label">Default Trading Symbol</label>
+                            <select class="form-select" id="default-symbol">
+                                <option value="BTCUSDT" {% if settings_data and settings_data.default_symbol == 'BTCUSDT' %}selected{% endif %}>BTC/USDT</option>
+                                <option value="ETHUSDT" {% if settings_data and settings_data.default_symbol == 'ETHUSDT' %}selected{% endif %}>ETH/USDT</option>
+                                <option value="DOGEUSDT" {% if settings_data and settings_data.default_symbol == 'DOGEUSDT' %}selected{% endif %}>DOGE/USDT</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="take-profit" class="form-label">Take Profit (%)</label>
+                            <input type="number" class="form-control" id="take-profit" 
+                                   value="{{ settings_data.take_profit or 2 }}" min="0.1" max="10" step="0.1">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="stop-loss" class="form-label">Stop Loss (%)</label>
+                            <input type="number" class="form-control" id="stop-loss" 
+                                   value="{{ settings_data.stop_loss or 8 }}" min="1" max="20" step="0.1">
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="grid-levels" class="form-label">Grid Levels</label>
+                            <input type="number" class="form-control" id="grid-levels" 
+                                   value="{{ settings_data.grid_levels or 5 }}" min="3" max="20">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="order-size" class="form-label">Order Size ($)</label>
+                            <input type="number" class="form-control" id="order-size" 
+                                   value="{{ settings_data.order_size or 10 }}" min="1" max="1000">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="auto-restart" class="form-label">Auto Restart</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="auto-restart" 
+                                       {% if settings_data and settings_data.auto_restart %}checked{% endif %}>
+                                <label class="form-check-label" for="auto-restart">
+                                    Automatically restart strategy after completion
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Risk Management -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-shield-check me-2"></i>
+                    Risk Management
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="max-daily-loss" class="form-label">Max Daily Loss ($)</label>
+                            <input type="number" class="form-control" id="max-daily-loss" 
+                                   value="{{ settings_data.max_daily_loss or 100 }}" min="10" max="1000">
+                            <small class="form-text text-muted">Bot will stop if daily loss exceeds this amount</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="max-open-orders" class="form-label">Max Open Orders</label>
+                            <input type="number" class="form-control" id="max-open-orders" 
+                                   value="{{ settings_data.max_open_orders or 10 }}" min="1" max="50">
+                            <small class="form-text text-muted">Maximum number of simultaneous orders</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function saveSettings() {
+    const settings = {
+        paper_balance: document.getElementById('paper-balance').value,
+        real_investment: document.getElementById('real-investment').value,
+        default_symbol: document.getElementById('default-symbol').value,
+        take_profit: document.getElementById('take-profit').value,
+        stop_loss: document.getElementById('stop-loss').value,
+        grid_levels: document.getElementById('grid-levels').value,
+        order_size: document.getElementById('order-size').value,
+        auto_restart: document.getElementById('auto-restart').checked,
+        max_daily_loss: document.getElementById('max-daily-loss').value,
+        max_open_orders: document.getElementById('max-open-orders').value
+    };
+    
+    fetch('/api/settings/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('✅ Settings saved successfully', 'success');
+        } else {
+            showAlert('❌ Failed to save settings: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('❌ Error saving settings: ' + error.message, 'danger');
+    });
+}
+
+function resetSettings() {
+    if (confirm('Are you sure you want to reset all settings to default values?')) {
+        location.reload();
+    }
+}
+
+// Show alert function (if not already defined in base.html)
+function showAlert(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.main-content');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}

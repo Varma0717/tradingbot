@@ -10,6 +10,10 @@ import logging
 import signal
 from pathlib import Path
 import yaml
+from dotenv import load_dotenv
+
+# Load environment variables first
+load_dotenv()
 
 # Setup basic logging first - no emojis to avoid Windows encoding issues
 logging.basicConfig(
