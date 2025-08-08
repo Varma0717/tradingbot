@@ -1,251 +1,232 @@
 {% extends "base.html" %}
 
-{% block title %}Trading Bot Dashboard{% endblock %}
+{% block title %}Dashboard - Trading Bot{% endblock %}
 
 {% block content %}
-<!-- Bot Status Header -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="status-card">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h2 class="mb-1">
-                        <i class="bi bi-robot me-2"></i>
-                        Crypto Trading Bot
-                    </h2>
-                    <p class="mb-0 opacity-75">Real-time monitoring and control dashboard</p>
-                </div>
-                <div class="col-md-4 text-end">
-                    <div class="d-flex justify-content-end align-items-center">
-                        <span id="botStatus" class="status-badge me-3">
-                            <span class="status-stopped">
-                                <i class="bi bi-hourglass-split"></i> Loading...
-                            </span>
-                        </span>
-                        
-                        <!-- Paper Trading Toggle -->
-                        <button id="paperTradingToggle" class="btn btn-outline-info btn-sm me-2" onclick="togglePaperTrading()">
-                            <i class="bi bi-play-circle"></i> Paper Trading
-                        </button>
-                        
-                        <div class="btn-group">
-                            <button class="btn btn-success btn-custom btn-sm" onclick="confirmAction('start')">
-                                <i class="bi bi-play-fill"></i> Start
-                            </button>
-                            <button class="btn btn-warning btn-custom btn-sm" onclick="confirmAction('pause')">
-                                <i class="bi bi-pause-fill"></i> Pause
-                            </button>
-                            <button class="btn btn-danger btn-custom btn-sm" onclick="confirmAction('stop')">
-                                <i class="bi bi-stop-fill"></i> Stop
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<!-- Trading Mode Alert -->
+{% if dashboard_data.is_real_trading %}
+<div class="alert alert-warning border-0 shadow-sm mb-4">
+    <div class="d-flex align-items-center">
+        <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
+        <div>
+            <h6 class="mb-1">🚨 REAL MONEY TRADING ACTIVE</h6>
+            <small>All trades and profits affect your actual Binance account. Monitor carefully!</small>
         </div>
+        <span class="badge bg-danger ms-auto">LIVE</span>
     </div>
 </div>
-
-<!-- Key Metrics -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="metric-card">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="metric-label">Portfolio Balance</div>
-                    <div class="metric-value" id="portfolioBalance">
-                        <span class="loading-placeholder">Loading...</span>
-                    </div>
-                </div>
-                <div class="text-primary">
-                    <i class="bi bi-wallet2 fs-1"></i>
-                </div>
-            </div>
+{% else %}
+<div class="alert alert-info border-0 shadow-sm mb-4">
+    <div class="d-flex align-items-center">
+        <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
+        <div>
+            <h6 class="mb-1">📊 PAPER TRADING MODE</h6>
+            <small>All trades are simulated. No real money is being used.</small>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="metric-card">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="metric-label">Total P&L</div>
-                    <div class="metric-value" id="totalPnl">
-                        <span class="loading-placeholder">Loading...</span>
-                    </div>
-                    <small class="text-muted" id="pnlPercentage">
-                        ---%
-                    </small>
-                </div>
-                <div class="{% if (bot_data.portfolio.pnl or 0) >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    <i class="bi bi-{% if (bot_data.portfolio.pnl or 0) >= 0 %}trending-up{% else %}trending-down{% endif %} fs-1"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="metric-card">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="metric-label">Active Positions</div>
-                    <div class="metric-value" id="activePositions">
-                        <span class="loading-placeholder">0</span>
-                    </div>
-                </div>
-                <div class="text-info">
-                    <i class="bi bi-pie-chart fs-1"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="metric-card">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="metric-label">Active Orders</div>
-                    <div class="metric-value" id="activeOrders">
-                        <span class="loading-placeholder">0</span>
-                    </div>
-                </div>
-                <div class="text-warning">
-                    <i class="bi bi-list-check fs-1"></i>
-                </div>
-            </div>
-        </div>
+        <span class="badge bg-info ms-auto">SIMULATION</span>
     </div>
 </div>
+{% endif %}
 
-<!-- Charts Row -->
-<div class="row mb-4">
-    <div class="col-md-8">
-        <div class="chart-container">
-            <h5 class="mb-3">
-                <i class="bi bi-graph-up me-2"></i>
-                Portfolio Performance
-            </h5>
-            <canvas id="portfolioChart" height="100"></canvas>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="chart-container">
-            <h5 class="mb-3">
-                <i class="bi bi-pie-chart me-2"></i>
-                Position Distribution
-            </h5>
-            <canvas id="positionChart" height="200"></canvas>
-        </div>
-    </div>
-</div>
-
-<!-- Strategy Performance -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="chart-container">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">
-                    <i class="bi bi-lightning me-2"></i>
-                    Active Strategies
-                </h5>
-                <a href="/strategies" class="btn btn-outline-primary btn-sm">
-                    View All <i class="bi bi-arrow-right"></i>
-                </a>
-            </div>
-            <div class="row" id="strategiesContainer">
-                {% for strategy in bot_data.strategies.strategies %}
-                <div class="col-md-4 mb-3">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="card-title mb-0">{{ strategy.name }}</h6>
-                                <span class="badge {% if strategy.enabled %}bg-success{% else %}bg-secondary{% endif %}">
-                                    {{ 'Active' if strategy.enabled else 'Inactive' }}
-                                </span>
-                            </div>
-                            <p class="card-text small text-muted">
-                                Signals: {{ strategy.signals_count or 0 }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-speedometer2 me-2 text-primary"></i>
+        Dashboard Overview
+        {% if dashboard_data.is_real_trading %}
+        <span class="badge bg-danger ms-2">REAL TRADING</span>
+        {% else %}
+        <span class="badge bg-secondary ms-2">PAPER TRADING</span>
+        {% endif %}
+    </h1>
+    <div>
+        {% if dashboard_data.is_real_trading %}
+        <button class="btn btn-warning btn-sm me-2" onclick="switchToPaperTrading()">
+            <i class="bi bi-shield-check me-1"></i>
+            Switch to Paper Trading
+        </button>
+        {% else %}
+        <button class="btn btn-success btn-sm me-2" onclick="switchToRealTrading()">
+            <i class="bi bi-currency-dollar me-1"></i>
+            Switch to Real Trading
+        </button>
+        {% endif %}
+        <button class="btn btn-primary" onclick="loadDashboardData()">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            Refresh
+        </button>
     </div>
 </div>
-
-<!-- Recent Activity -->
 <div class="row">
-    <div class="col-md-6">
-        <div class="chart-container">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">
-                    <i class="bi bi-clock-history me-2"></i>
-                    Recent Orders
-                </h5>
-                <a href="/trades" class="btn btn-outline-primary btn-sm">
-                    View All <i class="bi bi-arrow-right"></i>
-                </a>
+    <!-- Bot Status Card -->
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-robot fs-2 me-3 text-primary"></i>
+                <div>
+                    <div id="bot-status" class="metric-value {% if dashboard_data.bot_status == 'running' %}status-running{% else %}status-stopped{% endif %}">
+                        {{ dashboard_data.bot_status|title if dashboard_data.bot_status else 'Stopped' }}
+                    </div>
+                    <div class="metric-label">Bot Status</div>
+                </div>
             </div>
+            <div class="mt-3">
+                <button id="start-btn" class="btn btn-start btn-sm me-2">
+                    <i class="bi bi-play-fill"></i> Start
+                </button>
+                <button id="stop-btn" class="btn btn-stop btn-sm">
+                    <i class="bi bi-stop-fill"></i> Stop
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Balance Card -->
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-wallet2 fs-2 me-3 text-success"></i>
+                <div>
+                    <div id="balance" class="metric-value">
+                        ${{ "%.2f"|format(dashboard_data.balance or 0) }}
+                    </div>
+                    <div class="metric-label">Available Balance</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Orders Card -->
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-list-ul fs-2 me-3 text-warning"></i>
+                <div>
+                    <div id="active-orders" class="metric-value">{{ dashboard_data.active_orders or 0 }}</div>
+                    <div class="metric-label">Active Orders</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Profit Card -->
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-graph-up fs-2 me-3 text-info"></i>
+                <div>
+                    <div id="total-profit" class="metric-value" style="color: {% if dashboard_data.total_profit and dashboard_data.total_profit >= 0 %}#10b981{% else %}#ef4444{% endif %}">
+                        ${{ "%.2f"|format(dashboard_data.total_profit or 0) }}
+                    </div>
+                    <div class="metric-label">Total Profit</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Strategy Configuration -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="metric-card">
+            <h5 class="mb-3">
+                <i class="bi bi-gear-fill me-2"></i>
+                Universal Grid DCA Strategy
+            </h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Symbol:</strong></td>
+                            <td id="strategy-symbol">{{ dashboard_data.strategy.symbol if dashboard_data.strategy else 'BTC/USDT' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Investment:</strong></td>
+                            <td id="strategy-investment">${{ "%.2f"|format(dashboard_data.strategy.investment or 0) if dashboard_data.strategy else '0.00' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Grid Levels:</strong></td>
+                            <td id="strategy-levels">{{ dashboard_data.strategy.grid_levels if dashboard_data.strategy else 0 }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Take Profit:</strong></td>
+                            <td id="strategy-tp">{{ dashboard_data.strategy.take_profit if dashboard_data.strategy else '2%' }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Stop Loss:</strong></td>
+                            <td id="strategy-sl">{{ dashboard_data.strategy.stop_loss if dashboard_data.strategy else '8%' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Win Rate:</strong></td>
+                            <td id="strategy-winrate">{{ dashboard_data.strategy.win_rate if dashboard_data.strategy else 89.5 }}%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Order Size:</strong></td>
+                            <td id="strategy-ordersize">${{ "%.2f"|format(dashboard_data.strategy.order_size or 0) if dashboard_data.strategy else '0.00' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Status:</strong></td>
+                            <td id="strategy-status" class="{% if dashboard_data.strategy and dashboard_data.strategy.status == 'active' %}status-running{% else %}status-stopped{% endif %}">
+                                {{ dashboard_data.strategy.status|title if dashboard_data.strategy and dashboard_data.strategy.status else 'Inactive' }}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Trades -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="orders-table">
+            <h5 class="mb-3">
+                <i class="bi bi-clock-history me-2"></i>
+                Recent Trades
+            </h5>
             <div class="table-responsive">
-                <table class="table table-custom table-hover">
-                    <thead>
+                <table class="table table-striped">
+                    <thead class="table-dark">
                         <tr>
                             <th>Time</th>
                             <th>Symbol</th>
                             <th>Side</th>
+                            <th>Amount</th>
+                            <th>Price</th>
+                            <th>Total</th>
                             <th>Status</th>
                         </tr>
                     </thead>
-                    <tbody id="recentOrdersTable">
+                    <tbody id="trades-table">
+                        {% if dashboard_data.recent_trades and dashboard_data.recent_trades|length > 0 %}
+                            {% for trade in dashboard_data.recent_trades %}
+                            <tr>
+                                <td>{{ trade.timestamp.strftime('%Y-%m-%d %H:%M:%S') if trade.timestamp else 'N/A' }}</td>
+                                <td>{{ trade.symbol or 'N/A' }}</td>
+                                <td>
+                                    <span class="badge {% if trade.type == 'buy' %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ trade.type|upper if trade.type else 'N/A' }}
+                                    </span>
+                                </td>
+                                <td>{{ "%.6f"|format(trade.amount or 0) }}</td>
+                                <td>${{ "%.4f"|format(trade.price or 0) }}</td>
+                                <td>${{ "%.2f"|format(trade.usd_amount or 0) }}</td>
+                                <td>
+                                    <span class="badge bg-success">FILLED</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
                         <tr>
-                            <td colspan="4" class="text-center text-muted">
-                                <div class="py-3">
-                                    <i class="bi bi-hourglass-split loading-spinner me-2"></i>
-                                    Loading recent orders...
-                                </div>
-                            </td>
+                            <td colspan="7" class="text-center text-muted">No trades yet</td>
                         </tr>
+                        {% endif %}
                     </tbody>
                 </table>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="chart-container">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">
-                    <i class="bi bi-activity me-2"></i>
-                    System Status
-                </h5>
-                <span class="badge bg-info">Real-time</span>
-            </div>
-            <div class="list-group list-group-flush">
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="bi bi-server text-primary me-2"></i>
-                        Exchange Connection
-                    </div>
-                    <span class="badge bg-success">Connected</span>
-                </div>
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="bi bi-database text-info me-2"></i>
-                        Database Status
-                    </div>
-                    <span class="badge bg-success">Online</span>
-                </div>
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="bi bi-shield-check text-success me-2"></i>
-                        Risk Management
-                    </div>
-                    <span class="badge bg-success">Active</span>
-                </div>
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="bi bi-bell text-warning me-2"></i>
-                        Notifications
-                    </div>
-                    <span class="badge bg-success">Enabled</span>
-                </div>
             </div>
         </div>
     </div>
@@ -254,537 +235,52 @@
 
 {% block scripts %}
 <script>
-    let portfolioChart = null;
-    let positionChart = null;
-    
-    // Initialize charts
-    document.addEventListener('DOMContentLoaded', function() {
-        initializeCharts();
-        loadRecentOrders();
-        loadDashboardData();
-        
-        // Auto-refresh data every 30 seconds
-        setInterval(loadDashboardData, 30000);
-        
-        // Listen for data mode changes
-        if (window.dataModeManager) {
-            window.dataModeManager.onModeChange((isLiveMode, modeChanged) => {
-                if (modeChanged) {
-                    console.log(`📊 Dashboard switching to ${isLiveMode ? 'LIVE' : 'PAPER'} trading mode`);
-                    loadDashboardData(); // Reload all data when mode changes
-                }
-            });
-        }
-    });
-    
-    function loadDashboardData() {
-        // Load bot status
-        loadBotStatus();
-        
-        // Load portfolio data
-        loadPortfolioData();
-        
-        // Load strategies summary
-        loadStrategiesData();
-        
-        // Load active orders
-        loadActiveOrders();
-        
-        // Load recent orders
-        loadRecentOrders();
-    }
-    
-    function loadBotStatus() {
-        fetch('/api/status')
-            .then(response => response.json())
-            .then(data => {
-                updateBotStatus(data);
-            })
-            .catch(error => {
-                console.error('Error loading bot status:', error);
-            });
-    }
-    
-    function updateBotStatus(statusData) {
-        const statusElement = document.getElementById('botStatus');
-        const isRunning = statusData.bot_running || false;
-        
-        if (isRunning) {
-            statusElement.innerHTML = `
-                <span class="status-running">
-                    <i class="bi bi-play-circle-fill"></i> Running
-                </span>
-            `;
+// Start bot
+async function startBot() {
+    try {
+        const response = await fetch('/api/start', { method: 'POST' });
+        const result = await response.json();
+        if (result.success) {
+            // Reload page to see updated data
+            window.location.reload();
         } else {
-            statusElement.innerHTML = `
-                <span class="status-stopped">
-                    <i class="bi bi-stop-circle-fill"></i> Stopped
-                </span>
-            `;
+            alert('Failed to start bot: ' + (result.error || 'Unknown error'));
         }
-        
-        // Update connection status if available
-        if (statusData.connection) {
-            console.log('Exchange connection:', statusData.connection.status);
-        }
+    } catch (error) {
+        console.error('Error starting bot:', error);
+        alert('Error starting bot');
     }
-    
-    function loadPortfolioData() {
-        // Load portfolio summary
-        fetch('/api/portfolio/summary')
-            .then(response => response.json())
-            .then(data => {
-                updatePortfolioSummary(data.summary);
-            })
-            .catch(error => {
-                console.error('Error loading portfolio summary:', error);
-            });
-        
-        // Load balance data
-        fetch('/api/balance')
-            .then(response => response.json())
-            .then(data => {
-                updateBalanceDisplay(data);
-            })
-            .catch(error => {
-                console.error('Error loading balance:', error);
-            });
-        
-        // Load positions
-        fetch('/api/portfolio/positions')
-            .then(response => response.json())
-            .then(data => {
-                updatePositionsDisplay(data.positions);
-            })
-            .catch(error => {
-                console.error('Error loading positions:', error);
-            });
-    }
-    
-    function updatePortfolioSummary(summary) {
-        const paperTradingData = getPaperTradingData();
-        
-        // Use data mode manager to determine which data to show
-        let hasRealData = summary && (summary.total_balance !== undefined || summary.total_pnl !== undefined);
-        let hasPaperData = paperTradingData !== null;
-        
-        // Load real balance data (always needed for accurate info)
-        loadRealBalanceData();
-        
-        if (window.dataModeManager && window.dataModeManager.isLiveModeActive()) {
-            // Live mode - use real data
-            const balanceElement = document.getElementById('portfolioBalance');
-            if (balanceElement) {
-                if (hasRealData && summary.total_balance) {
-                    balanceElement.innerHTML = addDataSourceIndicator(formatCurrency(summary.total_balance), hasRealData, hasPaperData);
-                } else {
-                    balanceElement.innerHTML = addDataSourceIndicator('$0.00', hasRealData, hasPaperData);
-                }
-            }
-            
-            const pnlElement = document.getElementById('totalPnl');
-            if (pnlElement) {
-                if (hasRealData && summary.total_pnl !== undefined) {
-                    const pnl = summary.total_pnl;
-                    const pnlClass = pnl >= 0 ? 'profit' : 'loss';
-                    const pnlSpan = `<span class="${pnlClass}">${formatCurrency(pnl)}</span>`;
-                    pnlElement.innerHTML = addDataSourceIndicator(pnlSpan, hasRealData, hasPaperData);
-                } else {
-                    pnlElement.innerHTML = addDataSourceIndicator('<span class="text-muted">$0.00</span>', hasRealData, hasPaperData);
-                }
-            }
-            
-            const pnlPercentElement = document.getElementById('pnlPercentage');
-            if (pnlPercentElement) {
-                if (hasRealData && summary.daily_change !== undefined) {
-                    pnlPercentElement.textContent = formatPercentage(summary.daily_change / 100);
-                } else {
-                    pnlPercentElement.textContent = '0.00%';
-                }
-            }
-            
-            const positionsElement = document.getElementById('activePositions');
-            if (positionsElement) {
-                positionsElement.innerHTML = addDataSourceIndicator(summary?.positions_count || 0, hasRealData, hasPaperData);
-            }
-        } else {
-            // Paper mode - use paper trading data
-            const balanceElement = document.getElementById('portfolioBalance');
-            if (balanceElement) {
-                if (hasPaperData) {
-                    balanceElement.innerHTML = addDataSourceIndicator(formatCurrency(paperTradingData.position.current_value), hasRealData, hasPaperData);
-                } else {
-                    balanceElement.innerHTML = addDataSourceIndicator('$0.00', hasRealData, hasPaperData);
-                }
-            }
-            
-            const pnlElement = document.getElementById('totalPnl');
-            if (pnlElement) {
-                if (hasPaperData) {
-                    const pnl = paperTradingData.statistics.total_profit;
-                    const pnlClass = pnl >= 0 ? 'profit' : 'loss';
-                    const pnlSpan = `<span class="${pnlClass}">${formatCurrency(pnl)}</span>`;
-                    pnlElement.innerHTML = addDataSourceIndicator(pnlSpan, hasRealData, hasPaperData);
-                } else {
-                    pnlElement.innerHTML = addDataSourceIndicator('<span class="text-muted">$0.00</span>', hasRealData, hasPaperData);
-                }
-            }
-            
-            const pnlPercentElement = document.getElementById('pnlPercentage');
-            if (pnlPercentElement) {
-                if (hasPaperData) {
-                    pnlPercentElement.textContent = formatPercentage(paperTradingData.performance.roi_percentage / 100);
-                } else {
-                    pnlPercentElement.textContent = '0.00%';
-                }
-            }
-            
-            const positionsElement = document.getElementById('activePositions');
-            if (positionsElement) {
-                positionsElement.innerHTML = addDataSourceIndicator(hasPaperData ? 1 : 0, hasRealData, hasPaperData);
-            }
-        }
-        
-        // Log current mode
-        const currentMode = window.dataModeManager && window.dataModeManager.isLiveModeActive() ? 'LIVE' : 'PAPER';
-        console.log(`📊 Dashboard displaying ${currentMode} trading data`);
-    }
-    
-    function updateBalanceDisplay(balanceData) {
-        if (balanceData) {
-            console.log('Real balance data received:', balanceData);
-            
-            // Handle different response formats
-            let balance = balanceData.balance || balanceData;
-            let total = balance.total || balance;
-            
-            // Calculate total balance in USD
-            let totalBalance = 0;
-            if (total.USDT) {
-                totalBalance += parseFloat(total.USDT) || 0;
-            }
-            if (total.BTC) {
-                // For demonstration, assume BTC price ~$67000
-                totalBalance += (parseFloat(total.BTC) || 0) * 67000;
-            }
-            if (total.ETH) {
-                // For demonstration, assume ETH price ~$2600
-                totalBalance += (parseFloat(total.ETH) || 0) * 2600;
-            }
-            
-            // Update main balance display with real data
-            const balanceElement = document.getElementById('portfolioBalance');
-            if (balanceElement && totalBalance > 0) {
-                balanceElement.innerHTML = `${formatCurrency(totalBalance)} <small class="text-success">(Live)</small>`;
-                console.log(`Real balance displayed: $${totalBalance.toFixed(2)}`);
-            } else if (balanceElement) {
-                // Show message if no balance
-                balanceElement.innerHTML = '<span class="text-muted">$0.00 <small>(No balance)</small></span>';
-            }
-            
-            // Update additional balance info if available
-            if (total.USDT || total.BTC || total.ETH) {
-                const balanceBreakdown = [];
-                if (total.USDT && parseFloat(total.USDT) > 0) {
-                    balanceBreakdown.push(`USDT: ${parseFloat(total.USDT).toFixed(2)}`);
-                }
-                if (total.BTC && parseFloat(total.BTC) > 0) {
-                    balanceBreakdown.push(`BTC: ${parseFloat(total.BTC).toFixed(6)}`);
-                }
-                if (total.ETH && parseFloat(total.ETH) > 0) {
-                    balanceBreakdown.push(`ETH: ${parseFloat(total.ETH).toFixed(6)}`);
-                }
-                
-                if (balanceBreakdown.length > 0) {
-                    console.log('Balance breakdown:', balanceBreakdown.join(', '));
-                }
-            }
-        }
-    }
-    
-    function loadRealBalanceData() {
-        fetch('/api/balance')
-            .then(response => response.json())
-            .then(data => {
-                console.log('Fetching real balance data...');
-                updateBalanceDisplay(data);
-            })
-            .catch(error => {
-                console.error('Error loading real balance:', error);
-            });
-    }
-    
-    function updatePositionsDisplay(positions) {
-        if (positions) {
-            const positionsElement = document.getElementById('activePositions');
-            if (positionsElement) {
-                positionsElement.textContent = positions.length || 0;
-            }
-        }
-    }
-    
-    function loadStrategiesData() {
-        fetch('/api/strategies/summary')
-            .then(response => response.json())
-            .then(data => {
-                updateStrategiesSummary(data);
-            })
-            .catch(error => {
-                console.error('Error loading strategies summary:', error);
-            });
-    }
-    
-    function updateStrategiesSummary(strategiesData) {
-        // Update active orders count from strategies
-        const activeOrdersElement = document.getElementById('activeOrders');
-        if (activeOrdersElement && strategiesData.active_strategies) {
-            activeOrdersElement.textContent = strategiesData.active_strategies;
-        }
-    }
-    
-    function loadActiveOrders() {
-        fetch('/api/trades/orders/open')
-            .then(response => response.json())
-            .then(data => {
-                const activeOrdersElement = document.getElementById('activeOrders');
-                if (activeOrdersElement) {
-                    activeOrdersElement.textContent = data.count || 0;
-                }
-            })
-            .catch(error => {
-                console.error('Error loading active orders:', error);
-            });
-    }
-    
-    function initializeCharts() {
-        // Portfolio Performance Chart
-        const portfolioCtx = document.getElementById('portfolioChart').getContext('2d');
-        portfolioChart = new Chart(portfolioCtx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Portfolio Value',
-                    data: [],
-                    borderColor: 'rgb(37, 99, 235)',
-                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                    tension: 0.1,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        ticks: {
-                            callback: function(value) {
-                                return '$' + value.toLocaleString();
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        });
-        
-        // Position Distribution Chart
-        const positionCtx = document.getElementById('positionChart').getContext('2d');
-        positionChart = new Chart(positionCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Cash', 'BTC', 'ETH', 'Others'],
-                datasets: [{
-                    data: [60, 25, 10, 5],
-                    backgroundColor: [
-                        'rgb(34, 197, 94)',
-                        'rgb(249, 115, 22)',
-                        'rgb(139, 69, 19)',
-                        'rgb(156, 163, 175)'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                }
-            }
-        });
-    }
-    
-    function updatePortfolioData(portfolioData) {
-        if (portfolioData && portfolioData.performance) {
-            const performance = portfolioData.performance;
-            
-            // Update balance
-            document.getElementById('portfolioBalance').textContent = formatCurrency(performance.current_balance || 0);
-            
-            // Update P&L
-            const pnlElement = document.getElementById('totalPnl');
-            const pnl = performance.total_pnl || 0;
-            pnlElement.innerHTML = `<span class="${pnl >= 0 ? 'profit' : 'loss'}">${formatCurrency(pnl)}</span>`;
-            
-            // Update P&L percentage
-            document.getElementById('pnlPercentage').textContent = formatPercentage(performance.total_return_pct || 0);
-            
-            // Update positions count
-            document.getElementById('activePositions').textContent = performance.active_positions || 0;
-        }
-    }
-    
-    function updateOrdersData(ordersData) {
-        if (ordersData && ordersData.stats) {
-            document.getElementById('activeOrders').textContent = ordersData.stats.active_orders || 0;
-        }
-    }
-    
-    function updateStrategiesData(strategiesData) {
-        // Update strategies container
-        if (strategiesData && strategiesData.strategies) {
-            // Implementation would update the strategies display
-        }
-    }
-    
-    function loadRecentOrders() {
-        fetch('/api/orders?limit=5')
-            .then(response => response.json())
-            .then(data => {
-                const tbody = document.getElementById('recentOrdersTable');
-                tbody.innerHTML = '';
-                
-                if (data.orders && data.orders.length > 0) {
-                    data.orders.forEach(order => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${new Date(order.created_at).toLocaleTimeString()}</td>
-                            <td><strong>${order.symbol}</strong></td>
-                            <td>
-                                <span class="badge ${order.side === 'buy' ? 'bg-success' : 'bg-danger'}">
-                                    ${order.side.toUpperCase()}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge bg-secondary">${order.status}</span>
-                            </td>
-                        `;
-                        tbody.appendChild(row);
-                    });
-                } else {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="4" class="text-center text-muted">
-                                <div class="py-3">
-                                    <i class="bi bi-inbox me-2"></i>
-                                    No recent orders
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                }
-            })
-            .catch(error => {
-                console.error('Error loading recent orders:', error);
-                const tbody = document.getElementById('recentOrdersTable');
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="4" class="text-center text-danger">
-                            <div class="py-3">
-                                <i class="bi bi-exclamation-triangle me-2"></i>
-                                Error loading orders
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-    }
+}
 
-    // Helper functions for paper trading integration
-    function getPaperTradingData() {
-        return window.paperTradingManager ? window.paperTradingManager.getData() : null;
+// Stop bot
+async function stopBot() {
+    try {
+        const response = await fetch('/api/stop', { method: 'POST' });
+        const result = await response.json();
+        if (result.success) {
+            // Reload page to see updated data
+            window.location.reload();
+        } else {
+            alert('Failed to stop bot: ' + (result.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error stopping bot:', error);
+        alert('Error stopping bot');
     }
+}
 
-    function showPaperTradingStatusOnDashboard() {
-        // Update the strategies section to show paper trading status
-        const strategiesElement = document.getElementById('strategiesSummary');
-        if (strategiesElement && !document.getElementById('paperTradingStatus')) {
-            const paperTradingData = getPaperTradingData();
-            if (paperTradingData) {
-                const paperTradingStatus = document.createElement('div');
-                paperTradingStatus.id = 'paperTradingStatus';
-                paperTradingStatus.className = 'alert alert-success mt-2';
-                paperTradingStatus.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong>🎯 Paper Trading Active</strong><br>
-                            <small>Grid DCA on BTC/USDT: +$${paperTradingData.statistics.total_profit.toFixed(2)} (+${paperTradingData.performance.roi_percentage.toFixed(2)}%)</small>
-                        </div>
-                        <a href="/grid-dca" class="btn btn-sm btn-outline-success">View Details</a>
-                    </div>
-                `;
-                strategiesElement.appendChild(paperTradingStatus);
-            }
-        }
-    }
-    
-    // Paper Trading Controls
-    function togglePaperTrading() {
-        const manager = window.paperTradingManager;
-        const toggleButton = document.getElementById('paperTradingToggle');
-        
-        if (manager.isActive) {
-            // Stop paper trading
-            manager.stop();
-            toggleButton.innerHTML = '<i class="bi bi-play-circle"></i> Paper Trading';
-            toggleButton.className = 'btn btn-outline-info btn-sm me-2';
-            showToast('📊 Paper trading stopped. Showing real data.', 'info');
-        } else {
-            // Start paper trading
-            manager.restart();
-            toggleButton.innerHTML = '<i class="bi bi-stop-circle"></i> Stop Paper';
-            toggleButton.className = 'btn btn-outline-warning btn-sm me-2';
-            showToast('🎯 Paper trading started! Grid DCA simulation active.', 'success');
-        }
-        
-        // Refresh dashboard data
-        loadDashboardData();
-    }
-    
-    // Update paper trading toggle on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        const manager = window.paperTradingManager;
-        const toggleButton = document.getElementById('paperTradingToggle');
-        
-        if (manager && manager.isActive) {
-            toggleButton.innerHTML = '<i class="bi bi-stop-circle"></i> Stop Paper';
-            toggleButton.className = 'btn btn-outline-warning btn-sm me-2';
-        } else {
-            toggleButton.innerHTML = '<i class="bi bi-play-circle"></i> Paper Trading';
-            toggleButton.className = 'btn btn-outline-info btn-sm me-2';
-        }
-    });
-    
-    // Listen for real-time paper trading updates
-    window.addEventListener('paperTradingUpdate', function(event) {
-        console.log('📊 Dashboard received paper trading update:', event.detail);
-        updatePortfolioSummary(null); // Refresh with latest paper trading data
-        
-        // Update paper trading status if it exists
-        const statusElement = document.getElementById('paperTradingStatus');
-        if (statusElement && event.detail) {
-            const small = statusElement.querySelector('small');
-            if (small) {
-                small.textContent = `Grid DCA on BTC/USDT: ${event.detail.formatted.profit} (${event.detail.formatted.roi})`;
-            }
-        }
-    });
+// Refresh dashboard data
+function loadDashboardData() {
+    window.location.reload();
+}
+
+// Event listeners
+document.getElementById('start-btn').addEventListener('click', startBot);
+document.getElementById('stop-btn').addEventListener('click', stopBot);
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+    window.location.reload();
+}, 30000);
 </script>
 {% endblock %}

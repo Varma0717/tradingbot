@@ -112,7 +112,7 @@ class DashboardApp:
             self.app.include_router(
                 dashboard_routes.router, prefix="", tags=["dashboard"]
             )
-            self.app.include_router(api_routes.router, prefix="/api", tags=["api"])
+            self.app.include_router(api_routes.router, tags=["api"])
             self.app.include_router(
                 websocket_routes.router, prefix="/ws", tags=["websocket"]
             )
@@ -150,13 +150,9 @@ class DashboardApp:
         except Exception as e:
             self.logger.error(f"Error setting bot for WebSocket routes: {e}")
 
-        # Set bot for API routes
-        try:
-            from .routes import api_routes
-
-            api_routes.set_trading_bot(trading_bot)
-        except Exception as e:
-            self.logger.error(f"Error setting bot for API routes: {e}")
+        # Set bot for API routes - our universal strategy doesn't need this
+        # The API routes handle their own strategy manager initialization
+        self.logger.info("API routes configured for universal strategy")
 
         self.logger.info("Trading bot instance connected to dashboard")
 

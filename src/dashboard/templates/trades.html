@@ -1,348 +1,136 @@
 {% extends "base.html" %}
 
-{% block title %}Trades - Crypto Trading Bot{% endblock %}
+{% block title %}Trades - Trading Bot{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Trading Summary Cards -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="metric-card shadow-sm">
-                <div class="metric-label">Total Trades</div>
-                <div class="metric-value" id="totalTrades">0</div>
-                <div class="metric-change">
-                    <i class="fas fa-exchange-alt"></i>
-                    <span id="todayTrades">0 Today</span>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="metric-card shadow-sm">
-                <div class="metric-label">Win Rate</div>
-                <div class="metric-value" id="winRate">0%</div>
-                <div class="metric-change positive">
-                    <i class="fas fa-arrow-up"></i>
-                    <span id="winRateChange">+0.0%</span>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="metric-card shadow-sm">
-                <div class="metric-label">Total P&L</div>
-                <div class="metric-value" id="totalPnL">$0.00</div>
-                <div class="metric-change positive">
-                    <i class="fas fa-arrow-up"></i>
-                    <span id="totalPnLChange">+0.00%</span>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="metric-card shadow-sm">
-                <div class="metric-label">Avg Trade Size</div>
-                <div class="metric-value" id="avgTradeSize">$0.00</div>
-                <div class="metric-change">
-                    <i class="fas fa-chart-bar"></i>
-                    <span id="maxTradeSize">Max: $0.00</span>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-arrow-left-right me-2 text-primary"></i>
+        Trade History
+    </h1>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary" onclick="exportTrades()">
+            <i class="bi bi-download me-1"></i>
+            Export
+        </button>
+        <button class="btn btn-primary" onclick="refreshTrades()">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Trade Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-list-ol fs-2 me-3 text-primary"></i>
+                <div>
+                    <div id="total-trades" class="metric-value">{{ trades_data.total_trades or 0 }}</div>
+                    <div class="metric-label">Total Trades</div>
                 </div>
             </div>
         </div>
     </div>
-
-    <div class="row mb-4">
-        <!-- Manual Trading -->
-        <div class="col-xl-4 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-hand-paper me-2"></i>
-                        Manual Trading
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form id="manualTradeForm">
-                        <div class="mb-3">
-                            <label class="form-label">Symbol</label>
-                            <select class="form-select" id="tradeSymbol" required>
-                                <option value="">Select Symbol</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Order Type</label>
-                            <select class="form-select" id="orderType" required>
-                                <option value="market">Market</option>
-                                <option value="limit">Limit</option>
-                                <option value="stop">Stop</option>
-                                <option value="stop_limit">Stop Limit</option>
-                            </select>
-                        </div>
-                        <div class="row">
-                            <div class="col-6">
-                                <label class="form-label">Side</label>
-                                <select class="form-select" id="tradeSide" required>
-                                    <option value="buy">Buy</option>
-                                    <option value="sell">Sell</option>
-                                </select>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label">Amount</label>
-                                <input type="number" class="form-control" id="tradeAmount" step="0.00001" required>
-                            </div>
-                        </div>
-                        <div class="mb-3 mt-3" id="priceFields" style="display: none;">
-                            <div class="row">
-                                <div class="col-6">
-                                    <label class="form-label">Price</label>
-                                    <input type="number" class="form-control" id="tradePrice" step="0.01">
-                                </div>
-                                <div class="col-6" id="stopPriceField" style="display: none;">
-                                    <label class="form-label">Stop Price</label>
-                                    <input type="number" class="form-control" id="stopPrice" step="0.01">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Risk Management</label>
-                            <div class="row">
-                                <div class="col-6">
-                                    <input type="number" class="form-control" id="stopLoss" placeholder="Stop Loss" step="0.01">
-                                </div>
-                                <div class="col-6">
-                                    <input type="number" class="form-control" id="takeProfit" placeholder="Take Profit" step="0.01">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-paper-plane me-1"></i>
-                                Place Order
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="getQuote()">
-                                <i class="fas fa-chart-line me-1"></i>
-                                Get Quote
-                            </button>
-                        </div>
-                    </form>
-                    <div id="quoteResult" class="mt-3" style="display: none;">
-                        <div class="alert alert-info">
-                            <strong>Quote:</strong> <span id="quotePrice"></span><br>
-                            <strong>Total:</strong> <span id="quoteTotal"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Trade Performance Chart -->
-        <div class="col-xl-8 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-line me-2"></i>
-                        Trade Performance
-                        <span id="paperTradingIndicator" class="badge bg-warning ms-2" style="display: none;">
-                            <i class="fas fa-circle pulse-animation"></i> PAPER TRADING
-                        </span>
-                    </h5>
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" class="btn btn-outline-primary active" data-chart="pnl">P&L</button>
-                        <button type="button" class="btn btn-outline-primary" data-chart="volume">Volume</button>
-                        <button type="button" class="btn btn-outline-primary" data-chart="winrate">Win Rate</button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="performanceChart"></canvas>
-                    </div>
+    
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-check-circle fs-2 me-3 text-success"></i>
+                <div>
+                    <div id="winning-trades" class="metric-value">{{ trades_data.winning_trades or 0 }}</div>
+                    <div class="metric-label">Winning Trades</div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Open Orders -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-clock me-2"></i>
-                        Open Orders
-                    </h5>
-                    <button class="btn btn-primary btn-sm" onclick="refreshOpenOrders()">
-                        <i class="fas fa-sync-alt me-1"></i>
-                        Refresh
-                    </button>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Order ID</th>
-                                    <th>Symbol</th>
-                                    <th>Type</th>
-                                    <th>Side</th>
-                                    <th>Amount</th>
-                                    <th>Price</th>
-                                    <th>Filled</th>
-                                    <th>Status</th>
-                                    <th>Created</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="openOrdersTable">
-                                <tr>
-                                    <td colspan="10" class="text-center py-4">
-                                        <div class="spinner-border text-primary" role="status">
-                                            <span class="visually-hidden">Loading...</span>
-                                        </div>
-                                        <div class="mt-2">Loading open orders...</div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+    
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-percent fs-2 me-3 text-info"></i>
+                <div>
+                    <div id="win-rate" class="metric-value">{{ "%.1f"|format(trades_data.win_rate or 0) }}%</div>
+                    <div class="metric-label">Win Rate</div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Trade History -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-history me-2"></i>
-                        Trade History
-                    </h5>
-                    <div class="d-flex gap-2">
-                        <select class="form-select form-select-sm" id="filterPeriod" style="width: auto;">
-                            <option value="1d">Last 24 Hours</option>
-                            <option value="7d">Last 7 Days</option>
-                            <option value="30d" selected>Last 30 Days</option>
-                            <option value="90d">Last 90 Days</option>
-                            <option value="all">All Time</option>
-                        </select>
-                        <select class="form-select form-select-sm" id="filterSymbol" style="width: auto;">
-                            <option value="">All Symbols</option>
-                        </select>
-                        <button class="btn btn-outline-primary btn-sm" onclick="exportTrades()">
-                            <i class="fas fa-download me-1"></i>
-                            Export
-                        </button>
+    
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-currency-dollar fs-2 me-3 text-success"></i>
+                <div>
+                    <div id="total-profit" class="metric-value" style="color: {% if trades_data.total_profit and trades_data.total_profit >= 0 %}var(--success-color){% else %}var(--danger-color){% endif %}">
+                        ${{ "%.2f"|format(trades_data.total_profit or 0) }}
                     </div>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Trade ID</th>
-                                    <th>Symbol</th>
-                                    <th>Side</th>
-                                    <th>Amount</th>
-                                    <th>Entry Price</th>
-                                    <th>Exit Price</th>
-                                    <th>P&L</th>
-                                    <th>P&L %</th>
-                                    <th>Duration</th>
-                                    <th>Strategy</th>
-                                    <th>Date</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tradeHistoryTable">
-                                <tr>
-                                    <td colspan="12" class="text-center py-4">
-                                        <div class="spinner-border text-primary" role="status">
-                                            <span class="visually-hidden">Loading...</span>
-                                        </div>
-                                        <div class="mt-2">Loading trade history...</div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <nav class="mt-3">
-                        <ul class="pagination pagination-sm justify-content-center" id="paginationControls">
-                            <!-- Pagination will be added dynamically -->
-                        </ul>
-                    </nav>
+                    <div class="metric-label">Total Profit</div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Trade Details Modal -->
-<div class="modal fade" id="tradeModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Trade Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Trade Information</h6>
-                        <table class="table table-sm">
-                            <tr><td>Trade ID:</td><td><strong id="modalTradeId">-</strong></td></tr>
-                            <tr><td>Symbol:</td><td><strong id="modalSymbol">-</strong></td></tr>
-                            <tr><td>Side:</td><td><strong id="modalSide">-</strong></td></tr>
-                            <tr><td>Amount:</td><td><strong id="modalAmount">-</strong></td></tr>
-                            <tr><td>Entry Price:</td><td><strong id="modalEntryPrice">-</strong></td></tr>
-                            <tr><td>Exit Price:</td><td><strong id="modalExitPrice">-</strong></td></tr>
-                            <tr><td>Duration:</td><td><strong id="modalDuration">-</strong></td></tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Performance</h6>
-                        <table class="table table-sm">
-                            <tr><td>P&L:</td><td><strong id="modalPnL">-</strong></td></tr>
-                            <tr><td>P&L %:</td><td><strong id="modalPnLPercent">-</strong></td></tr>
-                            <tr><td>Fees:</td><td><strong id="modalFees">-</strong></td></tr>
-                            <tr><td>Strategy:</td><td><strong id="modalStrategy">-</strong></td></tr>
-                            <tr><td>Entry Date:</td><td><strong id="modalEntryDate">-</strong></td></tr>
-                            <tr><td>Exit Date:</td><td><strong id="modalExitDate">-</strong></td></tr>
-                            <tr><td>Risk Score:</td><td><strong id="modalRiskScore">-</strong></td></tr>
-                        </table>
-                    </div>
-                </div>
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <h6>Trade Notes</h6>
-                        <textarea class="form-control" id="tradeNotes" rows="3" placeholder="Add notes about this trade..."></textarea>
-                        <div class="mt-2">
-                            <button class="btn btn-sm btn-primary" onclick="saveTradeNotes()">Save Notes</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="viewTradeChart()">View Chart</button>
-            </div>
-        </div>
+<!-- Trades Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-clock-history me-2"></i>
+            Recent Trades
+        </h5>
     </div>
-</div>
-
-<!-- Order Cancel Confirmation Modal -->
-<div class="modal fade" id="cancelOrderModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Cancel Order</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to cancel this order?</p>
-                <div id="cancelOrderDetails"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, Keep Order</button>
-                <button type="button" class="btn btn-danger" onclick="confirmCancelOrder()">Yes, Cancel Order</button>
-            </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Amount</th>
+                        <th>Price</th>
+                        <th>Total</th>
+                        <th>Fee</th>
+                        <th>P&L</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="trades-table">
+                    {% if trades_data.recent_trades and trades_data.recent_trades|length > 0 %}
+                        {% for trade in trades_data.recent_trades %}
+                        <tr>
+                            <td>{{ trade.timestamp.strftime('%Y-%m-%d %H:%M:%S') if trade.timestamp else 'N/A' }}</td>
+                            <td><strong>{{ trade.symbol or 'N/A' }}</strong></td>
+                            <td>
+                                <span class="badge {% if trade.type == 'buy' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ trade.type|upper if trade.type else 'N/A' }}
+                                </span>
+                            </td>
+                            <td>{{ "%.6f"|format(trade.amount or 0) }}</td>
+                            <td>${{ "%.4f"|format(trade.price or 0) }}</td>
+                            <td>${{ "%.2f"|format(trade.usd_amount or 0) }}</td>
+                            <td>${{ "%.2f"|format(0) }}</td>
+                            <td class="{% if trade.profit and trade.profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                ${{ "%.2f"|format(trade.profit or 0) }}
+                            </td>
+                            <td>
+                                <span class="badge bg-success">FILLED</span>
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox me-2"></i>
+                            No trades found
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -350,789 +138,18 @@
 
 {% block scripts %}
 <script>
-let performanceChart;
-let currentPage = 1;
-let totalPages = 1;
-let selectedOrderId = null;
-let selectedTradeId = null;
-
-document.addEventListener('DOMContentLoaded', function() {
-    initializeCharts();
-    loadTradingData();
-    setupEventListeners();
-    loadSymbols();
-    setupWebSocket();
-    
-    // Paper trading integration
-    updatePaperTradingIndicator();
-    
-    // Listen for paper trading updates
-    document.addEventListener('paperTradingUpdate', function() {
-        loadTradingData();
-        loadTradeHistory();
-        updatePaperTradingIndicator();
-    });
-    
-    // Listen for data mode changes
-    if (window.dataModeManager) {
-        window.dataModeManager.onModeChange((isLiveMode, modeChanged) => {
-            if (modeChanged) {
-                console.log(`📊 Trades switching to ${isLiveMode ? 'LIVE' : 'PAPER'} trading mode`);
-                loadTradingData(); // Reload all data when mode changes
-                loadTradeHistory();
-            }
-        });
-    }
-});
-
-function initializeCharts() {
-    const ctx = document.getElementById('performanceChart').getContext('2d');
-    performanceChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'P&L',
-                data: [],
-                borderColor: '#0d6efd',
-                backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                fill: true,
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return '$' + value.toLocaleString();
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-function loadTradingData() {
-    // Load trading summary
-    fetch('/api/trades/summary')
-        .then(response => response.json())
-        .then(data => {
-            updateTradingSummary(data);
-        })
-        .catch(error => {
-            console.error('Error loading trading summary:', error);
-        });
-
-    // Load open orders
-    loadOpenOrders();
-
-    // Load trade history
-    loadTradeHistory();
-
-    // Load performance chart
-    loadPerformanceChart('pnl');
-}
-
-function updateTradingSummary(data) {
-    const paperTradingData = getPaperTradingData();
-    
-    // Use data mode manager to determine which data to show
-    let totalTrades, winRate, totalPnL, avgTradeSize, todayTrades, maxTradeSize;
-    let hasRealData = data.total_trades !== undefined || data.total_pnl !== undefined;
-    let hasPaperData = paperTradingData !== null;
-    
-    if (window.dataModeManager && window.dataModeManager.isLiveModeActive()) {
-        // Live mode - use real data
-        totalTrades = data.total_trades || 0;
-        winRate = data.win_rate || 0;
-        totalPnL = data.total_pnl || 0;
-        avgTradeSize = data.avg_trade_size || 0;
-        todayTrades = data.today_trades || 0;
-        maxTradeSize = data.max_trade_size || 0;
-    } else {
-        // Paper mode - use paper trading data
-        totalTrades = paperTradingData ? paperTradingData.statistics.total_trades : 0;
-        winRate = paperTradingData ? paperTradingData.statistics.win_rate : 0;
-        totalPnL = paperTradingData ? paperTradingData.statistics.total_profit : 0;
-        avgTradeSize = paperTradingData ? paperTradingData.performance.profit_per_trade : 0;
-        todayTrades = paperTradingData ? Math.floor(paperTradingData.statistics.total_trades * 0.4) : 0;
-        maxTradeSize = paperTradingData ? 4.20 : 0;
-    }
-    
-    // Update display with data source indicators
-    document.getElementById('totalTrades').innerHTML = addDataSourceIndicator(totalTrades, hasRealData, hasPaperData);
-    document.getElementById('winRate').innerHTML = addDataSourceIndicator(formatPercentage(winRate / 100), hasRealData, hasPaperData);
-    document.getElementById('totalPnL').innerHTML = addDataSourceIndicator(formatCurrency(totalPnL), hasRealData, hasPaperData);
-    document.getElementById('avgTradeSize').innerHTML = addDataSourceIndicator(formatCurrency(avgTradeSize), hasRealData, hasPaperData);
-    
-    document.getElementById('todayTrades').textContent = `${todayTrades} Today`;
-    document.getElementById('maxTradeSize').textContent = `Max: ${formatCurrency(maxTradeSize)}`;
-    
-    // Update metric changes based on current mode
-    let winRateChange, pnlChange;
-    
-    if (window.dataModeManager && window.dataModeManager.isLiveModeActive()) {
-        winRateChange = data.win_rate_change || 0;
-        pnlChange = data.total_pnl_change || 0;
-    } else {
-        winRateChange = paperTradingData ? 1.2 : 0;
-        pnlChange = paperTradingData ? 15.8 : 0;
-    }
-    
-    updateMetricChange('winRateChange', winRateChange);
-    updateMetricChange('totalPnLChange', pnlChange);
-    
-    // Log current mode
-    const currentMode = window.dataModeManager && window.dataModeManager.isLiveModeActive() ? 'LIVE' : 'PAPER';
-    console.log(`📊 Trades displaying ${currentMode} trading data`);
-}
-
-function loadSymbols() {
-    fetch('/api/symbols')
-        .then(response => response.json())
-        .then(symbols => {
-            const symbolSelect = document.getElementById('tradeSymbol');
-            const filterSelect = document.getElementById('filterSymbol');
-            
-            symbolSelect.innerHTML = '<option value="">Select Symbol</option>';
-            filterSelect.innerHTML = '<option value="">All Symbols</option>';
-            
-            symbols.forEach(symbol => {
-                symbolSelect.innerHTML += `<option value="${symbol}">${symbol}</option>`;
-                filterSelect.innerHTML += `<option value="${symbol}">${symbol}</option>`;
-            });
-        })
-        .catch(error => {
-            console.error('Error loading symbols:', error);
-        });
-}
-
-function loadOpenOrders() {
-    fetch('/api/trades/orders/open')
-        .then(response => response.json())
-        .then(data => {
-            const orders = data.orders || [];
-            updateOpenOrdersTable(orders);
-        })
-        .catch(error => {
-            console.error('Error loading open orders:', error);
-            document.getElementById('openOrdersTable').innerHTML = 
-                '<tr><td colspan="10" class="text-center text-danger">Error loading open orders</td></tr>';
-        });
-}
-
-function updateOpenOrdersTable(orders) {
-    const tbody = document.getElementById('openOrdersTable');
-    
-    if (orders.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No open orders</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = orders.map(order => `
-        <tr>
-            <td><code>${order.id.slice(0, 8)}...</code></td>
-            <td><strong>${order.symbol}</strong></td>
-            <td><span class="badge bg-secondary">${order.type.toUpperCase()}</span></td>
-            <td><span class="badge ${order.side === 'buy' ? 'bg-success' : 'bg-danger'}">${order.side.toUpperCase()}</span></td>
-            <td>${formatNumber(order.amount, 6)}</td>
-            <td>${order.price ? formatCurrency(order.price) : 'Market'}</td>
-            <td>${formatNumber(order.filled || 0, 6)} (${((order.filled || 0) / order.amount * 100).toFixed(1)}%)</td>
-            <td><span class="badge bg-warning">${order.status.toUpperCase()}</span></td>
-            <td>${formatDateTime(order.created_at)}</td>
-            <td>
-                <button class="btn btn-sm btn-outline-danger" onclick="cancelOrder('${order.id}')">
-                    <i class="fas fa-times"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-primary ms-1" onclick="modifyOrder('${order.id}')">
-                    <i class="fas fa-edit"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
-}
-
-function loadTradeHistory() {
-    const period = document.getElementById('filterPeriod').value;
-    const symbol = document.getElementById('filterSymbol').value;
-    
-    const params = new URLSearchParams({
-        period: period,
-        page: currentPage,
-        limit: 50
-    });
-    
-    if (symbol) {
-        params.append('symbol', symbol);
-    }
-    
-    fetch(`/api/trades/history?${params}`)
-        .then(response => response.json())
-        .then(data => {
-            const trades = data.trades || [];
-            
-            // Add paper trading trades if active
-            const paperTradingData = getPaperTradingData();
-            if (paperTradingData) {
-                const paperTrades = generatePaperTradingHistory(paperTradingData);
-                trades.unshift(...paperTrades); // Add to beginning
-            }
-            
-            updateTradeHistoryTable(trades);
-            updatePagination(data.total_pages || 1);
-        })
-        .catch(error => {
-            console.error('Error loading trade history:', error);
-            
-            // Show paper trading trades even if API fails
-            const paperTradingData = getPaperTradingData();
-            if (paperTradingData) {
-                const paperTrades = generatePaperTradingHistory(paperTradingData);
-                updateTradeHistoryTable(paperTrades);
-            } else {
-                document.getElementById('tradeHistoryTable').innerHTML = 
-                    '<tr><td colspan="12" class="text-center text-danger">Error loading trade history</td></tr>';
-            }
-        });
-}
-
-function updateTradeHistoryTable(trades) {
-    const tbody = document.getElementById('tradeHistoryTable');
-    
-    if (trades.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted">No trades found</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = trades.map(trade => {
-        // Handle both API trades and paper trading trades
-        const tradeId = trade.id || trade.trade_id || 'N/A';
-        const symbol = trade.symbol || 'N/A';
-        const side = trade.side || 'N/A';
-        const amount = trade.amount || trade.quantity || 0;
-        const entryPrice = trade.price || trade.entry_price || 0;
-        const exitPrice = trade.exit_price || null;
-        const profit = trade.profit || trade.pnl || 0;
-        const profitPercent = trade.profit_percentage || trade.pnl_percent || 0;
-        const duration = trade.duration || '-';
-        const strategy = trade.strategy || trade.type || 'Manual';
-        const timestamp = trade.timestamp || trade.created_at || new Date().toISOString();
-        const isPaperTrade = tradeId.toString().includes('paper_');
-        
-        return `
-        <tr class="${isPaperTrade ? 'table-info' : ''}">
-            <td>
-                <code>${tradeId.toString().slice(0, 8)}...</code>
-                ${isPaperTrade ? '<span class="badge bg-warning ms-1">PAPER</span>' : ''}
-            </td>
-            <td><strong>${symbol}</strong></td>
-            <td><span class="badge ${side === 'buy' ? 'bg-success' : 'bg-danger'}">${side.toUpperCase()}</span></td>
-            <td>${formatNumber(amount, 6)}</td>
-            <td>${formatCurrency(entryPrice)}</td>
-            <td>${exitPrice ? formatCurrency(exitPrice) : '-'}</td>
-            <td class="${profit >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(profit)}</td>
-            <td class="${profitPercent >= 0 ? 'text-success' : 'text-danger'}">${formatPercentage(profitPercent)}</td>
-            <td>${duration}</td>
-            <td><span class="badge ${isPaperTrade ? 'bg-warning' : 'bg-info'}">${strategy}</span></td>
-            <td>${formatDateTime(timestamp)}</td>
-            <td>
-                <button class="btn btn-sm btn-outline-primary" onclick="viewTrade('${tradeId}')">
-                    <i class="fas fa-eye"></i>
-                </button>
-            </td>
-        </tr>
-        `;
-    }).join('');
-}
-
-function loadPerformanceChart(type) {
-    fetch(`/api/trades/performance?type=${type}`)
-        .then(response => response.json())
-        .then(data => {
-            let chartData = data;
-            
-            // Enhance with paper trading data if active
-            const paperTradingData = getPaperTradingData();
-            if (paperTradingData) {
-                chartData = enhanceChartWithPaperTrading(data, type, paperTradingData);
-            }
-            
-            performanceChart.data.labels = chartData.timestamps;
-            performanceChart.data.datasets[0].data = chartData.values;
-            performanceChart.data.datasets[0].label = type.toUpperCase();
-            
-            if (type === 'pnl') {
-                performanceChart.options.scales.y.ticks.callback = function(value) {
-                    return '$' + value.toLocaleString();
-                };
-            } else if (type === 'volume') {
-                performanceChart.options.scales.y.ticks.callback = function(value) {
-                    return '$' + value.toLocaleString();
-                };
-            } else if (type === 'winrate') {
-                performanceChart.options.scales.y.ticks.callback = function(value) {
-                    return value.toFixed(1) + '%';
-                };
-            }
-            
-            performanceChart.update();
-        })
-        .catch(error => {
-            console.error('Error loading performance chart:', error);
-            
-            // Show paper trading chart even if API fails
-            const paperTradingData = getPaperTradingData();
-            if (paperTradingData) {
-                const chartData = generatePaperTradingChart(type, paperTradingData);
-                performanceChart.data.labels = chartData.timestamps;
-                performanceChart.data.datasets[0].data = chartData.values;
-                performanceChart.data.datasets[0].label = type.toUpperCase() + ' (Paper)';
-                performanceChart.update();
-            }
-        });
-}
-
-function setupEventListeners() {
-    // Manual trade form
-    document.getElementById('manualTradeForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        submitManualTrade();
-    });
-
-    // Order type change
-    document.getElementById('orderType').addEventListener('change', function() {
-        const priceFields = document.getElementById('priceFields');
-        const stopPriceField = document.getElementById('stopPriceField');
-        
-        if (this.value === 'market') {
-            priceFields.style.display = 'none';
-        } else {
-            priceFields.style.display = 'block';
-            
-            if (this.value === 'stop_limit') {
-                stopPriceField.style.display = 'block';
-            } else {
-                stopPriceField.style.display = 'none';
-            }
-        }
-    });
-
-    // Performance chart buttons
-    document.querySelectorAll('[data-chart]').forEach(button => {
-        button.addEventListener('click', function() {
-            document.querySelectorAll('[data-chart]').forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-            loadPerformanceChart(this.dataset.chart);
-        });
-    });
-
-    // Filter changes
-    document.getElementById('filterPeriod').addEventListener('change', function() {
-        currentPage = 1;
-        loadTradeHistory();
-    });
-
-    document.getElementById('filterSymbol').addEventListener('change', function() {
-        currentPage = 1;
-        loadTradeHistory();
-    });
-}
-
-function submitManualTrade() {
-    const formData = {
-        symbol: document.getElementById('tradeSymbol').value,
-        side: document.getElementById('tradeSide').value,
-        amount: parseFloat(document.getElementById('tradeAmount').value),
-        type: document.getElementById('orderType').value,
-        price: document.getElementById('tradePrice').value ? parseFloat(document.getElementById('tradePrice').value) : null,
-        stop_price: document.getElementById('stopPrice').value ? parseFloat(document.getElementById('stopPrice').value) : null,
-        stop_loss: document.getElementById('stopLoss').value ? parseFloat(document.getElementById('stopLoss').value) : null,
-        take_profit: document.getElementById('takeProfit').value ? parseFloat(document.getElementById('takeProfit').value) : null
-    };
-
-    fetch('/api/trades/manual', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Order placed successfully', 'success');
-            document.getElementById('manualTradeForm').reset();
-            document.getElementById('priceFields').style.display = 'none';
-            loadOpenOrders();
-        } else {
-            showToast('Order failed: ' + data.error, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error placing order:', error);
-        showToast('Order failed', 'error');
-    });
-}
-
-function getQuote() {
-    const symbol = document.getElementById('tradeSymbol').value;
-    const amount = document.getElementById('tradeAmount').value;
-    const side = document.getElementById('tradeSide').value;
-    
-    if (!symbol || !amount) {
-        showToast('Please select symbol and enter amount', 'warning');
-        return;
-    }
-
-    fetch(`/api/trades/quote?symbol=${symbol}&amount=${amount}&side=${side}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                document.getElementById('quotePrice').textContent = formatCurrency(data.price);
-                document.getElementById('quoteTotal').textContent = formatCurrency(data.total);
-                document.getElementById('quoteResult').style.display = 'block';
-            } else {
-                showToast('Quote failed: ' + data.error, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error getting quote:', error);
-            showToast('Quote failed', 'error');
-        });
-}
-
-function cancelOrder(orderId) {
-    selectedOrderId = orderId;
-    
-    // Get order details for confirmation
-    fetch(`/api/trades/orders/${orderId}`)
-        .then(response => response.json())
-        .then(order => {
-            document.getElementById('cancelOrderDetails').innerHTML = `
-                <strong>Order:</strong> ${order.side.toUpperCase()} ${formatNumber(order.amount, 6)} ${order.symbol}<br>
-                <strong>Type:</strong> ${order.type.toUpperCase()}<br>
-                <strong>Price:</strong> ${order.price ? formatCurrency(order.price) : 'Market'}
-            `;
-            new bootstrap.Modal(document.getElementById('cancelOrderModal')).show();
-        })
-        .catch(error => {
-            console.error('Error getting order details:', error);
-            showToast('Error loading order details', 'error');
-        });
-}
-
-function confirmCancelOrder() {
-    if (!selectedOrderId) return;
-    
-    fetch(`/api/trades/orders/${selectedOrderId}/cancel`, { method: 'POST' })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('Order cancelled successfully', 'success');
-                bootstrap.Modal.getInstance(document.getElementById('cancelOrderModal')).hide();
-                loadOpenOrders();
-            } else {
-                showToast('Cancel failed: ' + data.error, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error cancelling order:', error);
-            showToast('Cancel failed', 'error');
-        });
-}
-
-function modifyOrder(orderId) {
-    // TODO: Implement order modification
-    showToast('Order modification coming soon', 'info');
-}
-
-function viewTrade(tradeId) {
-    selectedTradeId = tradeId;
-    
-    fetch(`/api/trades/${tradeId}`)
-        .then(response => response.json())
-        .then(trade => {
-            // Populate modal
-            document.getElementById('modalTradeId').textContent = trade.id.slice(0, 8) + '...';
-            document.getElementById('modalSymbol').textContent = trade.symbol;
-            document.getElementById('modalSide').textContent = trade.side.toUpperCase();
-            document.getElementById('modalAmount').textContent = formatNumber(trade.amount, 6);
-            document.getElementById('modalEntryPrice').textContent = formatCurrency(trade.entry_price);
-            document.getElementById('modalExitPrice').textContent = trade.exit_price ? formatCurrency(trade.exit_price) : '-';
-            document.getElementById('modalDuration').textContent = trade.duration || '-';
-            document.getElementById('modalPnL').textContent = formatCurrency(trade.pnl);
-            document.getElementById('modalPnL').className = trade.pnl >= 0 ? 'text-success' : 'text-danger';
-            document.getElementById('modalPnLPercent').textContent = formatPercentage(trade.pnl_percent);
-            document.getElementById('modalPnLPercent').className = trade.pnl_percent >= 0 ? 'text-success' : 'text-danger';
-            document.getElementById('modalFees').textContent = formatCurrency(trade.fees || 0);
-            document.getElementById('modalStrategy').textContent = trade.strategy || 'Manual';
-            document.getElementById('modalEntryDate').textContent = formatDateTime(trade.created_at);
-            document.getElementById('modalExitDate').textContent = trade.exit_date ? formatDateTime(trade.exit_date) : '-';
-            document.getElementById('modalRiskScore').textContent = trade.risk_score || '-';
-            document.getElementById('tradeNotes').value = trade.notes || '';
-            
-            new bootstrap.Modal(document.getElementById('tradeModal')).show();
-        })
-        .catch(error => {
-            console.error('Error loading trade details:', error);
-            showToast('Error loading trade details', 'error');
-        });
-}
-
-function saveTradeNotes() {
-    if (!selectedTradeId) return;
-    
-    const notes = document.getElementById('tradeNotes').value;
-    
-    fetch(`/api/trades/${selectedTradeId}/notes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: notes })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Notes saved', 'success');
-        } else {
-            showToast('Failed to save notes', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error saving notes:', error);
-        showToast('Failed to save notes', 'error');
-    });
-}
-
-function viewTradeChart() {
-    if (!selectedTradeId) return;
-    
-    // TODO: Implement trade chart view
-    showToast('Trade chart view coming soon', 'info');
-}
-
-function refreshOpenOrders() {
-    loadOpenOrders();
-    showToast('Open orders refreshed', 'success');
+function refreshTrades() {
+    showAlert('Refreshing trade history...', 'info');
+    window.location.reload();
 }
 
 function exportTrades() {
-    const period = document.getElementById('filterPeriod').value;
-    const symbol = document.getElementById('filterSymbol').value;
-    
-    const params = new URLSearchParams({ period: period });
-    if (symbol) params.append('symbol', symbol);
-    
-    const link = document.createElement('a');
-    link.href = `/api/trades/export?${params}`;
-    link.download = `trades_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+    window.open('/api/trades/export?export=csv', '_blank');
 }
 
-function updatePagination(totalPagesCount) {
-    totalPages = totalPagesCount;
-    const pagination = document.getElementById('paginationControls');
-    
-    if (totalPages <= 1) {
-        pagination.innerHTML = '';
-        return;
-    }
-    
-    let paginationHTML = '';
-    
-    // Previous button
-    paginationHTML += `
-        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-            <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">&laquo;</a>
-        </li>
-    `;
-    
-    // Page numbers
-    const startPage = Math.max(1, currentPage - 2);
-    const endPage = Math.min(totalPages, currentPage + 2);
-    
-    for (let i = startPage; i <= endPage; i++) {
-        paginationHTML += `
-            <li class="page-item ${i === currentPage ? 'active' : ''}">
-                <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
-            </li>
-        `;
-    }
-    
-    // Next button
-    paginationHTML += `
-        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-            <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">&raquo;</a>
-        </li>
-    `;
-    
-    pagination.innerHTML = paginationHTML;
-}
-
-function changePage(page) {
-    if (page < 1 || page > totalPages || page === currentPage) return;
-    
-    currentPage = page;
-    loadTradeHistory();
-}
-
-function setupWebSocket() {
-    if (window.ws) {
-        window.ws.addEventListener('message', function(event) {
-            const data = JSON.parse(event.data);
-            
-            if (data.type === 'order_update') {
-                loadOpenOrders();
-            } else if (data.type === 'trade_update') {
-                loadTradingData();
-            }
-        });
-    }
-}
-
-// Paper trading helper functions
-function getPaperTradingData() {
-    if (typeof window.paperTradingManager !== 'undefined') {
-        return window.paperTradingManager.getData();
-    }
-    return null;
-}
-
-function generatePaperTradingHistory(paperData) {
-    const trades = [];
-    const now = new Date();
-    
-    // Generate grid trades with realistic timing
-    for (let i = 0; i < 26; i++) {
-        const tradeTime = new Date(now.getTime() - (25 - i) * 30000); // 30 seconds apart
-        const isBuy = i % 2 === 0;
-        const gridLevel = Math.floor(i / 2) + 1;
-        const basePrice = 97500;
-        const price = basePrice + (isBuy ? -gridLevel * 1500 : gridLevel * 1500);
-        const amount = 0.001;
-        const profit = isBuy ? 0 : 1.5; // Sell orders make profit
-        
-        trades.push({
-            id: `paper_grid_${i + 1}`,
-            symbol: 'BTC/USDT',
-            side: isBuy ? 'buy' : 'sell',
-            amount: amount,
-            price: price,
-            total: amount * price,
-            fee: amount * price * 0.001,
-            profit: isBuy ? 0 : profit,
-            profit_percentage: isBuy ? 0 : (profit / (amount * price)) * 100,
-            status: 'completed',
-            timestamp: tradeTime.toISOString(),
-            type: 'Grid Trade',
-            strategy: 'Grid DCA',
-            note: `Grid Level ${gridLevel} - Paper Trading`
-        });
-    }
-    
-    // Add DCA trades
-    for (let i = 0; i < 2; i++) {
-        const tradeTime = new Date(now.getTime() - (2 - i) * 60000); // 1 minute apart
-        const price = 96000 + i * 500;
-        const amount = 0.002;
-        const profit = 2.8;
-        
-        trades.push({
-            id: `paper_dca_${i + 1}`,
-            symbol: 'BTC/USDT',
-            side: 'sell',
-            amount: amount,
-            price: price,
-            total: amount * price,
-            fee: amount * price * 0.001,
-            profit: profit,
-            profit_percentage: (profit / (amount * price)) * 100,
-            status: 'completed',
-            timestamp: tradeTime.toISOString(),
-            type: 'DCA Trade',
-            strategy: 'Grid DCA',
-            note: `DCA Level ${i + 1} - Paper Trading`
-        });
-    }
-    
-    return trades.reverse(); // Most recent first
-}
-
-function enhanceChartWithPaperTrading(apiData, type, paperData) {
-    const now = new Date();
-    const timestamps = [...(apiData.timestamps || [])];
-    const values = [...(apiData.values || [])];
-    
-    // Add paper trading data points
-    const paperPoints = generatePaperTradingChart(type, paperData);
-    
-    // Merge with API data
-    paperPoints.timestamps.forEach((timestamp, index) => {
-        timestamps.push(timestamp);
-        values.push(paperPoints.values[index]);
-    });
-    
-    return { timestamps, values };
-}
-
-function generatePaperTradingChart(type, paperData) {
-    const now = new Date();
-    const timestamps = [];
-    const values = [];
-    
-    if (type === 'pnl') {
-        // Generate P&L progression
-        let cumulativePnL = 0;
-        for (let i = 0; i < 28; i++) {
-            const time = new Date(now.getTime() - (27 - i) * 30000);
-            timestamps.push(time.toISOString());
-            
-            if (i % 2 === 1) { // Sell orders make profit
-                cumulativePnL += (1.5 + Math.random() * 2); // $1.5-3.5 per trade
-            }
-            values.push(cumulativePnL);
-        }
-    } else if (type === 'volume') {
-        // Generate volume data
-        let cumulativeVolume = 0;
-        for (let i = 0; i < 28; i++) {
-            const time = new Date(now.getTime() - (27 - i) * 30000);
-            timestamps.push(time.toISOString());
-            cumulativeVolume += 97.5; // $97.5 per trade on average
-            values.push(cumulativeVolume);
-        }
-    } else if (type === 'winrate') {
-        // Generate win rate progression
-        let wins = 0;
-        for (let i = 0; i < 28; i++) {
-            const time = new Date(now.getTime() - (27 - i) * 30000);
-            timestamps.push(time.toISOString());
-            
-            if (i % 2 === 1) wins++; // Sell orders are wins
-            const winRate = i === 0 ? 0 : (wins / Math.ceil(i / 2)) * 100;
-            values.push(winRate);
-        }
-    }
-    
-    return { timestamps, values };
-}
-
-function updatePaperTradingIndicator() {
-    const indicator = document.getElementById('paperTradingIndicator');
-    const paperTradingData = getPaperTradingData();
-    
-    if (paperTradingData && paperTradingData.isActive) {
-        indicator.style.display = 'inline-block';
-    } else {
-        indicator.style.display = 'none';
-    }
-}
+// Auto-refresh every 60 seconds
+setInterval(() => {
+    window.location.reload();
+}, 60000);
 </script>
 {% endblock %}

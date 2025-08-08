@@ -266,6 +266,16 @@ class Config:
         # Initialize exchange configurations
         self.exchanges = self._init_exchange_configs()
 
+    @property
+    def binance_api_key(self) -> str:
+        """Get Binance API key from environment variables."""
+        return os.getenv("BINANCE_API_KEY", "")
+
+    @property
+    def binance_api_secret(self) -> str:
+        """Get Binance API secret from environment variables."""
+        return os.getenv("BINANCE_SECRET_KEY", "")
+
     def _load_config_file(self) -> Dict[str, Any]:
         """Load configuration from YAML file."""
         config_path = Path(self.config_file)

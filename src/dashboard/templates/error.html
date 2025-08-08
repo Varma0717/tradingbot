@@ -1,29 +1,105 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Error - Crypto Trading Bot</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet" />
-  </head>
-  <body class="bg-light">
-    <div class="container mt-5">
-      <div class="row justify-content-center">
-        <div class="col-md-6">
-          <div class="card">
-            <div class="card-body text-center">
-              <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
-              <h1 class="card-title mt-3">Oops! Something went wrong</h1>
-              <p class="card-text text-muted">{{ error }}</p>
-              <div class="mt-4">
-                <a href="/" class="btn btn-primary me-2"><i class="bi bi-house"></i> Go Home</a>
-                <button onclick="history.back()" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Go Back</button>
-              </div>
+{% extends 'base.html' %}
+
+{% block title %}
+  Error - Trading Bot
+{% endblock %}
+
+{% block content %}
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card border-danger">
+        <div class="card-header bg-danger text-white">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            An Error Occurred
+          </h5>
+        </div>
+        <div class="card-body text-center">
+          <div class="mb-4">
+            <i class="bi bi-x-circle-fill text-danger" style="font-size: 4rem;"></i>
+          </div>
+
+          <h4 class="text-danger mb-3">Oops! Something went wrong</h4>
+
+          {% if error %}
+            <div class="alert alert-danger">
+              <strong>Error Details:</strong><br />
+              {{ error }}
             </div>
+          {% endif %}
+
+          <p class="text-muted mb-4">We apologize for the inconvenience. The trading bot encountered an unexpected error.</p>
+
+          <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+            <button class="btn btn-primary" onclick="history.back()">
+              <i class="bi bi-arrow-left me-1"></i>
+              Go Back
+            </button>
+            <a href="/dashboard" class="btn btn-outline-primary">
+              <i class="bi bi-house me-1"></i>
+              Dashboard
+            </a>
+            <button class="btn btn-outline-secondary" onclick="location.reload()">
+              <i class="bi bi-arrow-clockwise me-1"></i>
+              Retry
+            </button>
           </div>
         </div>
       </div>
+
+      <!-- Troubleshooting Tips -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="bi bi-lightbulb me-2"></i>
+            Troubleshooting Tips
+          </h6>
+        </div>
+        <div class="card-body">
+          <ul class="list-unstyled mb-0">
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success me-2"></i>
+              Check your internet connection
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success me-2"></i>
+              Verify your API credentials in settings
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success me-2"></i>
+              Ensure sufficient balance for trading
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success me-2"></i>
+              Try refreshing the page
+            </li>
+            <li>
+              <i class="bi bi-check-circle text-success me-2"></i>
+              Contact support if the problem persists
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
-  </body>
-</html>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    // Auto-redirect to dashboard after 10 seconds if no user interaction
+    let redirectTimer = setTimeout(() => {
+      if (confirm('Would you like to return to the dashboard?')) {
+        window.location.href = '/dashboard'
+      }
+    }, 10000)
+    
+    // Clear timer if user interacts with the page
+    document.addEventListener('click', () => {
+      clearTimeout(redirectTimer)
+    })
+    
+    document.addEventListener('keydown', () => {
+      clearTimeout(redirectTimer)
+    })
+  </script>
+{% endblock %}

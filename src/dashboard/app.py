@@ -3,6 +3,11 @@
 import logging
 from pathlib import Path
 
+# Load environment variables first
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
@@ -42,6 +47,16 @@ else:
 async def startup_event():
     """Application startup event."""
     logger.info("Trading Bot Dashboard started")
+
+    # Initialize real trading integration
+    try:
+        from .real_trading_integration import real_trading_integrator
+
+        await real_trading_integrator.initialize_real_trading()
+        logger.info("✅ Real trading integration initialized")
+    except Exception as e:
+        logger.warning(f"⚠️ Real trading not available: {e}")
+        logger.info("📊 Dashboard will use paper trading only")
 
 
 @app.on_event("shutdown")
