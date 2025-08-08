@@ -12,6 +12,7 @@ from typing import Dict, List, Optional
 import json
 
 from .grid_dca_strategy import GridDCAStrategy, GRID_DCA_CONFIG
+from .micro_balance_grid_dca import MicroBalanceGridDCA
 
 logger = logging.getLogger(__name__)
 
@@ -56,23 +57,93 @@ class StrategyManager:
             logger.error(f"Error loading strategy configs: {e}")
 
     async def _initialize_strategies(self):
-        """Initialize enabled strategies."""
+        """Initialize enabled strategies based on account balance."""
         try:
-            # Check if Grid DCA strategy is enabled
-            if "grid_dca" in self.strategy_configs:
+            # Get current account balance
+            balance = await self.exchange.fetch_balance()
+            usdt_balance = float(balance.get("total", {}).get("USDT", 0))
+
+            logger.info(f"Account balance: ${usdt_balance:.2f} USDT")
+
+            # Choose strategy based on balance size
+            if usdt_balance < 10.0:
+                # Use micro balance strategy for small accounts
+                logger.info("Using Micro Balance Grid DCA Strategy for small account")
+
+                micro_config = {
+                    "symbol": "BTC/USDT",
+                    "total_balance": usdt_balance,
+                    "grid_levels": 3,
+                    "grid_spacing": 0.008,  # 0.8%
+                    "dca_enabled": True,
+                    "dca_percentage": 0.02,  # 2%
+                    "dca_multiplier": 1.1,  # 10%
+                    "max_dca_levels": 1,
+                    "take_profit_percentage": 0.015,  # 1.5%
+                    "stop_loss_percentage": 0.05,  # 5%
+                    "max_daily_loss": 0.15,
+                }
+
+                # Create Micro Balance strategy
+                from ..core.config import Config
+
+                config = Config()
+                micro_strategy = MicroBalanceGridDCA(micro_config, config)
+
+                if await micro_strategy.initialize():
+                    self.active_strategies["micro_grid_dca"] = micro_strategy
+                    logger.info("✅ Micro Balance Grid DCA strategy initialized")
+                else:
+                    logger.error("❌ Failed to initialize Micro Balance strategy")
+
+            else:
+                # Use regular Grid DCA for larger accounts
+                logger.info("Using Regular Grid DCA Strategy")
                 config = self.strategy_configs["grid_dca"]
 
                 # Create and initialize Grid DCA strategy
-                grid_dca = GridDCAStrategy(self.exchange, config)
+                from ..core.config import Config
+
+                bot_config = Config()
+                grid_dca = GridDCAStrategy(config, bot_config)
 
                 if await grid_dca.initialize():
                     self.active_strategies["grid_dca"] = grid_dca
-                    logger.info("Grid DCA strategy initialized and activated")
+                    logger.info("✅ Grid DCA strategy initialized and activated")
                 else:
-                    logger.error("Failed to initialize Grid DCA strategy")
+                    logger.error("❌ Failed to initialize Grid DCA strategy")
 
         except Exception as e:
             logger.error(f"Error initializing strategies: {e}")
+            # Fallback to micro strategy with default balance
+            try:
+                logger.info(
+                    "Falling back to Micro Balance strategy with default config"
+                )
+                micro_config = {
+                    "symbol": "BTC/USDT",
+                    "total_balance": 2.16,  # Default to your current balance
+                    "grid_levels": 3,
+                    "grid_spacing": 0.008,
+                    "dca_enabled": True,
+                    "dca_percentage": 0.02,
+                    "dca_multiplier": 1.1,
+                    "max_dca_levels": 1,
+                    "take_profit_percentage": 0.015,
+                    "stop_loss_percentage": 0.05,
+                }
+
+                from ..core.config import Config
+
+                config = Config()
+                micro_strategy = MicroBalanceGridDCA(micro_config, config)
+
+                if await micro_strategy.initialize():
+                    self.active_strategies["micro_grid_dca"] = micro_strategy
+                    logger.info("✅ Fallback Micro Balance strategy initialized")
+
+            except Exception as fallback_error:
+                logger.error(f"Fallback strategy also failed: {fallback_error}")
 
     async def start_strategies(self):
         """Start all active strategies."""

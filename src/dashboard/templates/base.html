@@ -105,6 +105,15 @@
                 {% endblock %}
               </h5>
               <div class="d-flex align-items-center">
+                <!-- Data Mode Toggle -->
+                <div class="me-3">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="dataModeToggle" checked>
+                    <label class="form-check-label fw-bold text-success" for="dataModeToggle" id="dataModeLabel">
+                      <i class="bi bi-broadcast-pin me-1"></i>Live Trading
+                    </label>
+                  </div>
+                </div>
                 <span class="text-muted me-3">{{ current_time }}</span>
                 <div class="dropdown">
                   <button class="btn btn-outline-secondary dropdown-toggle btn-sm" type="button" data-bs-toggle="dropdown">
@@ -348,9 +357,16 @@
             };
         }
 
-        // Initialize WebSocket on page load
+        // Initialize WebSocket and Data Mode Manager on page load
         document.addEventListener('DOMContentLoaded', function() {
             initializeWebSocket();
+            
+            // Initialize data mode manager after a short delay to ensure DOM is ready
+            setTimeout(() => {
+                if (window.dataModeManager) {
+                    window.dataModeManager.init();
+                }
+            }, 100);
         });
 
         // Paper trading indicator functions
@@ -381,6 +397,114 @@
                     handleFetchError(error, url);
                     throw error;
                 });
+        }
+
+        // Global Data Mode Manager
+        class DataModeManager {
+            constructor() {
+                this.isLiveMode = localStorage.getItem('tradingDataMode') !== 'paper';
+                this.listeners = [];
+                this.init();
+            }
+
+            init() {
+                // Set up toggle
+                const toggle = document.getElementById('dataModeToggle');
+                const label = document.getElementById('dataModeLabel');
+                
+                if (toggle) {
+                    toggle.checked = this.isLiveMode;
+                    this.updateToggleLabel();
+                    
+                    toggle.addEventListener('change', (e) => {
+                        this.setMode(e.target.checked);
+                    });
+                }
+            }
+
+            setMode(isLive) {
+                const oldMode = this.isLiveMode;
+                this.isLiveMode = isLive;
+                localStorage.setItem('tradingDataMode', isLive ? 'live' : 'paper');
+                
+                this.updateToggleLabel();
+                
+                // Show toast notification
+                const mode = isLive ? 'Live Trading' : 'Paper Trading';
+                showToast(`Switched to ${mode} mode`, 'info');
+                
+                // Notify all listeners
+                this.listeners.forEach(callback => {
+                    try {
+                        callback(this.isLiveMode, oldMode !== this.isLiveMode);
+                    } catch (error) {
+                        console.error('Error in data mode listener:', error);
+                    }
+                });
+            }
+
+            updateToggleLabel() {
+                const label = document.getElementById('dataModeLabel');
+                if (label) {
+                    if (this.isLiveMode) {
+                        label.innerHTML = '<i class="bi bi-broadcast-pin me-1"></i>Live Trading';
+                        label.className = 'form-check-label fw-bold text-success';
+                    } else {
+                        label.innerHTML = '<i class="bi bi-laptop me-1"></i>Paper Trading';
+                        label.className = 'form-check-label fw-bold text-warning';
+                    }
+                }
+            }
+
+            isLiveModeActive() {
+                return this.isLiveMode;
+            }
+
+            isPaperModeActive() {
+                return !this.isLiveMode;
+            }
+
+            onModeChange(callback) {
+                this.listeners.push(callback);
+                // Call immediately with current state
+                callback(this.isLiveMode, false);
+            }
+
+            removeModeChangeListener(callback) {
+                const index = this.listeners.indexOf(callback);
+                if (index > -1) {
+                    this.listeners.splice(index, 1);
+                }
+            }
+        }
+
+        // Global instance
+        window.dataModeManager = new DataModeManager();
+
+        // Helper function for pages to get appropriate data
+        function getDataForCurrentMode(liveData, paperData) {
+            if (window.dataModeManager.isLiveModeActive()) {
+                return liveData || {};
+            } else {
+                return paperData || {};
+            }
+        }
+
+        // Helper function to add data source indicators
+        function addDataSourceIndicator(value, hasRealData, hasPaperData) {
+            if (window.dataModeManager.isLiveModeActive()) {
+                if (hasRealData) {
+                    return `${value} <small class="text-success">(Live)</small>`;
+                } else {
+                    return `${value} <small class="text-muted">(No Data)</small>`;
+                }
+            } else {
+                if (hasPaperData) {
+                    return `${value} <small class="text-warning">(Paper)</small>`;
+                } else {
+                    return `${value} <small class="text-muted">(No Data)</small>`;
+                }
+            }
         }
     </script>
 

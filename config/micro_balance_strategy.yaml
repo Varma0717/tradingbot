@@ -1,0 +1,54 @@
+# Optimized Grid DCA Strategy for Small Balance ($2.16 USDT)
+# This configuration is designed to be profitable with minimal risk
+
+strategies:
+  grid_dca:
+    # Symbol Configuration
+    symbol: "BTC/USDT"
+    enabled: true
+    
+    # Grid Configuration (Optimized for small balance)
+    grid_levels: 5              # Fewer levels to concentrate orders
+    grid_spacing: 1.0           # 1% spacing between levels (tighter grid)
+    base_investment: 0.30       # $0.30 per grid level (5 levels = $1.50)
+    max_investment: 2.00        # Maximum $2.00 (90% of balance)
+    
+    # DCA Configuration (Conservative)
+    dca_enabled: true
+    dca_percentage: 3.0         # DCA triggers on 3% dips (more sensitive)
+    dca_multiplier: 1.2         # Only 20% increase (conservative)
+    max_dca_levels: 2           # Maximum 2 DCA levels to preserve capital
+    
+    # Profit Taking (Optimized for small gains)
+    take_profit_percentage: 1.5 # Take profit at 1.5% (realistic for small balance)
+    partial_profit_levels: [1.0, 2.0] # Partial profits at 1% and 2%
+    
+    # Risk Management (Conservative)
+    stop_loss_percentage: 8.0   # 8% stop loss (tighter control)
+    max_position_size: 0.9      # Use 90% of available balance
+    
+    # Order Configuration
+    min_order_size: 0.10        # Minimum $0.10 order (within Binance limits)
+    order_type: "limit"         # Use limit orders for better execution
+    
+    # Timing Configuration
+    rebalance_interval: 300     # Check every 5 minutes
+    cooldown_period: 60         # 1 minute cooldown between trades
+
+# Risk Management Settings
+risk_management:
+  max_daily_loss: 0.20          # Stop trading if daily loss exceeds $0.20
+  max_drawdown: 0.50            # Stop if drawdown exceeds $0.50
+  position_sizing: "fixed"      # Use fixed position sizes
+  
+# Performance Targets
+targets:
+  daily_profit_target: 0.05    # Target $0.05 daily profit (2.3% of balance)
+  weekly_profit_target: 0.20   # Target $0.20 weekly profit (9.3% of balance)
+  monthly_profit_target: 0.60  # Target $0.60 monthly profit (27.8% of balance)
+
+# Logging and Monitoring
+monitoring:
+  log_all_trades: true
+  send_notifications: true
+  track_performance: true

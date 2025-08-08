@@ -308,6 +308,16 @@ document.addEventListener('DOMContentLoaded', function() {
     loadPortfolioData();
     setupWebSocket();
     setupEventListeners();
+    
+    // Listen for data mode changes
+    if (window.dataModeManager) {
+        window.dataModeManager.onModeChange((isLiveMode, modeChanged) => {
+            if (modeChanged) {
+                console.log(`📊 Portfolio switching to ${isLiveMode ? 'LIVE' : 'PAPER'} trading mode`);
+                loadPortfolioData(); // Reload all data when mode changes
+            }
+        });
+    }
 });
 
 function initializeCharts() {
@@ -448,84 +458,168 @@ function loadPortfolioData() {
 }
 
 function updatePortfolioSummary(data) {
-    // Get paper trading data from Grid DCA if available
     const paperTradingData = getPaperTradingData();
     
-    // Merge API data with paper trading data
-    const portfolioValue = paperTradingData ? paperTradingData.position.current_value : (data.total_value || 0);
-    const totalPnl = paperTradingData ? paperTradingData.statistics.total_profit : (data.total_pnl || 0);
-    const dailyPnl = paperTradingData ? paperTradingData.position.unrealized_pnl : (data.daily_pnl || 0);
-    const activePositions = paperTradingData ? 1 : (data.active_positions || 0);
+    // Use data mode manager to determine which data to show
+    let portfolioValue, totalPnl, dailyPnl, activePositions;
+    let hasRealData = data.total_value !== undefined || data.total_pnl !== undefined;
+    let hasPaperData = paperTradingData !== null;
     
-    document.getElementById('portfolioValue').textContent = formatCurrency(portfolioValue);
-    document.getElementById('totalPnl').textContent = formatCurrency(totalPnl);
-    document.getElementById('dailyPnl').textContent = formatCurrency(dailyPnl);
-    document.getElementById('activePositions').textContent = activePositions;
+    if (window.dataModeManager && window.dataModeManager.isLiveModeActive()) {
+        // Live mode - use real data
+        portfolioValue = data.total_value || 0;
+        totalPnl = data.total_pnl || 0;
+        dailyPnl = data.daily_pnl || 0;
+        activePositions = data.active_positions || 0;
+    } else {
+        // Paper mode - use paper trading data
+        portfolioValue = paperTradingData ? paperTradingData.position.current_value : 0;
+        totalPnl = paperTradingData ? paperTradingData.statistics.total_profit : 0;
+        dailyPnl = paperTradingData ? paperTradingData.position.unrealized_pnl : 0;
+        activePositions = paperTradingData ? 1 : 0;
+    }
     
-    // Update percentage changes
-    const portfolioChangePercent = paperTradingData ? paperTradingData.performance.roi_percentage : (data.portfolio_change || 0);
-    const totalPnlPercent = paperTradingData ? paperTradingData.performance.roi_percentage : (data.total_pnl_percent || 0);
-    const dailyPnlPercent = paperTradingData ? (dailyPnl / portfolioValue * 100) : (data.daily_pnl_percent || 0);
+    // Update display with data source indicators
+    document.getElementById('portfolioValue').innerHTML = addDataSourceIndicator(formatCurrency(portfolioValue), hasRealData, hasPaperData);
+    document.getElementById('totalPnl').innerHTML = addDataSourceIndicator(formatCurrency(totalPnl), hasRealData, hasPaperData);
+    document.getElementById('dailyPnl').innerHTML = addDataSourceIndicator(formatCurrency(dailyPnl), hasRealData, hasPaperData);
+    document.getElementById('activePositions').innerHTML = addDataSourceIndicator(activePositions, hasRealData, hasPaperData);
+    
+    // Update percentage changes based on current mode
+    let portfolioChangePercent, totalPnlPercent, dailyPnlPercent;
+    
+    if (window.dataModeManager && window.dataModeManager.isLiveModeActive()) {
+        portfolioChangePercent = data.portfolio_change || 0;
+        totalPnlPercent = data.total_pnl_percent || 0;
+        dailyPnlPercent = data.daily_pnl_percent || 0;
+    } else {
+        portfolioChangePercent = paperTradingData ? paperTradingData.performance.roi_percentage : 0;
+        totalPnlPercent = paperTradingData ? paperTradingData.performance.roi_percentage : 0;
+        dailyPnlPercent = paperTradingData ? (dailyPnl / Math.max(portfolioValue, 1) * 100) : 0;
+    }
     
     updateMetricChange('portfolioChange', portfolioChangePercent);
     updateMetricChange('totalPnlPercent', totalPnlPercent);
     updateMetricChange('dailyPnlPercent', dailyPnlPercent);
     
-    // Update analytics with paper trading data
-    const winRate = paperTradingData ? paperTradingData.statistics.win_rate : (data.win_rate || 0);
-    const maxDrawdown = paperTradingData ? paperTradingData.statistics.max_drawdown : (data.max_drawdown || 0);
-    const totalTrades = paperTradingData ? paperTradingData.statistics.total_trades : (data.total_trades || 0);
-    const avgTradeProfit = paperTradingData ? paperTradingData.performance.profit_per_trade : (data.avg_trade_size || 0);
+    // Update analytics based on current mode
+    let winRate, maxDrawdown, totalTrades, avgTradeProfit;
     
-    document.getElementById('sharpeRatio').textContent = data.sharpe_ratio?.toFixed(2) || '2.4';
-    document.getElementById('maxDrawdown').textContent = formatPercentage(maxDrawdown);
-    document.getElementById('winRate').textContent = formatPercentage(winRate);
+    if (window.dataModeManager && window.dataModeManager.isLiveModeActive()) {
+        winRate = data.win_rate || 0;
+        maxDrawdown = data.max_drawdown || 0;
+        totalTrades = data.total_trades || 0;
+        avgTradeProfit = data.avg_trade_size || 0;
+        
+        document.getElementById('sharpeRatio').textContent = data.sharpe_ratio?.toFixed(2) || '-';
+        document.getElementById('bestTrade').textContent = data.best_trade ? formatCurrency(data.best_trade) : '-';
+        document.getElementById('worstTrade').textContent = data.worst_trade ? formatCurrency(data.worst_trade) : '-';
+    } else {
+        winRate = paperTradingData ? paperTradingData.statistics.win_rate : 0;
+        maxDrawdown = paperTradingData ? paperTradingData.statistics.max_drawdown : 0;
+        totalTrades = paperTradingData ? paperTradingData.statistics.total_trades : 0;
+        avgTradeProfit = paperTradingData ? paperTradingData.performance.profit_per_trade : 0;
+        
+        document.getElementById('sharpeRatio').textContent = paperTradingData ? '2.4' : '-';
+        document.getElementById('bestTrade').textContent = paperTradingData ? '+$4.20' : '-';
+        document.getElementById('worstTrade').textContent = paperTradingData ? '-$0.85' : '-';
+    }
+    
+    document.getElementById('maxDrawdown').textContent = formatPercentage(maxDrawdown / 100);
+    document.getElementById('winRate').textContent = formatPercentage(winRate / 100);
     document.getElementById('totalTrades').textContent = totalTrades;
     document.getElementById('avgTradeSize').textContent = formatCurrency(avgTradeProfit);
-    document.getElementById('bestTrade').textContent = paperTradingData ? '+$4.20' : (data.best_trade ? formatCurrency(data.best_trade) : '-');
-    document.getElementById('worstTrade').textContent = paperTradingData ? '-$0.85' : (data.worst_trade ? formatCurrency(data.worst_trade) : '-');
     
-    const totalAssets = paperTradingData ? 2 : (data.total_assets || 0); // BTC + USDT
+    const totalAssets = window.dataModeManager && window.dataModeManager.isLiveModeActive() ? 
+        (data.total_assets || 0) : 
+        (paperTradingData ? 2 : 0); // BTC + USDT if paper trading
+        
     document.getElementById('totalAssets').textContent = `${totalAssets} Assets`;
     
-    // Show paper trading indicator if active
-    if (paperTradingData) {
-        showPaperTradingIndicator();
-    }
+    // Log current mode
+    const currentMode = window.dataModeManager && window.dataModeManager.isLiveModeActive() ? 'LIVE' : 'PAPER';
+    console.log(`📊 Portfolio displaying ${currentMode} trading data`);
 }
 
 function loadPositions() {
-    fetch('/api/portfolio/positions')
-        .then(response => response.json())
-        .then(data => {
-            const positions = data.positions || [];
-            
-            // Add paper trading position if active
-            const paperTradingData = getPaperTradingData();
-            if (paperTradingData) {
-                const paperPosition = {
-                    symbol: 'BTC/USDT',
-                    side: 'long',
-                    size: paperTradingData.position.current_position,
-                    entry_price: 67420, // Paper trading entry
-                    current_price: 67890,
-                    market_value: paperTradingData.position.current_value,
-                    unrealized_pnl: paperTradingData.position.unrealized_pnl,
-                    unrealized_pnl_percent: paperTradingData.performance.roi_percentage,
-                    type: 'Paper Trading - Grid DCA'
-                };
-                positions.unshift(paperPosition); // Add to top
+    // Load real balance data first
+    Promise.all([
+        fetch('/api/portfolio/positions').then(r => r.json()),
+        fetch('/api/balance').then(r => r.json())
+    ]).then(([positionsData, balanceData]) => {
+        const realPositions = positionsData.positions || [];
+        const paperTradingData = getPaperTradingData();
+        
+        // Build real balance positions from Binance
+        const realBalancePositions = [];
+        if (balanceData && balanceData.total) {
+            for (const [currency, amount] of Object.entries(balanceData.total)) {
+                if (amount && parseFloat(amount) > 0.01) { // Only show meaningful balances
+                    let currentPrice = 1; // Default for USDT
+                    let marketValue = parseFloat(amount);
+                    
+                    if (currency === 'BTC') {
+                        currentPrice = 67890; // Will be updated with real price
+                        marketValue = parseFloat(amount) * currentPrice;
+                    } else if (currency === 'ETH') {
+                        currentPrice = 2600; // Will be updated with real price  
+                        marketValue = parseFloat(amount) * currentPrice;
+                    }
+                    
+                    realBalancePositions.push({
+                        symbol: `${currency}/USDT`,
+                        side: 'long',
+                        size: parseFloat(amount),
+                        entry_price: currentPrice,
+                        current_price: currentPrice,
+                        market_value: marketValue,
+                        unrealized_pnl: 0,
+                        unrealized_pnl_percent: 0,
+                        type: 'Spot Balance',
+                        currency: currency,
+                        isRealBalance: true
+                    });
+                }
             }
-            
-            currentPositions = positions;
-            updatePositionsTable(positions);
-            updateAllocationChart(positions);
-        })
-        .catch(error => {
-            console.error('Error loading positions:', error);
-            document.getElementById('positionsTable').innerHTML = 
-                '<tr><td colspan="8" class="text-center text-danger">Error loading positions</td></tr>';
-        });
+        }
+        
+        // Build paper trading positions
+        const paperPositions = [];
+        if (paperTradingData) {
+            paperPositions.push({
+                symbol: 'BTC/USDT',
+                side: 'long',
+                size: paperTradingData.position.current_position,
+                entry_price: 67420,
+                current_price: 67890,
+                market_value: paperTradingData.position.current_value,
+                unrealized_pnl: paperTradingData.position.unrealized_pnl,
+                unrealized_pnl_percent: paperTradingData.performance.roi_percentage,
+                type: 'Paper Trading - Grid DCA',
+                isPaperTrading: true
+            });
+        }
+        
+        // Choose positions based on current mode
+        let displayPositions = [];
+        if (window.dataModeManager && window.dataModeManager.isLiveModeActive()) {
+            displayPositions = [...realPositions, ...realBalancePositions];
+        } else {
+            displayPositions = paperPositions;
+        }
+        
+        currentPositions = displayPositions;
+        updatePositionsTable(displayPositions);
+        updateAllocationChart(displayPositions);
+        
+        const mode = window.dataModeManager && window.dataModeManager.isLiveModeActive() ? 'LIVE' : 'PAPER';
+        console.log(`📊 Loaded ${displayPositions.length} positions in ${mode} mode`);
+        
+    }).catch(error => {
+        console.error('Error loading positions:', error);
+        document.getElementById('positionsTable').innerHTML = 
+            '<tr><td colspan="8" class="text-center text-danger">Error loading positions</td></tr>';
+    });
 }
 
 function updatePositionsTable(positions) {
@@ -536,37 +630,67 @@ function updatePositionsTable(positions) {
         return;
     }
     
-    tbody.innerHTML = positions.map(position => `
-        <tr>
+    tbody.innerHTML = positions.map((position, index) => {
+        const pnl = position.unrealized_pnl || 0;
+        const pnlPercent = position.unrealized_pnl_percent || 0;
+        const dataSource = position.isRealBalance ? 'Live' : (position.isPaperTrading ? 'Paper' : 'Unknown');
+        const dataSourceClass = position.isRealBalance ? 'success' : (position.isPaperTrading ? 'warning' : 'secondary');
+        const currencyIcon = (position.currency && position.currency.toLowerCase()) || 'btc';
+        
+        return `
+        <tr onclick="openPositionModal(${index})" style="cursor: pointer;">
             <td>
                 <div class="d-flex align-items-center">
-                    <img src="https://cryptoicons.org/api/icon/${position.symbol.toLowerCase()}/32" 
+                    <img src="https://cryptoicons.org/api/icon/${currencyIcon}/32" 
                          alt="${position.symbol}" class="me-2" style="width: 24px; height: 24px;" 
                          onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTIiIGZpbGw9IiNjY2MiLz4KPHR5cGUgeD0iNiIgeT0iMTYiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMCIgZmlsbD0iI2ZmZiI+Pz88L3RleHQ+Cjwvc3ZnPgo='">
-                    <strong>${position.symbol}</strong>
+                    <div>
+                        <strong>${position.symbol}</strong>
+                        <br><span class="badge bg-${dataSourceClass} badge-sm">${dataSource}</span>
+                    </div>
                 </div>
             </td>
-            <td>${formatNumber(position.size, 6)}</td>
-            <td>${formatCurrency(position.entry_price)}</td>
-            <td>${formatCurrency(position.current_price)}</td>
-            <td class="${position.pnl >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(position.pnl)}</td>
-            <td class="${position.pnl_percent >= 0 ? 'text-success' : 'text-danger'}">${formatPercentage(position.pnl_percent)}</td>
-            <td>${formatCurrency(position.current_value)}</td>
             <td>
-                <button class="btn btn-sm btn-outline-primary" onclick="viewPosition('${position.symbol}')">
-                    <i class="fas fa-eye"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-danger ms-1" onclick="closePositionConfirm('${position.symbol}')">
-                    <i class="fas fa-times"></i>
-                </button>
+                <strong>${formatNumber(position.size, position.currency === 'BTC' ? 6 : 2)}</strong>
+                <br><small class="text-muted">${position.currency || 'Units'}</small>
+            </td>
+            <td>
+                <strong>${formatCurrency(position.entry_price)}</strong>
+                <br><small class="text-muted">Entry</small>
+            </td>
+            <td>
+                <strong>${formatCurrency(position.current_price)}</strong>
+                <br><small class="text-muted">Current</small>
+            </td>
+            <td class="${pnl >= 0 ? 'text-success' : 'text-danger'}">
+                <strong>${formatCurrency(pnl)}</strong>
+                <br><small>${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%</small>
+            </td>
+            <td class="${pnlPercent >= 0 ? 'text-success' : 'text-danger'}">
+                <strong>${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%</strong>
+            </td>
+            <td>
+                <strong>${formatCurrency(position.market_value)}</strong>
+                <br><small class="text-muted">Market</small>
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    ${position.isRealBalance ? 
+                        '<button class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation(); viewBalance(\'' + position.currency + '\')">View</button>' :
+                        position.isPaperTrading ?
+                        '<button class="btn btn-outline-warning btn-sm" onclick="event.stopPropagation(); managePaperTrade(' + index + ')">Manage</button>' :
+                        '<button class="btn btn-outline-secondary btn-sm" onclick="event.stopPropagation(); closePosition(' + index + ')">Close</button>'
+                    }
+                </div>
             </td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function updateAllocationChart(positions) {
     const labels = positions.map(p => p.symbol);
-    const data = positions.map(p => p.current_value);
+    const data = positions.map(p => p.market_value || p.current_value || 0);
     
     allocationChart.data.labels = labels;
     allocationChart.data.datasets[0].data = data;
@@ -626,8 +750,26 @@ function viewPosition(symbol) {
     document.getElementById('modalSize').textContent = formatNumber(position.size, 6);
     document.getElementById('modalEntryPrice').textContent = formatCurrency(position.entry_price);
     document.getElementById('modalCurrentPrice').textContent = formatCurrency(position.current_price);
-    document.getElementById('modalPnl').textContent = formatCurrency(position.pnl);
-    document.getElementById('modalPnl').className = position.pnl >= 0 ? 'text-success' : 'text-danger';
+    document.getElementById('modalPnl').textContent = formatCurrency(position.unrealized_pnl || 0);
+    document.getElementById('modalPnl').className = (position.unrealized_pnl || 0) >= 0 ? 'text-success' : 'text-danger';
+    
+    // Show modal
+    new bootstrap.Modal(document.getElementById('positionModal')).show();
+}
+
+function openPositionModal(index) {
+    const position = currentPositions[index];
+    if (!position) return;
+    
+    selectedPosition = position;
+    
+    // Populate modal with position data
+    document.getElementById('modalSymbol').textContent = position.symbol;
+    document.getElementById('modalSize').textContent = formatNumber(position.size, position.currency === 'BTC' ? 6 : 2);
+    document.getElementById('modalEntryPrice').textContent = formatCurrency(position.entry_price);
+    document.getElementById('modalCurrentPrice').textContent = formatCurrency(position.current_price);
+    document.getElementById('modalPnl').textContent = formatCurrency(position.unrealized_pnl || 0);
+    document.getElementById('modalPnl').className = (position.unrealized_pnl || 0) >= 0 ? 'text-success' : 'text-danger';
     
     // Show modal
     new bootstrap.Modal(document.getElementById('positionModal')).show();
@@ -834,6 +976,27 @@ function setupWebSocket() {
                 loadPositions();
             }
         });
+    }
+}
+
+// Additional helper functions for portfolio management
+function viewBalance(currency) {
+    showToast(`Viewing ${currency} balance details`, 'info');
+    // Could redirect to detailed balance page or show detailed modal
+}
+
+function managePaperTrade(index) {
+    const position = currentPositions[index];
+    if (position && position.isPaperTrading) {
+        showToast(`Managing paper trading position: ${position.symbol}`, 'info');
+        // Could open paper trading management interface
+    }
+}
+
+function hidePaperTradingIndicator() {
+    const indicator = document.getElementById('paperTradingIndicator');
+    if (indicator) {
+        indicator.remove();
     }
 }
 </script>

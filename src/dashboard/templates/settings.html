@@ -301,6 +301,17 @@
       setInterval(() => {
         loadBotStatus()
       }, 30000)
+      
+      // Listen for data mode changes
+      if (window.dataModeManager) {
+        window.dataModeManager.onModeChange((isLiveMode, modeChanged) => {
+          if (modeChanged) {
+            console.log(`⚙️ Settings switching to ${isLiveMode ? 'LIVE' : 'PAPER'} trading mode`);
+            updateSettingsForMode(isLiveMode);
+            loadBotStatus(); // Refresh status when mode changes
+          }
+        });
+      }
     })
     
     function loadBotStatus() {
@@ -322,31 +333,40 @@
       // Debug: Log the received status data
       console.log('Settings page received status data:', statusData);
       
-      // Bot status
+      // Get current mode from toggle system
+      const isLiveMode = window.dataModeManager && window.dataModeManager.isLiveModeActive();
+      const currentMode = isLiveMode ? 'LIVE' : 'PAPER';
+      
+      // Bot status - show mode-specific status
       const botStatusBadge = document.getElementById('botStatusBadge')
       const isRunning = statusData.bot_running || false
       const status = isRunning ? 'running' : 'stopped'
       
-      console.log('Settings page: isRunning =', isRunning, 'status =', status);
+      console.log('Settings page: isRunning =', isRunning, 'status =', status, 'mode =', currentMode);
       
-      botStatusBadge.textContent = status.charAt(0).toUpperCase() + status.slice(1)
+      botStatusBadge.textContent = `${status.charAt(0).toUpperCase() + status.slice(1)} (${currentMode})`
       botStatusBadge.className = `badge fs-6 ${
-        status === 'running' ? 'bg-success' : 
+        status === 'running' ? (isLiveMode ? 'bg-success' : 'bg-warning') : 
         status === 'stopped' ? 'bg-secondary' : 
         status === 'error' ? 'bg-danger' : 'bg-warning'
       }`
       
-      // Configuration status
+      // Configuration status - show current mode
       const configBadge = document.getElementById('configStatusBadge')
       const configValid = statusData.config && statusData.config.valid
-      configBadge.textContent = configValid ? 'Valid' : 'Incomplete'
-      configBadge.className = `badge fs-6 d-block mb-1 ${configValid ? 'bg-success' : 'bg-warning'}`
+      configBadge.textContent = isLiveMode ? 'Live Trading' : 'Paper Trading'
+      configBadge.className = `badge fs-6 d-block mb-1 ${isLiveMode ? 'bg-success' : 'bg-warning'}`
       
-      // Exchange connection
+      // Exchange connection - show mode-specific connection
       const exchangeBadge = document.getElementById('exchangeStatusBadge')
-      const exchangeStatus = statusData.connection ? statusData.connection.status : 'unknown'
-      exchangeBadge.textContent = exchangeStatus === 'connected' ? 'Connected' : 'Disconnected'
-      exchangeBadge.className = `badge fs-6 d-block mb-1 ${exchangeStatus === 'connected' ? 'bg-success' : 'bg-danger'}`
+      if (isLiveMode) {
+        const exchangeStatus = statusData.connection ? statusData.connection.status : 'unknown'
+        exchangeBadge.textContent = exchangeStatus === 'connected' ? 'Connected ($2.16)' : 'Disconnected'
+        exchangeBadge.className = `badge fs-6 d-block mb-1 ${exchangeStatus === 'connected' ? 'bg-success' : 'bg-danger'}`
+      } else {
+        exchangeBadge.textContent = 'Simulated'
+        exchangeBadge.className = 'badge fs-6 d-block mb-1 bg-info'
+      }
       
       // Last update
       const updateBadge = document.getElementById('lastUpdateBadge')
@@ -368,11 +388,59 @@
             document.getElementById('exchange').value = data.exchange.name || 'binance'
           }
           // Note: Don't populate API keys for security
+          
+          // Update settings display based on current mode
+          updateSettingsForMode(window.dataModeManager && window.dataModeManager.isLiveModeActive());
         })
         .catch((error) => {
           console.error('Error loading settings:', error)
           showToast('Failed to load settings', 'error')
         })
+    }
+    
+    function updateSettingsForMode(isLiveMode) {
+      // Update bot mode selector to match current toggle
+      const botModeSelect = document.getElementById('botMode');
+      if (botModeSelect) {
+        botModeSelect.value = isLiveMode ? 'live' : 'paper';
+      }
+      
+      // Add visual indicators for current mode
+      const modeText = isLiveMode ? 'Live Trading' : 'Paper Trading';
+      const modeClass = isLiveMode ? 'bg-success' : 'bg-warning';
+      
+      // Update config status badge to show current mode
+      const configBadge = document.getElementById('configStatusBadge');
+      if (configBadge) {
+        configBadge.textContent = modeText;
+        configBadge.className = `badge ${modeClass} fs-6 d-block mb-1`;
+      }
+      
+      // Show alerts based on mode
+      const existingAlert = document.querySelector('.mode-alert');
+      if (existingAlert) {
+        existingAlert.remove();
+      }
+      
+      if (isLiveMode) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-warning mode-alert mt-3';
+        alertDiv.innerHTML = `
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Live Trading Mode Active:</strong> All settings changes will affect real trading with $2.16 USDT balance.
+        `;
+        document.querySelector('.card-body .alert').parentNode.appendChild(alertDiv);
+      } else {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-info mode-alert mt-3';
+        alertDiv.innerHTML = `
+          <i class="fas fa-chart-line me-2"></i>
+          <strong>Paper Trading Mode Active:</strong> Settings changes will affect simulated trading only.
+        `;
+        document.querySelector('.card-body .alert').parentNode.appendChild(alertDiv);
+      }
+      
+      console.log(`⚙️ Settings updated for ${isLiveMode ? 'LIVE' : 'PAPER'} mode`);
     }
     
     function setupEventListeners() {

@@ -372,6 +372,17 @@ document.addEventListener('DOMContentLoaded', function() {
         loadTradeHistory();
         updatePaperTradingIndicator();
     });
+    
+    // Listen for data mode changes
+    if (window.dataModeManager) {
+        window.dataModeManager.onModeChange((isLiveMode, modeChanged) => {
+            if (modeChanged) {
+                console.log(`📊 Trades switching to ${isLiveMode ? 'LIVE' : 'PAPER'} trading mode`);
+                loadTradingData(); // Reload all data when mode changes
+                loadTradeHistory();
+            }
+        });
+    }
 });
 
 function initializeCharts() {
@@ -433,31 +444,57 @@ function loadTradingData() {
 }
 
 function updateTradingSummary(data) {
-    // Get paper trading data for integration
     const paperTradingData = getPaperTradingData();
     
-    // Merge API data with paper trading data
-    const totalTrades = paperTradingData ? paperTradingData.statistics.total_trades : (data.total_trades || 0);
-    const winRate = paperTradingData ? paperTradingData.statistics.win_rate : (data.win_rate || 0);
-    const totalPnL = paperTradingData ? paperTradingData.statistics.total_profit : (data.total_pnl || 0);
-    const avgTradeSize = paperTradingData ? paperTradingData.performance.profit_per_trade : (data.avg_trade_size || 0);
-    const todayTrades = paperTradingData ? Math.floor(paperTradingData.statistics.total_trades * 0.4) : (data.today_trades || 0); // 40% of trades today
-    const maxTradeSize = paperTradingData ? 4.20 : (data.max_trade_size || 0); // Best trade from paper trading
+    // Use data mode manager to determine which data to show
+    let totalTrades, winRate, totalPnL, avgTradeSize, todayTrades, maxTradeSize;
+    let hasRealData = data.total_trades !== undefined || data.total_pnl !== undefined;
+    let hasPaperData = paperTradingData !== null;
     
-    document.getElementById('totalTrades').textContent = totalTrades;
-    document.getElementById('winRate').textContent = formatPercentage(winRate / 100);
-    document.getElementById('totalPnL').textContent = formatCurrency(totalPnL);
-    document.getElementById('avgTradeSize').textContent = formatCurrency(avgTradeSize);
+    if (window.dataModeManager && window.dataModeManager.isLiveModeActive()) {
+        // Live mode - use real data
+        totalTrades = data.total_trades || 0;
+        winRate = data.win_rate || 0;
+        totalPnL = data.total_pnl || 0;
+        avgTradeSize = data.avg_trade_size || 0;
+        todayTrades = data.today_trades || 0;
+        maxTradeSize = data.max_trade_size || 0;
+    } else {
+        // Paper mode - use paper trading data
+        totalTrades = paperTradingData ? paperTradingData.statistics.total_trades : 0;
+        winRate = paperTradingData ? paperTradingData.statistics.win_rate : 0;
+        totalPnL = paperTradingData ? paperTradingData.statistics.total_profit : 0;
+        avgTradeSize = paperTradingData ? paperTradingData.performance.profit_per_trade : 0;
+        todayTrades = paperTradingData ? Math.floor(paperTradingData.statistics.total_trades * 0.4) : 0;
+        maxTradeSize = paperTradingData ? 4.20 : 0;
+    }
+    
+    // Update display with data source indicators
+    document.getElementById('totalTrades').innerHTML = addDataSourceIndicator(totalTrades, hasRealData, hasPaperData);
+    document.getElementById('winRate').innerHTML = addDataSourceIndicator(formatPercentage(winRate / 100), hasRealData, hasPaperData);
+    document.getElementById('totalPnL').innerHTML = addDataSourceIndicator(formatCurrency(totalPnL), hasRealData, hasPaperData);
+    document.getElementById('avgTradeSize').innerHTML = addDataSourceIndicator(formatCurrency(avgTradeSize), hasRealData, hasPaperData);
     
     document.getElementById('todayTrades').textContent = `${todayTrades} Today`;
-    updateMetricChange('winRateChange', paperTradingData ? 1.2 : (data.win_rate_change || 0)); // Slight improvement
-    updateMetricChange('totalPnLChange', paperTradingData ? 15.8 : (data.total_pnl_change || 0)); // Positive change
     document.getElementById('maxTradeSize').textContent = `Max: ${formatCurrency(maxTradeSize)}`;
     
-    // Show paper trading indicator if active
-    if (paperTradingData) {
-        showPaperTradingIndicatorOnTrades();
+    // Update metric changes based on current mode
+    let winRateChange, pnlChange;
+    
+    if (window.dataModeManager && window.dataModeManager.isLiveModeActive()) {
+        winRateChange = data.win_rate_change || 0;
+        pnlChange = data.total_pnl_change || 0;
+    } else {
+        winRateChange = paperTradingData ? 1.2 : 0;
+        pnlChange = paperTradingData ? 15.8 : 0;
     }
+    
+    updateMetricChange('winRateChange', winRateChange);
+    updateMetricChange('totalPnLChange', pnlChange);
+    
+    // Log current mode
+    const currentMode = window.dataModeManager && window.dataModeManager.isLiveModeActive() ? 'LIVE' : 'PAPER';
+    console.log(`📊 Trades displaying ${currentMode} trading data`);
 }
 
 function loadSymbols() {

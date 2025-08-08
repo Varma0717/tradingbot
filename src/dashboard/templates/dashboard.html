@@ -265,6 +265,16 @@
         
         // Auto-refresh data every 30 seconds
         setInterval(loadDashboardData, 30000);
+        
+        // Listen for data mode changes
+        if (window.dataModeManager) {
+            window.dataModeManager.onModeChange((isLiveMode, modeChanged) => {
+                if (modeChanged) {
+                    console.log(`📊 Dashboard switching to ${isLiveMode ? 'LIVE' : 'PAPER'} trading mode`);
+                    loadDashboardData(); // Reload all data when mode changes
+                }
+            });
+        }
     });
     
     function loadDashboardData() {
@@ -352,63 +362,92 @@
     }
     
     function updatePortfolioSummary(summary) {
-        // Priority: Real data first, then paper trading data as fallback
         const paperTradingData = getPaperTradingData();
         
-        // Fetch and display real balance data
+        // Use data mode manager to determine which data to show
+        let hasRealData = summary && (summary.total_balance !== undefined || summary.total_pnl !== undefined);
+        let hasPaperData = paperTradingData !== null;
+        
+        // Load real balance data (always needed for accurate info)
         loadRealBalanceData();
         
-        if (summary || paperTradingData) {
-            // Update portfolio balance - prioritize real data
+        if (window.dataModeManager && window.dataModeManager.isLiveModeActive()) {
+            // Live mode - use real data
             const balanceElement = document.getElementById('portfolioBalance');
-            if (balanceElement && summary?.total_balance) {
-                // Use real balance data when available
-                balanceElement.textContent = formatCurrency(summary.total_balance);
-            } else if (balanceElement && paperTradingData) {
-                // Fallback to paper trading data
-                balanceElement.textContent = formatCurrency(paperTradingData.position.current_value);
-                balanceElement.innerHTML += ' <small class="text-warning">(Paper)</small>';
-            }
-            
-            // Update P&L - prioritize real data  
-            const pnlElement = document.getElementById('totalPnl');
-            if (pnlElement && summary?.total_pnl !== undefined) {
-                // Use real P&L data
-                const pnl = summary.total_pnl;
-                pnlElement.innerHTML = `<span class="${pnl >= 0 ? 'profit' : 'loss'}">${formatCurrency(pnl)}</span>`;
-            } else if (pnlElement && paperTradingData) {
-                // Fallback to paper trading profit
-                const pnl = paperTradingData.statistics.total_profit;
-                pnlElement.innerHTML = `<span class="${pnl >= 0 ? 'profit' : 'loss'}">${formatCurrency(pnl)} <small class="text-warning">(Paper)</small></span>`;
-            }
-            
-            // Update P&L percentage - prioritize real data
-            const pnlPercentElement = document.getElementById('pnlPercentage');
-            if (pnlPercentElement && summary?.daily_change !== undefined) {
-                // Use real percentage change
-                pnlPercentElement.textContent = formatPercentage(summary.daily_change / 100);
-            } else if (pnlPercentElement && paperTradingData) {
-                // Fallback to paper trading ROI
-                pnlPercentElement.textContent = formatPercentage(paperTradingData.performance.roi_percentage / 100) + ' (Paper)';
-            }
-            
-            // Update positions count - prioritize real data
-            const positionsElement = document.getElementById('activePositions');
-            if (positionsElement) {
-                const realPositions = summary?.positions_count || 0;
-                const paperPosition = paperTradingData ? 1 : 0;
-                const totalPositions = realPositions + paperPosition;
-                positionsElement.textContent = totalPositions;
-                if (paperPosition > 0 && realPositions === 0) {
-                    positionsElement.innerHTML += ' <small class="text-warning">(Paper)</small>';
+            if (balanceElement) {
+                if (hasRealData && summary.total_balance) {
+                    balanceElement.innerHTML = addDataSourceIndicator(formatCurrency(summary.total_balance), hasRealData, hasPaperData);
+                } else {
+                    balanceElement.innerHTML = addDataSourceIndicator('$0.00', hasRealData, hasPaperData);
                 }
             }
             
-            // Show paper trading indicator on dashboard
-            if (paperTradingData) {
-                showPaperTradingStatusOnDashboard();
+            const pnlElement = document.getElementById('totalPnl');
+            if (pnlElement) {
+                if (hasRealData && summary.total_pnl !== undefined) {
+                    const pnl = summary.total_pnl;
+                    const pnlClass = pnl >= 0 ? 'profit' : 'loss';
+                    const pnlSpan = `<span class="${pnlClass}">${formatCurrency(pnl)}</span>`;
+                    pnlElement.innerHTML = addDataSourceIndicator(pnlSpan, hasRealData, hasPaperData);
+                } else {
+                    pnlElement.innerHTML = addDataSourceIndicator('<span class="text-muted">$0.00</span>', hasRealData, hasPaperData);
+                }
+            }
+            
+            const pnlPercentElement = document.getElementById('pnlPercentage');
+            if (pnlPercentElement) {
+                if (hasRealData && summary.daily_change !== undefined) {
+                    pnlPercentElement.textContent = formatPercentage(summary.daily_change / 100);
+                } else {
+                    pnlPercentElement.textContent = '0.00%';
+                }
+            }
+            
+            const positionsElement = document.getElementById('activePositions');
+            if (positionsElement) {
+                positionsElement.innerHTML = addDataSourceIndicator(summary?.positions_count || 0, hasRealData, hasPaperData);
+            }
+        } else {
+            // Paper mode - use paper trading data
+            const balanceElement = document.getElementById('portfolioBalance');
+            if (balanceElement) {
+                if (hasPaperData) {
+                    balanceElement.innerHTML = addDataSourceIndicator(formatCurrency(paperTradingData.position.current_value), hasRealData, hasPaperData);
+                } else {
+                    balanceElement.innerHTML = addDataSourceIndicator('$0.00', hasRealData, hasPaperData);
+                }
+            }
+            
+            const pnlElement = document.getElementById('totalPnl');
+            if (pnlElement) {
+                if (hasPaperData) {
+                    const pnl = paperTradingData.statistics.total_profit;
+                    const pnlClass = pnl >= 0 ? 'profit' : 'loss';
+                    const pnlSpan = `<span class="${pnlClass}">${formatCurrency(pnl)}</span>`;
+                    pnlElement.innerHTML = addDataSourceIndicator(pnlSpan, hasRealData, hasPaperData);
+                } else {
+                    pnlElement.innerHTML = addDataSourceIndicator('<span class="text-muted">$0.00</span>', hasRealData, hasPaperData);
+                }
+            }
+            
+            const pnlPercentElement = document.getElementById('pnlPercentage');
+            if (pnlPercentElement) {
+                if (hasPaperData) {
+                    pnlPercentElement.textContent = formatPercentage(paperTradingData.performance.roi_percentage / 100);
+                } else {
+                    pnlPercentElement.textContent = '0.00%';
+                }
+            }
+            
+            const positionsElement = document.getElementById('activePositions');
+            if (positionsElement) {
+                positionsElement.innerHTML = addDataSourceIndicator(hasPaperData ? 1 : 0, hasRealData, hasPaperData);
             }
         }
+        
+        // Log current mode
+        const currentMode = window.dataModeManager && window.dataModeManager.isLiveModeActive() ? 'LIVE' : 'PAPER';
+        console.log(`📊 Dashboard displaying ${currentMode} trading data`);
     }
     
     function updateBalanceDisplay(balanceData) {
