@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.flaskenv
+instance/
+# macOS
+.DS_Store
+# Linux
+.Trash-*
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+# Editor-specific
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
