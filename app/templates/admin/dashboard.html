@@ -1,0 +1,18 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+    <div class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-lg font-medium text-gray-500">Total Users</h2>
+      <p class="mt-1 text-3xl font-semibold text-gray-900">{{ user_count }}</p>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-lg font-medium text-gray-500">Pro Subscriptions</h2>
+      <p class="mt-1 text-3xl font-semibold text-gray-900">{{ pro_subscriptions }}</p>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-lg font-medium text-gray-500">Total Revenue</h2>
+      <p class="mt-1 text-3xl font-semibold text-gray-900">₹{{ '%.2f'|format(total_payments) }}</p>
+    </div>
+  </div>
+{% endblock %}

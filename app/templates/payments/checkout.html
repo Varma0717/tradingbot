@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="text-center">
+    <h1 class="text-3xl font-bold">Complete Your Upgrade</h1>
+    <p class="mt-2 text-gray-600">You are upgrading to the Pro plan for ₹{{ "%.2f"|format(order.amount / 100) }}.</p>
+    <form action="{{ url_for('webhook.razorpay_webhook') }}" method="POST" class="mt-6">
+        <script
+            src="https://checkout.razorpay.com/v1/checkout.js"
+            data-key="{{ razorpay_key }}"
+            data-amount="{{ order.amount }}"
+            data-currency="INR"
+            data-order_id="{{ order.id }}"
+            data-buttontext="Pay with Razorpay"
+            data-name="TradingBot Inc."
+            data-description="Pro Plan Subscription"
+            data-image="/placeholder.svg?height=100&width=100"
+            data-prefill.name="{{ current_user.username }}"
+            data-prefill.email="{{ current_user.email }}"
+            data-theme.color="#333333"
+        ></script>
+        <input type="hidden" custom="Hidden Element" name="hidden">
+    </form>
+</div>
+{% endblock %}

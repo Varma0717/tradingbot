@@ -1,0 +1,10 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <h1 class="text-3xl font-bold text-gray-900">System Logs</h1>
+  <p class="text-sm text-gray-500 mt-2">Showing last 100 lines from the debug log file. This page is only available when DEBUG=True.</p>
+  <div class="mt-6 bg-gray-900 text-white p-4 rounded-lg font-mono text-sm overflow-x-auto">
+    <pre>
+      <code>{{ log_content }}</code>
+    </pre>
+  </div>
+{% endblock %}
