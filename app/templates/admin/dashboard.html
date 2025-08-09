@@ -1,18 +1,170 @@
 {% extends 'layout.html' %}
 {% block content %}
-  <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-    <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-lg font-medium text-gray-500">Total Users</h2>
-      <p class="mt-1 text-3xl font-semibold text-gray-900">{{ user_count }}</p>
-    </div>
-    <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-lg font-medium text-gray-500">Pro Subscriptions</h2>
-      <p class="mt-1 text-3xl font-semibold text-gray-900">{{ pro_subscriptions }}</p>
-    </div>
-    <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-lg font-medium text-gray-500">Total Revenue</h2>
-      <p class="mt-1 text-3xl font-semibold text-gray-900">₹{{ '%.2f'|format(total_payments) }}</p>
+  <div class="min-h-screen bg-gray-50">
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <div class="px-4 py-6 sm:px-0">
+        <div class="border-b border-gray-200 pb-4">
+          <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p class="mt-2 text-sm text-gray-600">Overview of system metrics and user activity</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <svg class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Total Users</dt>
+                    <dd class="text-lg font-medium text-gray-900">{{ user_count }}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <svg class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Pro Subscriptions</dt>
+                    <dd class="text-lg font-medium text-gray-900">{{ pro_subscriptions }}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <svg class="h-6 w-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Total Revenue</dt>
+                    <dd class="text-lg font-medium text-gray-900">₹{{ '%.2f'|format(total_payments) }}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <svg class="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Active Strategies</dt>
+                    <dd class="text-lg font-medium text-gray-900">{{ active_strategies }}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity and Quick Actions -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+          <!-- Recent User Registrations -->
+          <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Registrations</h3>
+              <div class="mt-4">
+                {% if recent_users %}
+                  <div class="space-y-3">
+                    {% for user in recent_users %}
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <p class="text-sm font-medium text-gray-900">{{ user.username }}</p>
+                          <p class="text-sm text-gray-500">{{ user.email }}</p>
+                        </div>
+                        <div class="text-sm text-gray-500">{{ user.created_at.strftime('%m/%d %H:%M') }}</div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <p class="text-sm text-gray-500">No recent registrations</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <h3 class="text-lg leading-6 font-medium text-gray-900">Quick Actions</h3>
+              <div class="mt-4 space-y-3">
+                <a href="{{ url_for('admin.manage_users') }}" class="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md text-center transition duration-150 ease-in-out">Manage Users</a>
+                <a href="{{ url_for('admin.audit_trail') }}" class="block w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md text-center transition duration-150 ease-in-out">View Audit Trail</a>
+                <a href="{{ url_for('admin.view_logs') }}" class="block w-full bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-md text-center transition duration-150 ease-in-out">System Logs</a>
+                <button id="refreshStats" class="block w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out">Refresh Stats</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Health Indicators -->
+        <div class="mt-8 bg-white shadow rounded-lg">
+          <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">System Health</h3>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="h-3 w-3 rounded-full bg-green-400"></div>
+                </div>
+                <div class="ml-3">
+                  <p class="text-sm font-medium text-gray-900">Database</p>
+                  <p class="text-sm text-gray-500">Connected</p>
+                </div>
+              </div>
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="h-3 w-3 rounded-full bg-green-400"></div>
+                </div>
+                <div class="ml-3">
+                  <p class="text-sm font-medium text-gray-900">Scheduler</p>
+                  <p class="text-sm text-gray-500">Running</p>
+                </div>
+              </div>
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="h-3 w-3 rounded-full bg-green-400"></div>
+                </div>
+                <div class="ml-3">
+                  <p class="text-sm font-medium text-gray-900">Trading Engine</p>
+                  <p class="text-sm text-gray-500">Active</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
+
+  <script>
+    document.getElementById('refreshStats').addEventListener('click', function () {
+      location.reload()
+    })
+  </script>
 {% endblock %}

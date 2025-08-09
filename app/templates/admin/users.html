@@ -1,37 +1,175 @@
 {% extends 'layout.html' %}
 {% block content %}
-  <h1 class="text-3xl font-bold text-gray-900">Manage Users</h1>
-  <div class="mt-6 bg-white shadow overflow-hidden sm:rounded-lg">
-    <table class="min-w-full divide-y divide-gray-200">
-      <thead class="bg-gray-50">
-        <tr>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-        </tr>
-      </thead>
-      <tbody class="bg-white divide-y divide-gray-200">
-        {% for user in users %}
-          <tr>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm font-medium text-gray-900">{{ user.username }}</div>
-              <div class="text-sm text-gray-500">{{ user.email }}</div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              {% if user.has_pro_plan %}
-                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Pro</span>
-              {% else %}
-                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Free</span>
-              {% endif %}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.created_at.strftime('%Y-%m-%d') }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <a href="{{ url_for('admin.toggle_user_plan', user_id=user.id) }}" class="text-indigo-600 hover:text-indigo-900">Toggle Plan</a>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<div class="min-h-screen bg-gray-50">
+  <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="px-4 py-6 sm:px-0">
+      <!-- Header -->
+      <div class="border-b border-gray-200 pb-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-900">Manage Users</h1>
+            <p class="mt-2 text-sm text-gray-600">View and manage user accounts and subscriptions</p>
+          </div>
+          <div class="flex space-x-3">
+            <div class="relative">
+              <input type="text" id="userSearch" placeholder="Search users..." class="block w-full pr-10 sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+              <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+              </div>
+            </div>
+            <select id="planFilter" class="block w-full sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+              <option value="">All Plans</option>
+              <option value="free">Free</option>
+              <option value="pro">Pro</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Overview -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+        <div class="bg-white p-4 rounded-lg shadow">
+          <div class="text-sm font-medium text-gray-500">Total Users</div>
+          <div class="text-2xl font-bold text-gray-900">{{ users|length }}</div>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+          <div class="text-sm font-medium text-gray-500">Pro Users</div>
+          <div class="text-2xl font-bold text-green-600">{{ users|selectattr('has_pro_plan')|list|length }}</div>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+          <div class="text-sm font-medium text-gray-500">Free Users</div>
+          <div class="text-2xl font-bold text-gray-600">{{ (users|length) - (users|selectattr('has_pro_plan')|list|length) }}</div>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+          <div class="text-sm font-medium text-gray-500">This Month</div>
+          <div class="text-2xl font-bold text-blue-600">{{ recent_users_count }}</div>
+        </div>
+      </div>
+
+      <!-- Users Table -->
+      <div class="mt-8 bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">User Accounts</h3>
+          <p class="mt-1 max-w-2xl text-sm text-gray-500">Detailed list of all registered users</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200" id="usersTable">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Active</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              {% for user in users %}
+                <tr class="user-row" data-user="{{ user.username|lower }}" data-email="{{ user.email|lower }}" data-plan="{{ 'pro' if user.has_pro_plan else 'free' }}">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <div class="flex-shrink-0 h-10 w-10">
+                        <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                          <span class="text-sm font-medium text-gray-700">{{ user.username[0]|upper }}</span>
+                        </div>
+                      </div>
+                      <div class="ml-4">
+                        <div class="text-sm font-medium text-gray-900">{{ user.username }}</div>
+                        <div class="text-sm text-gray-500">{{ user.email }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    {% if user.has_pro_plan %}
+                      <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        <svg class="mr-1 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        Pro
+                      </span>
+                    {% else %}
+                      <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                        Free
+                      </span>
+                    {% endif %}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    {% if user.email_verified %}
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Verified</span>
+                    {% else %}
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{ user.created_at.strftime('%b %d, %Y') }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {% if user.last_login %}
+                      {{ user.last_login.strftime('%b %d, %Y') }}
+                    {% else %}
+                      Never
+                    {% endif %}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div class="flex justify-end space-x-2">
+                      <a href="{{ url_for('admin.toggle_user_plan', user_id=user.id) }}" 
+                         class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium transition duration-150 ease-in-out">
+                        {% if user.has_pro_plan %}Downgrade{% else %}Upgrade{% endif %}
+                      </a>
+                      <button onclick="viewUserDetails({{ user.id }})" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-xs font-medium transition duration-150 ease-in-out">
+                        Details
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
+</div>
+
+<script>
+// Search functionality
+document.getElementById('userSearch').addEventListener('input', function() {
+  const searchTerm = this.value.toLowerCase();
+  const planFilter = document.getElementById('planFilter').value;
+  filterUsers(searchTerm, planFilter);
+});
+
+document.getElementById('planFilter').addEventListener('change', function() {
+  const searchTerm = document.getElementById('userSearch').value.toLowerCase();
+  const planFilter = this.value;
+  filterUsers(searchTerm, planFilter);
+});
+
+function filterUsers(searchTerm, planFilter) {
+  const rows = document.querySelectorAll('.user-row');
+  
+  rows.forEach(row => {
+    const user = row.dataset.user;
+    const email = row.dataset.email;
+    const plan = row.dataset.plan;
+    
+    const matchesSearch = user.includes(searchTerm) || email.includes(searchTerm);
+    const matchesPlan = !planFilter || plan === planFilter;
+    
+    if (matchesSearch && matchesPlan) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
+function viewUserDetails(userId) {
+  // This would open a modal or navigate to user details page
+  alert('User details view would be implemented here for user ID: ' + userId);
+}
+</script>
 {% endblock %}

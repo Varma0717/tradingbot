@@ -1,96 +1,248 @@
 {% extends 'layout.html' %}
 {% block content %}
-  <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+<div class="p-6">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+    <div class="flex items-center space-x-4">
+      <label class="flex items-center">
+        <input type="checkbox" id="realtimeUpdates" class="rounded">
+        <span class="ml-2 text-sm text-gray-600">Real-time updates</span>
+      </label>
+      <span class="text-sm text-gray-500">Last updated: <span id="lastUpdate">just now</span></span>
+    </div>
+  </div>
 
-  Stats<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+  <!-- Stats Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
     <div class="bg-white p-6 rounded-lg shadow">
       <h2 class="text-lg font-medium text-gray-500">Total P&L</h2>
-      <p class="mt-1 text-3xl font-semibold text-green-600">₹{{ '%.2f'|format(pnl.total) }}</p>
+      <p id="totalPnL" class="mt-1 text-3xl font-semibold {% if pnl.total >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+        ₹{{ '%.2f'|format(pnl.total) }}
+      </p>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-lg font-medium text-gray-500">Daily P&L</h2>
+      <p id="dailyPnL" class="mt-1 text-3xl font-semibold {% if pnl.daily >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+        ₹{{ '%.2f'|format(pnl.daily) }}
+      </p>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-lg font-medium text-gray-500">Monthly P&L</h2>
+      <p id="monthlyPnL" class="mt-1 text-3xl font-semibold {% if pnl.monthly >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+        ₹{{ '%.2f'|format(pnl.monthly) }}
+      </p>
     </div>
     <div class="bg-white p-6 rounded-lg shadow">
       <h2 class="text-lg font-medium text-gray-500">Account Balance</h2>
       <p class="mt-1 text-3xl font-semibold text-gray-900">₹{{ '%.2f'|format(balance) }}</p>
     </div>
+  </div>
+
+  <!-- Main Content Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- Trading Interface -->
     <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-lg font-medium text-gray-500">Daily P&L</h2>
-      <p class="mt-1 text-3xl font-semibold {% if pnl.daily >= 0 %}
-          text-green-600
-        {% else %}
-          text-red-600
-        {% endif %}">₹{{ '%.2f'|format(pnl.daily) }}</p>
-    </div>
-  </div>Trade Form and Chart<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-    <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow">
       <h2 class="text-xl font-semibold mb-4">Place Order</h2>
-      <form action="{{ url_for('user.execute_trade') }}" method="POST">
+      <form id="orderForm" action="{{ url_for('user.execute_trade') }}" method="POST">
+        {{ csrf_token() }}
         <div class="mb-4">
           <label for="symbol" class="block text-sm font-medium text-gray-700">Symbol</label>
-          <input type="text" name="symbol" id="symbol" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+          <input type="text" name="symbol" id="symbol" required 
+                 placeholder="e.g., RELIANCE, TCS"
+                 class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
         </div>
+        
         <div class="mb-4">
           <label for="quantity" class="block text-sm font-medium text-gray-700">Quantity</label>
-          <input type="number" name="quantity" id="quantity" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+          <input type="number" name="quantity" id="quantity" required min="1"
+                 class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
         </div>
+        
         <div class="grid grid-cols-2 gap-4 mb-4">
           <div>
             <label for="order_type" class="block text-sm font-medium text-gray-700">Order Type</label>
-            <select name="order_type" id="order_type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-              <option>market</option>
-              <option>limit</option>
+            <select name="order_type" id="order_type" 
+                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+              <option value="market">Market</option>
+              <option value="limit">Limit</option>
             </select>
           </div>
           <div>
             <label for="side" class="block text-sm font-medium text-gray-700">Side</label>
-            <select name="side" id="side" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+            <select name="side" id="side" 
+                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
               <option value="buy">Buy</option>
               <option value="sell">Sell</option>
             </select>
           </div>
         </div>
+
+        <div class="mb-4" id="priceField" style="display: none;">
+          <label for="price" class="block text-sm font-medium text-gray-700">Price</label>
+          <input type="number" name="price" id="price" step="0.01"
+                 class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+        </div>
+        
         {% if current_user.has_pro_plan %}
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700">Trade Mode</label>
-            <div class="mt-2 flex items-center">
-              <input id="paper" name="trade_mode" type="radio" value="paper" checked class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300" />
-              <label for="paper" class="ml-3 block text-sm font-medium text-gray-700">Paper</label>
-              <input id="real" name="trade_mode" type="radio" value="real" class="ml-6 focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300" />
-              <label for="real" class="ml-3 block text-sm font-medium text-gray-700">Real</label>
-            </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700">Trade Mode</label>
+          <div class="mt-2 flex items-center">
+            <input id="paper" name="trade_mode" type="radio" value="paper" checked 
+                   class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300" />
+            <label for="paper" class="ml-3 block text-sm font-medium text-gray-700">Paper</label>
+            <input id="real" name="trade_mode" type="radio" value="real" 
+                   class="ml-6 focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300" />
+            <label for="real" class="ml-3 block text-sm font-medium text-gray-700">Live</label>
           </div>
+        </div>
+        {% else %}
+        <input type="hidden" name="trade_mode" value="paper">
+        <div class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p class="text-sm text-yellow-800">
+            <strong>Paper Trading Only:</strong> Upgrade to Pro plan for live trading.
+            <a href="{{ url_for('payments.upgrade') }}" class="underline">Upgrade now</a>
+          </p>
+        </div>
         {% endif %}
-        <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">Place Trade</button>
+        
+        <button type="submit" id="orderSubmitBtn"
+                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+          Place Order
+        </button>
       </form>
     </div>
-    <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow">
-      <h2 class="text-xl font-semibold mb-4">Performance Chart</h2>
-      <canvas id="performanceChart"></canvas>
+
+    <!-- Charts Section -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- P&L Chart -->
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4">Portfolio Performance</h2>
+        <canvas id="pnlChart" width="400" height="200"></canvas>
+      </div>
+      
+      <!-- Portfolio Composition -->
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4">Portfolio Composition</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <canvas id="portfolioChart" width="200" height="200"></canvas>
+          <div class="space-y-2" id="positionsContainer">
+            {% for position in positions %}
+            <div class="bg-gray-50 p-3 rounded">
+              <div class="flex justify-between items-center">
+                <span class="font-medium">{{ position.symbol }}</span>
+                <span class="text-sm {% if position.pnl >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                  ₹{{ position.pnl }}
+                </span>
+              </div>
+              <div class="text-sm text-gray-600">
+                Qty: {{ position.qty }} | Avg: ₹{{ position.avg_price }}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <script>
-    const ctx = document.getElementById('performanceChart').getContext('2d')
-    const performanceChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], // Placeholder labels
-        datasets: [
-          {
-            label: 'Portfolio Value',
-            data: [500000, 512000, 508000, 525000, 530000, 545000], // Placeholder data
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1,
-            tension: 0.1
-          }
-        ]
-      },
-      options: {
-        scales: {
-          y: {
-            beginAtZero: false
-          }
-        }
-      }
-    })
-  </script>
+  <!-- Recent Activity Section -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+    <!-- Recent Orders -->
+    <div class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-xl font-semibold mb-4">Recent Orders</h2>
+      <div class="space-y-3">
+        {% for order in recent_orders %}
+        <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+          <div>
+            <div class="font-medium">{{ order.symbol }}</div>
+            <div class="text-sm text-gray-600">{{ order.quantity }} shares</div>
+          </div>
+          <div class="text-right">
+            <div class="text-sm font-medium 
+              {% if order.status == 'filled' %}text-green-600
+              {% elif order.status == 'pending' %}text-yellow-600
+              {% elif order.status == 'failed' %}text-red-600
+              {% else %}text-gray-600{% endif %}">
+              {{ order.status.title() }}
+            </div>
+            <div class="text-xs text-gray-500">{{ order.created_at.strftime('%H:%M') }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Recent Trades -->
+    <div class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-xl font-semibold mb-4">Recent Trades</h2>
+      <div class="space-y-3" id="recentTradesContainer">
+        {% for trade in trades %}
+        <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+          <div>
+            <div class="font-medium">{{ trade.symbol }}</div>
+            <div class="text-sm text-gray-600">{{ trade.quantity }} @ ₹{{ trade.price }}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-sm font-medium {% if trade.side == 'buy' %}text-green-600{% else %}text-red-600{% endif %}">
+              {{ trade.side.upper() }}
+            </div>
+            <div class="text-xs text-gray-500">{{ trade.timestamp.strftime('%H:%M') }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Strategies -->
+  {% if active_strategies %}
+  <div class="bg-white p-6 rounded-lg shadow mt-6">
+    <h2 class="text-xl font-semibold mb-4">Active Strategies</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {% for strategy in active_strategies %}
+      <div class="border border-gray-200 rounded-lg p-4">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="font-medium">{{ strategy.name }}</h3>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" class="sr-only peer strategy-toggle" 
+                   data-strategy-id="{{ strategy.id }}" 
+                   {% if strategy.is_active %}checked{% endif %}>
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+        <p class="text-sm text-gray-600">
+          Parameters: {{ strategy.parameters | length }} configured
+        </p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Include Trading JavaScript -->
+<script src="{{ url_for('static', filename='js/trading.js') }}"></script>
+
+<script>
+// Order type change handler
+document.getElementById('order_type').addEventListener('change', function() {
+    const priceField = document.getElementById('priceField');
+    if (this.value === 'limit') {
+        priceField.style.display = 'block';
+        document.getElementById('price').required = true;
+    } else {
+        priceField.style.display = 'none';
+        document.getElementById('price').required = false;
+    }
+});
+
+// Update last update time
+function updateLastUpdateTime() {
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+}
+
+// Update every minute
+setInterval(updateLastUpdateTime, 60000);
+</script>
 {% endblock %}
