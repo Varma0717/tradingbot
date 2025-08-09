@@ -62,11 +62,8 @@ class RealUniversalGridDCAStrategy:
         self.trading_pair = pair
         print(f"📊 Strategy trading pair set to: {pair}")
 
-        # Adjust order size based on pair
-        if "BTC" in pair:
-            self.order_size_usd = 10.0  # Larger orders for BTC
-        else:
-            self.order_size_usd = 2.0  # Smaller orders for altcoins
+        # Keep consistent order size regardless of pair for testing
+        # This can be overridden by settings
 
     def calculate_grid_levels(self, current_price):
         """Calculate grid buy/sell levels around current price"""
