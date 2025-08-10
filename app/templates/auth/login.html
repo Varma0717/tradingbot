@@ -1,22 +1,107 @@
 {% extends 'layout.html' %}
+
+{% block title %}
+  Login - TradeMantra
+{% endblock %}
+
+{% block meta %}
+  <meta name="description" content="Login to your TradeMantra account to access advanced trading strategies and portfolio management tools." />
+  <meta name="robots" content="noindex, nofollow" />
+{% endblock %}
+
 {% block content %}
-  <div class="flex items-center justify-center min-h-screen bg-gray-100">
-    <div class="px-8 py-6 mt-4 text-left bg-white shadow-lg rounded-lg w-full max-w-md">
-      <h3 class="text-2xl font-bold text-center">Login to your account</h3>
-      <form method="POST" action="{{ url_for('auth.login') }}">
-        {{ form.hidden_tag() }}
-        <div class="mt-4">
-          <div>{{ form.email.label(class='block') }}
-            {{ form.email(class='w-full px-4 py-2 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-600') }}</div>
-          <div class="mt-4">{{ form.password.label(class='block') }}
-            {{ form.password(class='w-full px-4 py-2 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-600') }}</div>
-          <div class="mt-4 flex items-center justify-between">
-            <div class="flex items-center">{{ form.remember_me() }}
-              {{ form.remember_me.label(class='ml-2') }}</div>
-          </div>
-          <div class="flex items-baseline justify-center">{{ form.submit(class='px-6 py-2 mt-4 text-white bg-gray-800 rounded-lg hover:bg-gray-900 cursor-pointer') }}</div>
+  <section class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+      <!-- Header -->
+      <div class="text-center">
+        <div class="flex justify-center mb-6">
+          <span class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">TradeMantra</span>
         </div>
-      </form>
+        <h2 class="text-3xl font-bold text-gray-900 mb-2">Welcome back</h2>
+        <p class="text-gray-600">Sign in to your trading account</p>
+      </div>
+
+      <!-- Login Form -->
+      <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+        <form method="POST" action="{{ url_for('auth.login') }}" class="space-y-6">
+          {{ form.hidden_tag() }}
+
+          <!-- Email Field -->
+          <div>
+            {{ form.email.label(class='block text-sm font-medium text-gray-700 mb-2') }}
+            {{ form.email(class='w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200', placeholder='Enter your email address') }}
+            {% if form.email.errors %}
+              <div class="mt-1">
+                {% for error in form.email.errors %}
+                  <p class="text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Password Field -->
+          <div>
+            {{ form.password.label(class='block text-sm font-medium text-gray-700 mb-2') }}
+            {{ form.password(class='w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200', placeholder='Enter your password') }}
+            {% if form.password.errors %}
+              <div class="mt-1">
+                {% for error in form.password.errors %}
+                  <p class="text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Remember Me -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">{{ form.remember_me(class='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded') }}
+              {{ form.remember_me.label(class='ml-2 block text-sm text-gray-700') }}</div>
+            <div>
+              <a href="#" class="text-sm text-blue-600 hover:text-blue-500 transition-colors duration-200">Forgot your password?</a>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div>{{ form.submit(class='w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 cursor-pointer') }}</div>
+
+          <!-- Divider -->
+          <div class="relative my-6">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-gray-300"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+              <span class="px-2 bg-white text-gray-500">New to TradeMantra?</span>
+            </div>
+          </div>
+
+          <!-- Register Link -->
+          <div class="text-center">
+            <a href="{{ url_for('auth.register') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">Create an account</a>
+          </div>
+        </form>
+      </div>
+
+      <!-- Features -->
+      <div class="text-center text-sm text-gray-600">
+        <p class="mb-4">Join thousands of traders using TradeMantra for:</p>
+        <div class="flex justify-center space-x-6">
+          <span class="flex items-center">
+            <svg class="w-4 h-4 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+            </svg>AI Trading
+          </span>
+          <span class="flex items-center">
+            <svg class="w-4 h-4 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+            </svg>Risk Management
+          </span>
+          <span class="flex items-center">
+            <svg class="w-4 h-4 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+            </svg>Analytics
+          </span>
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
 {% endblock %}

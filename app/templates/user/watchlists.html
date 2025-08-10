@@ -1,0 +1,376 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+  Watchlists - TradeMantra
+{% endblock %}
+
+{% block content %}
+  <div class="p-6 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex justify-between items-start">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900 mb-2">👁️ Watchlists</h1>
+          <p class="text-gray-600">Monitor your favorite stocks and cryptocurrencies with automated tracking and alerts</p>
+        </div>
+        <button onclick="createWatchlist()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>Create Watchlist
+        </button>
+      </div>
+    </div>
+
+    <!-- Market Selector -->
+    <div class="flex space-x-2 mb-6">
+      <button onclick="switchMarket('stocks')" id="stocks-tab" class="market-tab bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">📈 Stocks</button>
+      <button onclick="switchMarket('crypto')" id="crypto-tab" class="market-tab bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-300">₿ Crypto</button>
+    </div>
+
+    <!-- Stocks Watchlists -->
+    <div id="stocks-watchlists">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Momentum Stocks Watchlist -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div class="p-4 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-semibold text-gray-900">🚀 Momentum Stocks</h3>
+              <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Auto-Updated</span>
+                <button class="text-gray-400 hover:text-gray-600">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="p-4">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-bold text-blue-600">TCS</span>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">TCS</div>
+                    <div class="text-xs text-gray-500">Tata Consultancy Services</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-medium text-gray-900">₹3,245.50</div>
+                  <div class="text-xs text-green-600">+2.4%</div>
+                </div>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-bold text-purple-600">ITC</span>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">ITC</div>
+                    <div class="text-xs text-gray-500">ITC Limited</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-medium text-gray-900">₹412.85</div>
+                  <div class="text-xs text-green-600">+1.8%</div>
+                </div>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-bold text-green-600">RIL</span>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">RELIANCE</div>
+                    <div class="text-xs text-gray-500">Reliance Industries</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-medium text-gray-900">₹2,567.30</div>
+                  <div class="text-xs text-red-600">-0.5%</div>
+                </div>
+              </div>
+            </div>
+            <button class="w-full mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium">View All (12 stocks)</button>
+          </div>
+        </div>
+
+        <!-- Blue Chip Stocks Watchlist -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div class="p-4 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-semibold text-gray-900">⭐ Blue Chip Stocks</h3>
+              <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Manual</span>
+                <button class="text-gray-400 hover:text-gray-600">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="p-4">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-bold text-yellow-600">INF</span>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">INFY</div>
+                    <div class="text-xs text-gray-500">Infosys Limited</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-medium text-gray-900">₹1,456.75</div>
+                  <div class="text-xs text-green-600">+1.2%</div>
+                </div>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-bold text-red-600">HDL</span>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">HDFCBANK</div>
+                    <div class="text-xs text-gray-500">HDFC Bank</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-medium text-gray-900">₹1,623.40</div>
+                  <div class="text-xs text-green-600">+0.8%</div>
+                </div>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-bold text-indigo-600">WIP</span>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">WIPRO</div>
+                    <div class="text-xs text-gray-500">Wipro Limited</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-medium text-gray-900">₹445.20</div>
+                  <div class="text-xs text-red-600">-1.1%</div>
+                </div>
+              </div>
+            </div>
+            <button class="w-full mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium">View All (8 stocks)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Crypto Watchlists -->
+    <div id="crypto-watchlists" style="display: none;">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Top Crypto Watchlist -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div class="p-4 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-semibold text-gray-900">🥇 Top Cryptocurrencies</h3>
+              <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Auto-Updated</span>
+                <button class="text-gray-400 hover:text-gray-600">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="p-4">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-bold text-orange-600">₿</span>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">BTC/USDT</div>
+                    <div class="text-xs text-gray-500">Bitcoin</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-medium text-gray-900">$42,567.80</div>
+                  <div class="text-xs text-green-600">+3.2%</div>
+                </div>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-bold text-blue-600">Ξ</span>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">ETH/USDT</div>
+                    <div class="text-xs text-gray-500">Ethereum</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-medium text-gray-900">$2,456.90</div>
+                  <div class="text-xs text-green-600">+2.8%</div>
+                </div>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-bold text-yellow-600">◉</span>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">BNB/USDT</div>
+                    <div class="text-xs text-gray-500">Binance Coin</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-medium text-gray-900">$312.45</div>
+                  <div class="text-xs text-red-600">-1.5%</div>
+                </div>
+              </div>
+            </div>
+            <button class="w-full mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium">View All (15 pairs)</button>
+          </div>
+        </div>
+
+        <!-- DeFi Tokens Watchlist -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div class="p-4 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-semibold text-gray-900">🔗 DeFi Tokens</h3>
+              <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">Custom</span>
+                <button class="text-gray-400 hover:text-gray-600">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="p-4">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-bold text-pink-600">UNI</span>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">UNI/USDT</div>
+                    <div class="text-xs text-gray-500">Uniswap</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-medium text-gray-900">$6.75</div>
+                  <div class="text-xs text-green-600">+4.2%</div>
+                </div>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-bold text-green-600">LINK</span>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">LINK/USDT</div>
+                    <div class="text-xs text-gray-500">Chainlink</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-medium text-gray-900">$14.82</div>
+                  <div class="text-xs text-green-600">+2.1%</div>
+                </div>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-bold text-purple-600">AAVE</span>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">AAVE/USDT</div>
+                    <div class="text-xs text-gray-500">Aave</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-medium text-gray-900">$98.34</div>
+                  <div class="text-xs text-red-600">-2.3%</div>
+                </div>
+              </div>
+            </div>
+            <button class="w-full mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium">View All (10 pairs)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alerts & Notifications -->
+    <div class="mt-8 bg-white rounded-lg shadow-sm border border-gray-200">
+      <div class="p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">🔔 Active Price Alerts</h3>
+        <div class="space-y-4">
+          <div class="flex items-center justify-between p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+            <div class="flex items-center space-x-3">
+              <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                <span class="text-xs font-bold text-yellow-600">TCS</span>
+              </div>
+              <div>
+                <div class="font-medium text-gray-900">TCS Alert</div>
+                <div class="text-sm text-gray-600">Price above ₹3,250</div>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Triggered</span>
+              <button class="text-gray-400 hover:text-gray-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+            <div class="flex items-center space-x-3">
+              <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                <span class="text-xs font-bold text-orange-600">₿</span>
+              </div>
+              <div>
+                <div class="font-medium text-gray-900">BTC Alert</div>
+                <div class="text-sm text-gray-600">Price above $42,000</div>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+              <button class="text-gray-400 hover:text-gray-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">+ Add New Alert</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchMarket(market) {
+      // Update tabs
+      document.querySelectorAll('.market-tab').forEach((tab) => {
+        tab.className = 'market-tab bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-300'
+      })
+      document.getElementById(market + '-tab').className = 'market-tab bg-blue-600 text-white px-4 py-2 rounded-lg text-sm'
+    
+      // Show/hide content
+      document.getElementById('stocks-watchlists').style.display = market === 'stocks' ? 'block' : 'none'
+      document.getElementById('crypto-watchlists').style.display = market === 'crypto' ? 'block' : 'none'
+    }
+    
+    function createWatchlist() {
+      alert('Create New Watchlist feature - Implementation pending for automated trading focus')
+    }
+  </script>
+{% endblock %}

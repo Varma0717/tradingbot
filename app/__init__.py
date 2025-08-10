@@ -91,4 +91,16 @@ def create_app(config_name="default"):
         scheduler.start()
         app.logger.info("Scheduler started - strategies will run every 5 minutes.")
 
+    # Initialize bot manager and restore active bots
+    with app.app_context():
+        from .automation.bot_manager import BotManager, start_heartbeat_monitor
+
+        # Restore any active bots from database
+        BotManager.restore_active_bots()
+
+        # Start heartbeat monitor with app context
+        start_heartbeat_monitor(app)
+
+        app.logger.info("Bot manager initialized and active bots restored.")
+
     return app

@@ -1,14 +1,24 @@
 {% extends 'layout.html' %}
 {% block content %}
-  <h1 class="text-3xl font-bold text-gray-900">Orders</h1>
+  <div class="py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+      <h1 class="text-3xl font-bold text-gray-900">Orders</h1>
 
-  <div class="mt-6">
-    <h2 class="text-xl font-semibold text-gray-800">Active Orders</h2>
-    <div class="mt-4 bg-white shadow overflow-hidden sm:rounded-lg">Active Orders Table</div>
-  </div>
+      <div class="mt-6">
+        <h2 class="text-xl font-semibold text-gray-800">Active Orders</h2>
+        <div class="mt-4 bg-white shadow overflow-hidden sm:rounded-lg">
+          <div class="px-4 py-6 text-center text-gray-500">
+            No active orders found. <a href="{{ url_for('user.dashboard') }}" class="text-blue-600 hover:text-blue-500">Place your first order</a>
+          </div>
+        </div>
+      </div>
 
-  <div class="mt-8">
-    <h2 class="text-xl font-semibold text-gray-800">Order History</h2>
-    <div class="mt-4 bg-white shadow overflow-hidden sm:rounded-lg">Order History Table</div>
+      <div class="mt-8">
+        <h2 class="text-xl font-semibold text-gray-800">Order History</h2>
+        <div class="mt-4 bg-white shadow overflow-hidden sm:rounded-lg">
+          <div class="px-4 py-6 text-center text-gray-500">No order history found.</div>
+        </div>
+      </div>
+    </div>
   </div>
 {% endblock %}

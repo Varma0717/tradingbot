@@ -1,0 +1,171 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+  Account Statement - TradeMantra
+{% endblock %}
+
+{% block content %}
+  <div class="p-6 max-w-7xl mx-auto" data-trading-mode>
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 Account Statement</h1>
+          <p class="text-gray-600">Download and view your trading account statements</p>
+        </div>
+        <div class="flex items-center space-x-4">
+          <span class="trading-mode-badge inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">📝 PAPER</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trading Mode Alert -->
+    <div id="statementTradingAlert" class="paper-trading mb-6">
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-center">
+          <svg class="w-5 h-5 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <div>
+            <h4 class="text-sm font-semibold text-blue-800">Paper Trading Statements</h4>
+            <p class="text-sm text-blue-700">These statements show simulated trading activity only.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Statement Options -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <!-- Monthly Statement -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center mb-4">
+          <svg class="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          <h3 class="text-lg font-semibold text-gray-900">Monthly Statement</h3>
+        </div>
+        <p class="text-gray-600 text-sm mb-4">Download detailed monthly trading statements with P&L analysis.</p>
+        <button class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Download Latest</button>
+      </div>
+
+      <!-- Annual Statement -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center mb-4">
+          <svg class="w-8 h-8 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+          <h3 class="text-lg font-semibold text-gray-900">Annual Statement</h3>
+        </div>
+        <p class="text-gray-600 text-sm mb-4">Comprehensive yearly statement for tax filing and record keeping.</p>
+        <button class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">Download 2024</button>
+      </div>
+
+      <!-- Custom Range -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center mb-4">
+          <svg class="w-8 h-8 text-purple-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <h3 class="text-lg font-semibold text-gray-900">Custom Range</h3>
+        </div>
+        <p class="text-gray-600 text-sm mb-4">Generate statements for any custom date range you specify.</p>
+        <button class="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">Select Dates</button>
+      </div>
+    </div>
+
+    <!-- Recent Statements -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-xl font-semibold text-gray-900">Recent Statements</h2>
+      </div>
+      <div class="p-6">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              <div>
+                <p class="text-sm font-medium text-gray-900">July 2025 Statement</p>
+                <p class="text-xs text-gray-500">Generated on Aug 1, 2025</p>
+              </div>
+            </div>
+            <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">Download</button>
+          </div>
+
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              <div>
+                <p class="text-sm font-medium text-gray-900">June 2025 Statement</p>
+                <p class="text-xs text-gray-500">Generated on Jul 1, 2025</p>
+              </div>
+            </div>
+            <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">Download</button>
+          </div>
+
+          <div class="text-center py-8 text-gray-500">
+            <p class="text-sm">More statements will appear here as you continue trading</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Account statement specific trading mode updates
+    function updateStatementTradingMode() {
+      const alert = document.getElementById('statementTradingAlert')
+    
+      if (!alert) return
+    
+      if (window.currentTradingMode === 'live') {
+        alert.className = 'live-trading mb-6'
+        alert.innerHTML = `
+              <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="flex items-center">
+                  <svg class="w-5 h-5 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                  </svg>
+                  <div>
+                    <h4 class="text-sm font-semibold text-red-800">Live Trading Statements</h4>
+                    <p class="text-sm text-red-700">These statements show real trading activity and actual profits/losses.</p>
+                  </div>
+                </div>
+              </div>
+            `
+      } else {
+        alert.className = 'paper-trading mb-6'
+        alert.innerHTML = `
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-center">
+                  <svg class="w-5 h-5 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  <div>
+                    <h4 class="text-sm font-semibold text-blue-800">Paper Trading Statements</h4>
+                    <p class="text-sm text-blue-700">These statements show simulated trading activity only.</p>
+                  </div>
+                </div>
+              </div>
+            `
+      }
+    }
+    
+    // Override the global updateTradingUI function
+    const originalUpdateTradingUI = window.updateTradingUI
+    window.updateTradingUI = function () {
+      if (originalUpdateTradingUI) {
+        originalUpdateTradingUI()
+      }
+      updateStatementTradingMode()
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(updateStatementTradingMode, 500)
+    })
+  </script>
+{% endblock %}

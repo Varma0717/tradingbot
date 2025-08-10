@@ -15,12 +15,22 @@ A comprehensive Flask-based trading bot platform with strategy automation, user 
 
 ### 📈 Implemented Trading Strategies
 
+#### Stock Market (NSE/BSE)
+
 1. **Moving Average Crossover**: Simple two-MA crossover with stop-loss/take-profit
 2. **Momentum Breakout**: Trade breakouts above X-day high with volume confirmation
 3. **RSI Mean Reversion**: Buy when RSI < 30, sell when RSI > 70
 4. **VWAP Intraday Scalper**: Trade deviations from VWAP
 5. **Bollinger Band Reversal**: Trade reversals at band extremes
-6. **More strategies**: Extensible architecture for adding new strategies
+
+#### Cryptocurrency Market (Binance)
+
+1. **Crypto Momentum**: Captures crypto momentum with moving averages and RSI
+2. **Crypto Mean Reversion**: Trades oversold/overbought levels using Bollinger Bands
+3. **Crypto Breakout**: Captures breakouts with volume confirmation
+4. **24/7 Trading**: Unlike stocks, crypto markets never close - trade around the clock
+
+**More strategies**: Extensible architecture for adding new strategies
 
 ### 🔧 Technical Features
 
@@ -228,12 +238,41 @@ gunicorn -w 4 -b 0.0.0.0:8000 "app:create_app()"
 
 ## Configuration
 
+### Cryptocurrency Trading Setup
+
+To enable crypto trading with Binance:
+
+1. **Get Binance API Keys**
+   - Go to [Binance API Management](https://www.binance.com/en/my/settings/api-management)
+   - Create a new API key with trading permissions
+   - **Important**: Enable IP access restrictions for security
+
+2. **Configure Environment Variables**
+
+   ```bash
+   BINANCE_API_KEY=your_binance_api_key
+   BINANCE_API_SECRET=your_binance_api_secret
+   BINANCE_TESTNET=true  # Set to false for live trading
+   ```
+
+3. **Trading Markets Available**
+   - **Stock Market**: NSE/BSE equities (requires stock broker API)
+   - **Cryptocurrency**: Binance USDT pairs (BTC, ETH, BNB, ADA, SOL, etc.)
+
+4. **Safety Features**
+   - Start with testnet (BINANCE_TESTNET=true)
+   - Paper trading mode available
+   - Built-in risk management (1% position sizing)
+   - Stop loss and take profit controls
+
 ### Environment Variables
 
 - `SECRET_KEY`: Flask secret key for sessions
 - `DEBUG`: Enable/disable debug mode
 - `DATABASE_URL`: Database connection string
-- `BROKER_API_KEY/SECRET`: Broker API credentials
+- `BROKER_API_KEY/SECRET`: Stock broker API credentials
+- `BINANCE_API_KEY/SECRET`: Binance API credentials for crypto trading
+- `BINANCE_TESTNET`: Use Binance testnet (true/false)
 - `RAZORPAY_KEY/SECRET`: Payment gateway credentials
 - `SCHEDULER_ENABLED`: Enable/disable strategy automation
 

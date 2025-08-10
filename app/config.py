@@ -38,6 +38,16 @@ class Config:
     # Broker and Payment API Keys
     BROKER_API_KEY = os.environ.get("BROKER_API_KEY")
     BROKER_API_SECRET = os.environ.get("BROKER_API_SECRET")
+
+    # Binance API Keys for Crypto Trading
+    BINANCE_API_KEY = os.environ.get("BINANCE_API_KEY")
+    BINANCE_API_SECRET = os.environ.get("BINANCE_API_SECRET")
+    BINANCE_TESTNET = os.environ.get("BINANCE_TESTNET", "true").lower() in [
+        "true",
+        "on",
+        "1",
+    ]
+
     RAZORPAY_KEY = os.environ.get("RAZORPAY_KEY")
     RAZORPAY_SECRET = os.environ.get("RAZORPAY_SECRET")
 
@@ -47,9 +57,17 @@ class Config:
 
 
 class DevelopmentConfig(Config):
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL"
-    ) or "sqlite:///" + os.path.join(basedir, "..", "dev.db")
+    # MySQL configuration for XAMPP
+    MYSQL_HOST = os.environ.get("MYSQL_HOST", "localhost")
+    MYSQL_PORT = int(os.environ.get("MYSQL_PORT", "3306"))
+    MYSQL_USER = os.environ.get("MYSQL_USER", "root")
+    MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "")
+    MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE", "trademantra")
+
+    SQLALCHEMY_DATABASE_URI = (
+        os.environ.get("DATABASE_URL")
+        or f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}"
+    )
 
 
 class ProductionConfig(Config):

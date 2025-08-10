@@ -1,248 +1,443 @@
 {% extends 'layout.html' %}
 {% block content %}
-<div class="p-6">
-  <div class="flex justify-between items-center mb-6">
-    <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
-    <div class="flex items-center space-x-4">
-      <label class="flex items-center">
-        <input type="checkbox" id="realtimeUpdates" class="rounded">
-        <span class="ml-2 text-sm text-gray-600">Real-time updates</span>
-      </label>
-      <span class="text-sm text-gray-500">Last updated: <span id="lastUpdate">just now</span></span>
-    </div>
-  </div>
-
-  <!-- Stats Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-    <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-lg font-medium text-gray-500">Total P&L</h2>
-      <p id="totalPnL" class="mt-1 text-3xl font-semibold {% if pnl.total >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
-        ₹{{ '%.2f'|format(pnl.total) }}
-      </p>
-    </div>
-    <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-lg font-medium text-gray-500">Daily P&L</h2>
-      <p id="dailyPnL" class="mt-1 text-3xl font-semibold {% if pnl.daily >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
-        ₹{{ '%.2f'|format(pnl.daily) }}
-      </p>
-    </div>
-    <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-lg font-medium text-gray-500">Monthly P&L</h2>
-      <p id="monthlyPnL" class="mt-1 text-3xl font-semibold {% if pnl.monthly >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
-        ₹{{ '%.2f'|format(pnl.monthly) }}
-      </p>
-    </div>
-    <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-lg font-medium text-gray-500">Account Balance</h2>
-      <p class="mt-1 text-3xl font-semibold text-gray-900">₹{{ '%.2f'|format(balance) }}</p>
-    </div>
-  </div>
-
-  <!-- Main Content Grid -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    
-    <!-- Trading Interface -->
-    <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-xl font-semibold mb-4">Place Order</h2>
-      <form id="orderForm" action="{{ url_for('user.execute_trade') }}" method="POST">
-        {{ csrf_token() }}
-        <div class="mb-4">
-          <label for="symbol" class="block text-sm font-medium text-gray-700">Symbol</label>
-          <input type="text" name="symbol" id="symbol" required 
-                 placeholder="e.g., RELIANCE, TCS"
-                 class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+  <div class="py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+      <div class="flex justify-between items-center mb-6">
+        <div class="flex items-center space-x-4">
+          <h1 class="text-3xl font-bold text-gray-900">Trading Overview</h1>
+          <span class="trading-mode-badge inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">📝 PAPER</span>
         </div>
-        
-        <div class="mb-4">
-          <label for="quantity" class="block text-sm font-medium text-gray-700">Quantity</label>
-          <input type="number" name="quantity" id="quantity" required min="1"
-                 class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
-        </div>
-        
-        <div class="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label for="order_type" class="block text-sm font-medium text-gray-700">Order Type</label>
-            <select name="order_type" id="order_type" 
-                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-              <option value="market">Market</option>
-              <option value="limit">Limit</option>
-            </select>
-          </div>
-          <div>
-            <label for="side" class="block text-sm font-medium text-gray-700">Side</label>
-            <select name="side" id="side" 
-                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-              <option value="buy">Buy</option>
-              <option value="sell">Sell</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="mb-4" id="priceField" style="display: none;">
-          <label for="price" class="block text-sm font-medium text-gray-700">Price</label>
-          <input type="number" name="price" id="price" step="0.01"
-                 class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
-        </div>
-        
-        {% if current_user.has_pro_plan %}
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700">Trade Mode</label>
-          <div class="mt-2 flex items-center">
-            <input id="paper" name="trade_mode" type="radio" value="paper" checked 
-                   class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300" />
-            <label for="paper" class="ml-3 block text-sm font-medium text-gray-700">Paper</label>
-            <input id="real" name="trade_mode" type="radio" value="real" 
-                   class="ml-6 focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300" />
-            <label for="real" class="ml-3 block text-sm font-medium text-gray-700">Live</label>
-          </div>
-        </div>
-        {% else %}
-        <input type="hidden" name="trade_mode" value="paper">
-        <div class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-          <p class="text-sm text-yellow-800">
-            <strong>Paper Trading Only:</strong> Upgrade to Pro plan for live trading.
-            <a href="{{ url_for('payments.upgrade') }}" class="underline">Upgrade now</a>
-          </p>
-        </div>
-        {% endif %}
-        
-        <button type="submit" id="orderSubmitBtn"
-                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-          Place Order
-        </button>
-      </form>
-    </div>
-
-    <!-- Charts Section -->
-    <div class="lg:col-span-2 space-y-6">
-      <!-- P&L Chart -->
-      <div class="bg-white p-6 rounded-lg shadow">
-        <h2 class="text-xl font-semibold mb-4">Portfolio Performance</h2>
-        <canvas id="pnlChart" width="400" height="200"></canvas>
-      </div>
-      
-      <!-- Portfolio Composition -->
-      <div class="bg-white p-6 rounded-lg shadow">
-        <h2 class="text-xl font-semibold mb-4">Portfolio Composition</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <canvas id="portfolioChart" width="200" height="200"></canvas>
-          <div class="space-y-2" id="positionsContainer">
-            {% for position in positions %}
-            <div class="bg-gray-50 p-3 rounded">
-              <div class="flex justify-between items-center">
-                <span class="font-medium">{{ position.symbol }}</span>
-                <span class="text-sm {% if position.pnl >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
-                  ₹{{ position.pnl }}
-                </span>
-              </div>
-              <div class="text-sm text-gray-600">
-                Qty: {{ position.qty }} | Avg: ₹{{ position.avg_price }}
-              </div>
+        <div class="flex items-center space-x-4">
+          <!-- Main Trading Button -->
+          <a href="{{ url_for('user.automation_dashboard') }}" class="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-4 rounded-lg font-bold hover:from-green-600 hover:to-green-700 transform hover:scale-105 transition-all duration-200 shadow-lg text-lg">
+            <div class="flex items-center">
+              <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+              </svg>🚀 Go to Trading Dashboard
             </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- Trading Mode Alert -->
+      <div id="tradingModeAlert" class="paper-trading mb-6">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div class="flex items-center">
+            <svg class="w-5 h-5 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+              <h4 class="text-sm font-semibold text-blue-800">Paper Trading Mode Active</h4>
+              <p class="text-sm text-blue-700">You're in practice mode. No real money will be used for trades.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info Banner -->
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+        <div class="flex items-center">
+          <svg class="w-8 h-8 text-blue-600 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <div>
+            <h3 class="text-lg font-semibold text-blue-800">Automated Trading Platform</h3>
+            <p class="text-blue-700">TradeMantra handles all your trading automatically with intelligent strategies. No manual orders needed - just start the bot and let it trade for you!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-lg font-medium text-gray-500">Total P&L</h2>
+          <p id="totalPnL"
+            class="mt-1 text-3xl font-semibold {% if pnl.total >= 0 %}
+              
+              
+              
+              text-green-600
+
+
+
+            {% else %}
+              
+              
+              
+              text-red-600
+
+
+
+            {% endif %}">₹{{ '%.2f'|format(pnl.total) }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-lg font-medium text-gray-500">Daily P&L</h2>
+          <p id="dailyPnL"
+            class="mt-1 text-3xl font-semibold {% if pnl.daily >= 0 %}
+              
+              
+              
+              text-green-600
+
+
+
+            {% else %}
+              
+              
+              
+              text-red-600
+
+
+
+            {% endif %}">₹{{ '%.2f'|format(pnl.daily) }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-lg font-medium text-gray-500">Monthly P&L</h2>
+          <p id="monthlyPnL"
+            class="mt-1 text-3xl font-semibold {% if pnl.monthly >= 0 %}
+              
+              
+              
+              text-green-600
+
+
+
+            {% else %}
+              
+              
+              
+              text-red-600
+
+
+
+            {% endif %}">₹{{ '%.2f'|format(pnl.monthly) }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-lg font-medium text-gray-500">Account Balance</h2>
+          <p class="mt-1 text-3xl font-semibold text-gray-900">₹{{ '%.2f'|format(balance) }}</p>
+        </div>
+      </div>
+
+      <!-- Main Content Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Current Positions -->
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-xl font-semibold mb-4">Current Positions</h2>
+          <div class="space-y-3" id="positionsContainer">
+            {% for position in positions %}
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <div class="flex justify-between items-center">
+                  <span class="font-medium text-lg">{{ position.symbol }}</span>
+                  <span class="text-lg font-semibold {% if position.pnl >= 0 %}
+                      
+                      
+                      
+                      text-green-600
+
+
+
+                    {% else %}
+                      
+                      
+                      
+                      text-red-600
+
+
+
+                    {% endif %}">
+                    ₹{{ position.pnl }}
+                  </span>
+                </div>
+                <div class="text-sm text-gray-600 mt-1">Qty: {{ position.qty }} | Avg: ₹{{ position.avg_price }} | LTP: ₹{{ position.ltp }}</div>
+              </div>
+            {% else %}
+              <div class="text-center py-8 text-gray-500">
+                <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                <p>No active positions</p>
+                <p class="text-sm">Start automated trading to see positions here</p>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Recent Bot Activity -->
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-xl font-semibold mb-4">Recent Bot Activity</h2>
+          <div class="space-y-3" id="recentTradesContainer">
+            {% for trade in trades %}
+              <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <div>
+                  <div class="font-medium">{{ trade.symbol }}</div>
+                  <div class="text-sm text-gray-600">{{ trade.quantity }} @ ₹{{ trade.price }}</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-sm font-medium {% if trade.side == 'buy' %}
+                      
+                      
+                      
+                      text-green-600
+
+
+
+                    {% else %}
+                      
+                      
+                      
+                      text-red-600
+
+
+
+                    {% endif %}">{{ trade.side.upper() }}</div>
+                  <div class="text-xs text-gray-500">{{ trade.timestamp.strftime('%H:%M') }}</div>
+                </div>
+              </div>
+            {% else %}
+              <div class="text-center py-8 text-gray-500">
+                <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                <p>No trades yet</p>
+                <p class="text-sm">Bot trades will appear here</p>
+              </div>
             {% endfor %}
           </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Recent Activity Section -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-    <!-- Recent Orders -->
-    <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-xl font-semibold mb-4">Recent Orders</h2>
-      <div class="space-y-3">
-        {% for order in recent_orders %}
-        <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
-          <div>
-            <div class="font-medium">{{ order.symbol }}</div>
-            <div class="text-sm text-gray-600">{{ order.quantity }} shares</div>
-          </div>
-          <div class="text-right">
-            <div class="text-sm font-medium 
-              {% if order.status == 'filled' %}text-green-600
-              {% elif order.status == 'pending' %}text-yellow-600
-              {% elif order.status == 'failed' %}text-red-600
-              {% else %}text-gray-600{% endif %}">
-              {{ order.status.title() }}
+      <!-- Quick Actions -->
+      <div class="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <a href="{{ url_for('user.automation_dashboard') }}" class="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-lg shadow hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <svg class="w-8 h-8 text-green-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+              </svg>
             </div>
-            <div class="text-xs text-gray-500">{{ order.created_at.strftime('%H:%M') }}</div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-
-    <!-- Recent Trades -->
-    <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-xl font-semibold mb-4">Recent Trades</h2>
-      <div class="space-y-3" id="recentTradesContainer">
-        {% for trade in trades %}
-        <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
-          <div>
-            <div class="font-medium">{{ trade.symbol }}</div>
-            <div class="text-sm text-gray-600">{{ trade.quantity }} @ ₹{{ trade.price }}</div>
-          </div>
-          <div class="text-right">
-            <div class="text-sm font-medium {% if trade.side == 'buy' %}text-green-600{% else %}text-red-600{% endif %}">
-              {{ trade.side.upper() }}
+            <div class="ml-4">
+              <h3 class="text-lg font-bold text-white">Trading Bot</h3>
+              <p class="text-sm text-green-100">Start/stop automated trading</p>
             </div>
-            <div class="text-xs text-gray-500">{{ trade.timestamp.strftime('%H:%M') }}</div>
+          </div>
+        </a>
+
+        <a href="{{ url_for('user.analytics') }}" class="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+              </svg>
+            </div>
+            <div class="ml-4">
+              <h3 class="text-lg font-medium text-gray-900">Analytics</h3>
+              <p class="text-sm text-gray-500">Performance metrics & reports</p>
+            </div>
+          </div>
+        </a>
+
+        <a href="{{ url_for('user.settings') }}" class="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>
+            </div>
+            <div class="ml-4">
+              <h3 class="text-lg font-medium text-gray-900">Settings</h3>
+              <p class="text-sm text-gray-500">Broker connections & config</p>
+            </div>
+          </div>
+        </a>
+
+        <a href="{{ url_for('user.risk_management') }}" class="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <svg class="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <div class="ml-4">
+              <h3 class="text-lg font-medium text-gray-900">Risk Management</h3>
+              <p class="text-sm text-gray-500">Position sizing & risk controls</p>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <!-- TradeMantra Services Grid -->
+      <div class="mt-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">TradeMantra Services</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Market Research -->
+          <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+            <div class="flex items-center mb-4">
+              <svg class="w-8 h-8 text-purple-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+              </svg>
+              <h3 class="text-lg font-semibold text-gray-900">Market Research</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Access comprehensive market analysis, stock research reports, and technical insights.</p>
+            <a href="#" onclick="showComingSoon('Market Research')" class="text-purple-600 hover:text-purple-800 font-medium text-sm">View Research →</a>
+          </div>
+
+          <!-- Strategy Library -->
+          <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+            <div class="flex items-center mb-4">
+              <svg class="w-8 h-8 text-indigo-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+              </svg>
+              <h3 class="text-lg font-semibold text-gray-900">Strategy Library</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Browse and customize proven trading strategies for different market conditions.</p>
+            <a href="{{ url_for('user.strategy_library') }}" class="text-indigo-600 hover:text-indigo-800 font-medium text-sm">Browse Strategies →</a>
+          </div>
+
+          <!-- Portfolio Optimizer -->
+          <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+            <div class="flex items-center mb-4">
+              <svg class="w-8 h-8 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+              </svg>
+              <h3 class="text-lg font-semibold text-gray-900">Portfolio Optimizer</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">AI-powered portfolio optimization based on your risk profile and goals.</p>
+            <a href="{{ url_for('user.portfolio') }}" class="text-green-600 hover:text-green-800 font-medium text-sm">Optimize Portfolio →</a>
+          </div>
+
+          <!-- Education Center -->
+          <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+            <div class="flex items-center mb-4">
+              <svg class="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+              </svg>
+              <h3 class="text-lg font-semibold text-gray-900">Education Center</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Learn trading fundamentals, technical analysis, and market psychology.</p>
+            <a href="{{ url_for('user.education') }}" class="text-blue-600 hover:text-blue-800 font-medium text-sm">Start Learning →</a>
+          </div>
+
+          <!-- Support Center -->
+          <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+            <div class="flex items-center mb-4">
+              <svg class="w-8 h-8 text-yellow-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path>
+              </svg>
+              <h3 class="text-lg font-semibold text-gray-900">Support Center</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Get help with platform setup, trading questions, and technical support.</p>
+            <a href="{{ url_for('user.support') }}" class="text-yellow-600 hover:text-yellow-800 font-medium text-sm">Get Support →</a>
+          </div>
+
+          <!-- Community Forum -->
+          <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+            <div class="flex items-center mb-4">
+              <svg class="w-8 h-8 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a2 2 0 01-2-2v-6a2 2 0 012-2h8z"></path>
+              </svg>
+              <h3 class="text-lg font-semibold text-gray-900">Community Forum</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Connect with other traders, share strategies, and discuss market insights.</p>
+            <a href="{{ url_for('user.community') }}" class="text-red-600 hover:text-red-800 font-medium text-sm">Join Community →</a>
           </div>
         </div>
-        {% endfor %}
       </div>
-    </div>
-  </div>
 
-  <!-- Active Strategies -->
-  {% if active_strategies %}
-  <div class="bg-white p-6 rounded-lg shadow mt-6">
-    <h2 class="text-xl font-semibold mb-4">Active Strategies</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {% for strategy in active_strategies %}
-      <div class="border border-gray-200 rounded-lg p-4">
-        <div class="flex justify-between items-center mb-2">
-          <h3 class="font-medium">{{ strategy.name }}</h3>
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" class="sr-only peer strategy-toggle" 
-                   data-strategy-id="{{ strategy.id }}" 
-                   {% if strategy.is_active %}checked{% endif %}>
-            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
+      <!-- Quick Links Section -->
+      <div class="mt-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">Quick Links</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <a href="{{ url_for('user.account_statement') }}" class="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors text-center">
+            <svg class="w-6 h-6 text-gray-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <span class="text-sm font-medium text-gray-700">Account Statement</span>
+          </a>
+
+          <a href="{{ url_for('user.tax_reports') }}" class="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors text-center">
+            <svg class="w-6 h-6 text-gray-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            </svg>
+            <span class="text-sm font-medium text-gray-700">Tax Reports</span>
+          </a>
+
+          <a href="{{ url_for('user.market_calendar') }}" class="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors text-center">
+            <svg class="w-6 h-6 text-gray-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <span class="text-sm font-medium text-gray-700">Market Calendar</span>
+          </a>
+
+          <a href="{{ url_for('user.watchlists') }}" class="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors text-center">
+            <svg class="w-6 h-6 text-gray-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            </svg>
+            <span class="text-sm font-medium text-gray-700">Watchlists</span>
+          </a>
         </div>
-        <p class="text-sm text-gray-600">
-          Parameters: {{ strategy.parameters | length }} configured
-        </p>
       </div>
-      {% endfor %}
     </div>
   </div>
-  {% endif %}
-</div>
 
-<!-- Include Trading JavaScript -->
-<script src="{{ url_for('static', filename='js/trading.js') }}"></script>
-
-<script>
-// Order type change handler
-document.getElementById('order_type').addEventListener('change', function() {
-    const priceField = document.getElementById('priceField');
-    if (this.value === 'limit') {
-        priceField.style.display = 'block';
-        document.getElementById('price').required = true;
-    } else {
-        priceField.style.display = 'none';
-        document.getElementById('price').required = false;
+  <!-- JavaScript for Coming Soon Modal -->
+  <script>
+    function showComingSoon(feature) {
+      alert(`🚀 ${feature} is coming soon!\n\nThis feature is currently under development and will be available in a future update. Stay tuned for more exciting features from TradeMantra!`)
     }
-});
-
-// Update last update time
-function updateLastUpdateTime() {
-    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
-}
-
-// Update every minute
-setInterval(updateLastUpdateTime, 60000);
-</script>
+    
+    // Update trading mode alert based on current mode
+    function updateTradingModeAlert() {
+      const alert = document.getElementById('tradingModeAlert')
+      if (!alert) return
+    
+      if (currentTradingMode === 'live') {
+        alert.className = 'live-trading mb-6'
+        alert.innerHTML = `
+                  <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div class="flex items-center">
+                      <svg class="w-5 h-5 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                      </svg>
+                      <div>
+                        <h4 class="text-sm font-semibold text-red-800">⚠️ Live Trading Mode Active</h4>
+                        <p class="text-sm text-red-700">Real money trading is enabled. All trades will use actual funds.</p>
+                      </div>
+                    </div>
+                  </div>
+                `
+      } else {
+        alert.className = 'paper-trading mb-6'
+        alert.innerHTML = `
+                  <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex items-center">
+                      <svg class="w-5 h-5 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      <div>
+                        <h4 class="text-sm font-semibold text-blue-800">📝 Paper Trading Mode Active</h4>
+                        <p class="text-sm text-blue-700">You're in practice mode. No real money will be used for trades.</p>
+                      </div>
+                    </div>
+                  </div>
+                `
+      }
+    }
+    
+    // Override the updateTradingUI function to include dashboard-specific updates
+    const originalUpdateTradingUI = window.updateTradingUI
+    window.updateTradingUI = function () {
+      if (originalUpdateTradingUI) {
+        originalUpdateTradingUI()
+      }
+      updateTradingModeAlert()
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function () {
+      // Wait a bit for the trading mode to be loaded
+      setTimeout(updateTradingModeAlert, 500)
+    })
+  </script>
 {% endblock %}

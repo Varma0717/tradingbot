@@ -1,0 +1,189 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+  Connect to {{ connection.get_display_name() }} - TradeMantra
+{% endblock %}
+
+{% block content %}
+  <div class="p-6 max-w-2xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex items-center mb-4">
+        <a href="{{ url_for('user.settings') }}" class="text-blue-600 hover:text-blue-800 mr-4">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+        </a>
+        <h1 class="text-3xl font-bold text-gray-900">Connect to {{ connection.get_display_name() }}</h1>
+      </div>
+      <p class="text-gray-600">Set up your API connection to enable live trading</p>
+    </div>
+
+    <!-- Exchange Info -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+      <div class="flex items-start">
+        <div class="flex-shrink-0">
+          <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        <div class="ml-3 flex-1">
+          <h3 class="text-lg font-medium text-blue-900 mb-3">Quick Setup</h3>
+          <div class="space-y-3">
+            <a 
+              href="{{ url_for('user.redirect_to_exchange', exchange=exchange) }}" 
+              target="_blank"
+              class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200 text-sm"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+              </svg>
+              Open {{ connection.get_display_name() }} API Portal
+            </a>
+            <p class="text-sm text-blue-800">Click above to go directly to {{ connection.get_display_name() }}'s developer portal and set up your API credentials.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detailed Instructions -->
+    <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Detailed Setup Instructions</h3>
+      <div class="text-sm text-gray-800 space-y-2">
+        <p><strong>Step 1:</strong> Click the button above to visit {{ connection.get_display_name() }}'s developer portal</p>
+        <p><strong>Step 2:</strong> Create an API application and get your API credentials</p>
+        <p><strong>Step 3:</strong> Return here and enter your API credentials below</p>
+        <p><strong>Step 4:</strong> Test the connection and start trading!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exchange Specific Instructions -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ connection.get_display_name() }} Specific Instructions</h3>
+
+      {% if exchange == 'binance' %}
+        <div class="space-y-3 text-sm text-gray-700">
+          <p>
+            • Go to <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" class="text-blue-600 hover:underline">Binance API Management</a> and log in to your account
+          </p>
+          <p>• Click "Create API" and give it a descriptive label (e.g., "TradeMantra Bot")</p>
+          <p>• <strong>Important:</strong> Only enable "Enable Spot & Margin Trading" permission</p>
+          <p>• Complete 2FA verification to create the API key</p>
+          <p>• Copy your API Key and Secret Key immediately (Secret is shown only once)</p>
+          <p>• <strong>Security:</strong> Consider adding IP whitelist restrictions for added security</p>
+          <p>• <strong>Note:</strong> API access is free, but trading fees apply per transaction</p>
+        </div>
+      {% elif exchange == 'zerodha' %}
+        <div class="space-y-3 text-sm text-gray-700">
+          <p>
+            • Go to <a href="https://kite.trade/connect/login" target="_blank" class="text-blue-600 hover:underline">Kite Connect</a> and log in with your Zerodha credentials
+          </p>
+          <p>• Navigate to "My Apps" and create a new app</p>
+          <p>
+            • Set the redirect URL to: <code class="bg-gray-100 px-2 py-1 rounded">{{ url_for('user.exchange_callback', exchange='zerodha', _external=True) }}</code>
+          </p>
+          <p>• Copy your API Key and API Secret</p>
+          <p>• Note: You'll need to pay ₹2000/month for Kite Connect API access</p>
+        </div>
+      {% elif exchange == 'upstox' %}
+        <div class="space-y-3 text-sm text-gray-700">
+          <p>
+            • Visit <a href="https://api.upstox.com/" target="_blank" class="text-blue-600 hover:underline">Upstox API</a> and create a developer account
+          </p>
+          <p>• Create a new app in the developer console</p>
+          <p>
+            • Set the redirect URL to: <code class="bg-gray-100 px-2 py-1 rounded">{{ url_for('user.exchange_callback', exchange='upstox', _external=True) }}</code>
+          </p>
+          <p>• Copy your API Key and API Secret</p>
+          <p>• API access is free for Upstox users</p>
+        </div>
+      {% elif exchange == 'angelbroking' %}
+        <div class="space-y-3 text-sm text-gray-700">
+          <p>
+            • Go to <a href="https://smartapi.angelbroking.com/" target="_blank" class="text-blue-600 hover:underline">Angel SmartAPI</a>
+          </p>
+          <p>• Register and create a new API application</p>
+          <p>• Complete the API documentation and approval process</p>
+          <p>• Once approved, you'll receive your API credentials</p>
+        </div>
+      {% else %}
+        <div class="space-y-3 text-sm text-gray-700">
+          <p>• Visit the {{ connection.get_display_name() }} developer portal</p>
+          <p>• Create an API application following their documentation</p>
+          <p>• Obtain your API credentials (API Key and Secret)</p>
+          <p>• Return here to complete the setup</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- API Credentials Form -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Enter API Credentials</h3>
+
+      <form method="POST" action="{{ url_for('user.exchange_callback', exchange=exchange) }}" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        
+        {% if exchange == 'binance' %}
+          <!-- Binance Environment Selection -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Environment</label>
+            <div class="space-y-2">
+              <label class="flex items-center">
+                <input type="radio" name="environment" value="live" checked class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" />
+                <span class="ml-2 text-sm text-gray-700">Live Trading (Mainnet)</span>
+              </label>
+              <label class="flex items-center">
+                <input type="radio" name="environment" value="testnet" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" />
+                <span class="ml-2 text-sm text-gray-700">Testnet (Paper Trading)</span>
+              </label>
+            </div>
+          </div>
+        {% endif %}
+        
+        <div>
+          <label for="api_key" class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+          <input type="text" id="api_key" name="api_key" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter your API Key" />
+        </div>
+
+        <div>
+          <label for="api_secret" class="block text-sm font-medium text-gray-700 mb-2">
+            {% if exchange == 'binance' %}Secret Key{% else %}API Secret{% endif %}
+          </label>
+          <input type="password" id="api_secret" name="api_secret" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="{% if exchange == 'binance' %}Enter your Secret Key{% else %}Enter your API Secret{% endif %}" />
+        </div>
+
+        {% if exchange == 'binance' %}
+          <!-- Binance-specific security notice -->
+          <div class="bg-red-50 border border-red-200 rounded-md p-4">
+            <div class="flex">
+              <svg class="w-5 h-5 text-red-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+              <div class="text-sm text-red-800">
+                <strong>Binance Security:</strong> Only enable "Spot & Margin Trading" permissions. Never enable "Enable Withdrawals" for trading bots. Consider using IP whitelist restrictions.
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
+        <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+          <div class="flex">
+            <svg class="w-5 h-5 text-yellow-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+            <div class="text-sm text-yellow-800">
+              <strong>Security Notice:</strong> Your API credentials are encrypted and stored securely. We never store your trading password or PIN.
+            </div>
+          </div>
+        </div>
+
+        <div class="flex space-x-4">
+          <button type="submit" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors duration-200">Connect & Test API</button>
+          <a href="{{ url_for('user.settings') }}" class="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-md text-sm font-medium text-center hover:bg-gray-200 transition-colors duration-200">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

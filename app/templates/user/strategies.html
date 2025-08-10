@@ -1,5 +1,50 @@
 {% extends 'layout.html' %}
 {% block content %}
-  <h1 class="text-3xl font-bold text-gray-900">Strategies</h1>
-  Strategy management UI goes here
+  <div class="py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Trading Strategies</h1>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">Create Strategy</button>
+      </div>
+
+      <!-- Strategy Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Popular Strategies -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Mean Reversion</h3>
+          <p class="text-gray-600 text-sm mb-4">Buy low, sell high strategy based on price reversals</p>
+          <div class="flex justify-between items-center">
+            <span class="text-green-600 font-medium">+12.5% return</span>
+            <button class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200">Activate</button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Momentum Trading</h3>
+          <p class="text-gray-600 text-sm mb-4">Follow the trend with technical indicators</p>
+          <div class="flex justify-between items-center">
+            <span class="text-green-600 font-medium">+8.3% return</span>
+            <button class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200">Activate</button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Swing Trading</h3>
+          <p class="text-gray-600 text-sm mb-4">Medium-term positions based on price swings</p>
+          <div class="flex justify-between items-center">
+            <span class="text-green-600 font-medium">+15.2% return</span>
+            <button class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200">Activate</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Strategies -->
+      <div class="mt-8">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Active Strategies</h2>
+        <div class="bg-white rounded-lg shadow">
+          <div class="px-6 py-4 text-center text-gray-500">No active strategies. Activate a strategy above to get started.</div>
+        </div>
+      </div>
+    </div>
+  </div>
 {% endblock %}

@@ -1,0 +1,340 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+  Account Settings - TradeMantra
+{% endblock %}
+
+{% block content %}
+  <div class="p-6 max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Account Settings</h1>
+      <p class="text-gray-600">Manage your trading preferences and account configuration</p>
+    </div>
+
+    <form method="POST" class="space-y-8">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <!-- Trading Settings -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-6">Trading Preferences</h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label for="risk_level" class="block text-sm font-medium text-gray-700 mb-2">Risk Level</label>
+            <select id="risk_level" name="risk_level" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <option value="conservative">Conservative</option>
+              <option value="moderate" selected>Moderate</option>
+              <option value="aggressive">Aggressive</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="max_position_size" class="block text-sm font-medium text-gray-700 mb-2">Max Position Size (%)</label>
+            <input type="number" id="max_position_size" name="max_position_size" min="1" max="100" value="10" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+
+          <div>
+            <label for="stop_loss_default" class="block text-sm font-medium text-gray-700 mb-2">Default Stop Loss (%)</label>
+            <input type="number" id="stop_loss_default" name="stop_loss_default" min="0.1" max="50" step="0.1" value="2.0" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+
+          <div>
+            <label for="take_profit_default" class="block text-sm font-medium text-gray-700 mb-2">Default Take Profit (%)</label>
+            <input type="number" id="take_profit_default" name="take_profit_default" min="0.1" max="100" step="0.1" value="5.0" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+        </div>
+
+        <!-- Auto Trading Toggle -->
+        <div class="mt-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-sm font-medium text-gray-900">Auto Trading</h4>
+              <p class="text-sm text-gray-600">Allow strategies to execute trades automatically</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" name="auto_trading" class="sr-only peer" checked />
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-6">Notifications</h3>
+
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-sm font-medium text-gray-900">Email Notifications</h4>
+              <p class="text-sm text-gray-600">Receive trade confirmations and alerts via email</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" name="notifications_email" class="sr-only peer" checked />
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-sm font-medium text-gray-900">SMS Notifications</h4>
+              <p class="text-sm text-gray-600">Receive important alerts via SMS</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" name="notifications_sms" class="sr-only peer" />
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- API Configuration -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-6">Exchange API Connections</h3>
+
+        <div class="space-y-4">
+          <div class="p-4 bg-blue-50 border border-blue-200 rounded-md">
+            <div class="flex">
+              <svg class="w-5 h-5 text-blue-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <div>
+                <h4 class="text-sm font-medium text-blue-800">Broker Integration</h4>
+                <p class="text-sm text-blue-700 mt-1">Connect your broker accounts to enable live trading. Your API credentials are encrypted and stored securely.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Available Exchanges -->
+          <div class="space-y-4">
+            {% set exchanges = [
+              {'id': 'binance', 'name': 'Binance', 'description': 'World\'s largest cryptocurrency exchange', 'fees': 'Free API access', 'type': 'crypto'},
+              {'id': 'zerodha', 'name': 'Zerodha Kite', 'description': 'India\'s largest retail broker', 'fees': '₹2000/month', 'type': 'stocks'},
+              {'id': 'upstox', 'name': 'Upstox', 'description': 'Free API access for account holders', 'fees': 'Free', 'type': 'stocks'},
+              {'id': 'angelbroking', 'name': 'Angel Broking', 'description': 'SmartAPI platform', 'fees': 'Contact broker', 'type': 'stocks'},
+              {'id': 'iifl', 'name': 'IIFL Securities', 'description': 'Institutional grade APIs', 'fees': 'Contact broker', 'type': 'stocks'},
+              {'id': 'fyers', 'name': 'Fyers', 'description': 'Technology-focused broker', 'fees': 'Contact broker', 'type': 'stocks'},
+              {'id': 'aliceblue', 'name': 'Alice Blue', 'description': 'Discount broker with API access', 'fees': 'Contact broker', 'type': 'stocks'}
+            ] %}
+
+            {% for exchange in exchanges %}
+              {% set connection = exchange_connections.get(exchange.id) %}
+              <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors duration-200">
+                <div class="flex items-center justify-between">
+                  <div class="flex-1">
+                    <div class="flex items-center">
+                      {% if exchange.id == 'binance' %}
+                        <div class="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center mr-3">
+                          <span class="text-sm font-bold text-white">₿</span>
+                        </div>
+                      {% else %}
+                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                          <span class="text-sm font-bold text-white">{{ exchange.name[0] }}</span>
+                        </div>
+                      {% endif %}
+                      <div>
+                        <h4 class="text-sm font-medium text-gray-900">{{ exchange.name }}</h4>
+                        <p class="text-xs text-gray-600">{{ exchange.description }}</p>
+                        <div class="flex items-center space-x-2">
+                          <p class="text-xs text-blue-600 font-medium">API Fee: {{ exchange.fees }}</p>
+                          {% if exchange.type == 'crypto' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Crypto</span>
+                          {% elif exchange.type == 'stocks' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Stocks</span>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center space-x-3">
+                    <!-- Connection Status -->
+                    <div class="text-right">
+                      {% if connection and connection.is_connected %}
+                        <div class="flex items-center text-green-600">
+                          <span class="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                          <span class="text-xs font-medium">Connected</span>
+                        </div>
+                        {% if connection.last_connected %}
+                          <p class="text-xs text-gray-500">{{ connection.last_connected.strftime('%d %b %Y') }}</p>
+                        {% endif %}
+                      {% elif connection and connection.status == 'pending' %}
+                        <div class="flex items-center text-yellow-600">
+                          <span class="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+                          <span class="text-xs font-medium">Pending</span>
+                        </div>
+                      {% elif connection and connection.status == 'error' %}
+                        <div class="flex items-center text-red-600">
+                          <span class="w-2 h-2 bg-red-400 rounded-full mr-2"></span>
+                          <span class="text-xs font-medium">Error</span>
+                        </div>
+                        {% if connection.error_message %}
+                          <p class="text-xs text-red-500">{{ connection.error_message[:30] }}...</p>
+                        {% endif %}
+                      {% else %}
+                        <div class="flex items-center text-gray-500">
+                          <span class="w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
+                          <span class="text-xs font-medium">Not Connected</span>
+                        </div>
+                      {% endif %}
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex space-x-2">
+                      {% if connection and connection.is_connected %}
+                        <form method="POST" action="{{ url_for('user.disconnect_exchange', exchange=exchange.id) }}" class="inline">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                          <button 
+                            type="submit" 
+                            class="px-3 py-1 text-xs border border-red-600 text-red-600 rounded hover:bg-red-50 transition-colors duration-200"
+                            onclick="return confirm('Are you sure you want to disconnect from {{ exchange.name }}?')"
+                          >
+                            Disconnect
+                          </button>
+                        </form>
+                        <button 
+                          type="button" 
+                          class="px-3 py-1 text-xs border border-green-600 text-green-600 rounded hover:bg-green-50 transition-colors duration-200"
+                          onclick="testConnection('{{ exchange.id }}')"
+                        >
+                          Test
+                        </button>
+                      {% else %}
+                        <a 
+                          href="{{ url_for('user.connect_exchange', exchange=exchange.id) }}" 
+                          class="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors duration-200"
+                        >
+                          Connect
+                        </a>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Connection Details (if connected) -->
+                {% if connection and connection.is_connected %}
+                  <div class="mt-3 pt-3 border-t border-gray-100">
+                    <div class="grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <span class="text-gray-600">API Key:</span>
+                        <span class="text-gray-900 font-mono">{{ connection.api_key if connection.api_key else 'Not set' }}</span>
+                      </div>
+                      <div>
+                        <span class="text-gray-600">Status:</span>
+                        <span class="text-green-600 font-medium">Active</span>
+                      </div>
+                    </div>
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+
+          <!-- Trading Limits Warning -->
+          <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-md">
+            <div class="flex">
+              <svg class="w-5 h-5 text-amber-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+              <div class="text-sm text-amber-800">
+                <strong>Important:</strong> Ensure you have sufficient margin and understand the risks before enabling auto-trading. 
+                Set appropriate position limits and stop-losses.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Security Settings -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-6">Security</h3>
+
+        <div class="space-y-4">
+          <div>
+            <button type="button" class="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200">Change Password</button>
+          </div>
+
+          <div>
+            <button type="button" class="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200">Enable Two-Factor Authentication</button>
+          </div>
+
+          <div>
+            <button type="button" class="w-full md:w-auto px-4 py-2 border border-red-600 text-red-600 rounded-md text-sm font-medium hover:bg-red-50 transition-colors duration-200">Download Account Data</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Save Button -->
+      <div class="flex justify-end space-x-4">
+        <button type="button" class="px-6 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200">Cancel</button>
+        <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors duration-200">Save Settings</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    function testConnection(exchange) {
+      // Show loading state
+      const button = event.target;
+      const originalText = button.textContent;
+      button.textContent = 'Testing...';
+      button.disabled = true;
+      
+      // Simulate API test (in real implementation, this would make an AJAX call)
+      setTimeout(() => {
+        // Random success/failure for demo
+        const success = Math.random() > 0.3;
+        
+        if (success) {
+          button.textContent = 'Connected';
+          button.className = 'px-3 py-1 text-xs border border-green-600 text-green-600 rounded hover:bg-green-50 transition-colors duration-200';
+          
+          // Show success message
+          showNotification('Connection test successful!', 'success');
+        } else {
+          button.textContent = 'Failed';
+          button.className = 'px-3 py-1 text-xs border border-red-600 text-red-600 rounded hover:bg-red-50 transition-colors duration-200';
+          
+          // Show error message
+          showNotification('Connection test failed. Please check your API credentials.', 'error');
+        }
+        
+        // Reset button after 3 seconds
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.className = 'px-3 py-1 text-xs border border-green-600 text-green-600 rounded hover:bg-green-50 transition-colors duration-200';
+          button.disabled = false;
+        }, 3000);
+      }, 2000);
+    }
+    
+    function showNotification(message, type) {
+      // Create notification element
+      const notification = document.createElement('div');
+      notification.className = `fixed top-4 right-4 z-50 max-w-sm p-4 rounded-lg shadow-lg border transition-all duration-300 ${
+        type === 'success' 
+          ? 'bg-green-50 border-green-200 text-green-800' 
+          : 'bg-red-50 border-red-200 text-red-800'
+      }`;
+      
+      notification.innerHTML = `
+        <div class="flex items-center">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            ${type === 'success' 
+              ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>'
+              : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>'
+            }
+          </svg>
+          <span class="text-sm font-medium">${message}</span>
+        </div>
+      `;
+      
+      document.body.appendChild(notification);
+      
+      // Remove notification after 5 seconds
+      setTimeout(() => {
+        notification.remove();
+      }, 5000);
+    }
+  </script>
+{% endblock %}

@@ -1,0 +1,1140 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+  Trading Dashboard - TradeMantra
+{% endblock %}
+
+{% block content %}
+  <div class="p-6 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">🤖 Trading Dashboard</h1>
+      <p class="text-gray-600">One-click automated trading for Indian stock market with intelligent strategies</p>
+    </div>
+
+    <!-- Status Alert -->
+    <div id="statusAlert" class="mb-6"></div>
+
+    <!-- Connection Status -->
+    <div id="connectionStatus">
+      <!-- Stock Market Connections -->
+      <div id="stockConnectionStatus">
+        {% if not stock_exchanges %}
+        <div class="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+          <div class="flex items-center">
+            <svg class="w-6 h-6 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+            <div>
+              <h3 class="text-lg font-semibold text-red-800">Stock Exchange Connection Required</h3>
+              <p class="text-red-700">Please connect to an Indian broker (Zerodha, Upstox, etc.) to enable stock trading.</p>
+              <a href="{{ url_for('user.settings') }}" class="inline-flex items-center mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                </svg>
+                Connect Indian Broker
+              </a>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              <div>
+                <span class="text-green-700 font-medium">Connected Stock Exchanges:</span>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  {% for exchange in stock_exchanges %}
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {% if exchange.exchange_name == 'zerodha' %}🏛️ Zerodha Kite
+                      {% elif exchange.exchange_name == 'upstox' %}📈 Upstox
+                      {% elif exchange.exchange_name == 'angelbroking' %}👼 Angel Broking
+                      {% elif exchange.exchange_name == 'iifl' %}🏢 IIFL Securities
+                      {% elif exchange.exchange_name == 'fyers' %}💼 Fyers
+                      {% elif exchange.exchange_name == 'aliceblue' %}💙 Alice Blue
+                      {% else %}{{ exchange.exchange_name.title() }}
+                      {% endif %}
+                    </span>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Crypto Market Connections -->
+      <div id="cryptoConnectionStatus" class="hidden">
+        {% if not crypto_exchanges %}
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
+          <div class="flex items-center">
+            <svg class="w-6 h-6 text-yellow-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+            <div>
+              <h3 class="text-lg font-semibold text-yellow-800">Crypto Exchange Connection Required</h3>
+              <p class="text-yellow-700">Please connect to Binance or other cryptocurrency exchanges to enable crypto trading.</p>
+              <a href="{{ url_for('user.settings') }}" class="inline-flex items-center mt-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                </svg>
+                Connect Crypto Exchange
+              </a>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              <div>
+                <span class="text-green-700 font-medium">Connected Crypto Exchanges:</span>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  {% for exchange in crypto_exchanges %}
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      {% if exchange.exchange_name == 'binance' %}₿ Binance (Live)
+                      {% elif exchange.exchange_name == 'binance_testnet' %}₿ Binance (Testnet)
+                      {% else %}{{ exchange.exchange_name.title() }}
+                      {% endif %}
+                    </span>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Main Control Panel -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      
+      <!-- Trading Market Selector -->
+      <div class="lg:col-span-3 bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Trading Markets</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Stock Market -->
+          <div id="stockMarketCard" class="border-2 border-blue-500 bg-blue-50 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md" onclick="selectMarket('stocks')">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="font-semibold text-blue-900">🏛️ Stock Market (NSE/BSE)</h3>
+                <p class="text-sm text-blue-700">Trade Indian equities with advanced strategies</p>
+              </div>
+              <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Crypto Market -->
+          <div id="cryptoMarketCard" class="border-2 border-gray-300 bg-gray-50 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md" onclick="selectMarket('crypto')">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="font-semibold text-gray-700">₿ Cryptocurrency (Binance)</h3>
+                <p class="text-sm text-gray-600">Trade crypto with same proven strategies</p>
+              </div>
+              <div class="w-6 h-6 bg-gray-400 rounded-full flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="2" fill="none"></circle>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Stock Trading Bot Control -->
+      <div id="stockTradingSection" class="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900">Stock Trading Bot Control</h2>
+            <p class="text-gray-600">Start or stop automated trading with comprehensive strategies</p>
+          </div>
+          <div class="flex items-center">
+            <div id="botStatus" class="flex items-center">
+              <div class="w-3 h-3 rounded-full {% if automation_status.is_running %}bg-green-500{% else %}bg-red-500{% endif %} mr-2"></div>
+              <span class="text-sm font-medium">{% if automation_status.is_running %}Running{% else %}Stopped{% endif %}</span>
+            </div>
+          </div>
+        </div>
+
+        {% if stock_exchanges %}
+        <div class="space-y-4">
+          <!-- Start Trading Button -->
+          <button id="startTradingBtn" 
+                  onclick="startAutomatedTrading()"
+                  {% if automation_status.is_running %}disabled{% endif %}
+                  class="w-full bg-green-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">
+            <div class="flex items-center justify-center">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m-6-8h1m4 0h1m-6 4h6M7 16h10M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              <span id="startBtnText">{% if automation_status.is_running %}Trading Active{% else %}🚀 Start Stock Trading{% endif %}</span>
+            </div>
+          </button>
+
+          <!-- Stop Trading Button -->
+          <button id="stopTradingBtn" 
+                  onclick="stopAutomatedTrading()"
+                  {% if not automation_status.is_running %}disabled{% endif %}
+                  class="w-full bg-red-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">
+            <div class="flex items-center justify-center">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+              </svg>
+              <span id="stopBtnText">Stop Trading</span>
+            </div>
+          </button>
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+          <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+          </svg>
+          <p class="text-gray-500 mb-4">Connect to an Indian broker to enable stock trading</p>
+          <p class="text-sm text-gray-400 mb-6">Supported: Zerodha, Upstox, Angel Broking, IIFL, Fyers, Alice Blue</p>
+          <a href="{{ url_for('user.settings') }}" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            Setup Stock Exchange Connection
+          </a>
+        </div>
+        {% endif %}
+      </div>
+      
+      <!-- Crypto Trading Bot Control -->
+      <div id="cryptoTradingSection" class="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-6 hidden">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900">Crypto Trading Bot Control</h2>
+            <p class="text-gray-600">Trade cryptocurrencies using same proven strategies</p>
+          </div>
+          <div class="flex items-center">
+            <div id="cryptoBotStatus" class="flex items-center">
+              <div class="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+              <span class="text-sm font-medium">Stopped</span>
+            </div>
+          </div>
+        </div>
+
+        {% if crypto_exchanges %}
+        <div class="space-y-4">
+          <!-- Start Crypto Trading Button -->
+          <button id="startCryptoTradingBtn" 
+                  onclick="startCryptoTrading()"
+                  class="w-full bg-yellow-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-yellow-700 transition-colors">
+            <div class="flex items-center justify-center">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+              </svg>
+              <span id="startCryptoBtnText">₿ Start Crypto Trading</span>
+            </div>
+          </button>
+
+          <!-- Stop Crypto Trading Button -->
+          <button id="stopCryptoTradingBtn" 
+                  onclick="stopCryptoTrading()"
+                  disabled
+                  class="w-full bg-red-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">
+            <div class="flex items-center justify-center">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+              </svg>
+              <span id="stopCryptoBtnText">Stop Crypto Trading</span>
+            </div>
+          </button>
+
+          <!-- Connected Exchanges Info -->
+          <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              <div>
+                <p class="text-sm font-medium text-green-800">Ready for Crypto Trading</p>
+                <div class="flex flex-wrap gap-1 mt-1">
+                  {% for exchange in crypto_exchanges %}
+                    <span class="text-xs text-green-700">
+                      {% if exchange.exchange_name == 'binance' %}Binance (Live)
+                      {% elif exchange.exchange_name == 'binance_testnet' %}Binance (Testnet)
+                      {% else %}{{ exchange.exchange_name.title() }}
+                      {% endif %}
+                    </span>
+                    {% if not loop.last %}, {% endif %}
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+          <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <p class="text-gray-500 mb-4">Connect to a crypto exchange to enable crypto trading</p>
+          <p class="text-sm text-gray-400 mb-6">Supported: Binance (Live & Testnet)</p>
+          <a href="{{ url_for('user.settings') }}" class="inline-flex items-center px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors">
+            Setup Crypto Exchange Connection
+          </a>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Performance Summary -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">📊 Performance Summary</h3>
+        
+        <!-- Stock Performance -->
+        <div id="stockPerformance">
+          <div class="text-center mb-4">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+              🏛️ Stock Market Performance
+            </span>
+          </div>
+          <div class="space-y-4">
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Total Trades</span>
+              <span id="stockTotalTrades" class="font-semibold">{{ stock_stats.total_trades or 0 }}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Win Rate</span>
+              <span id="stockWinRate" class="font-semibold text-green-600">{{ "%.1f"|format(stock_stats.win_rate or 0) }}%</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Daily P&L</span>
+              <span id="stockDailyPnL" class="font-semibold {% if stock_stats.daily_pnl >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                ₹{{ "%.2f"|format(stock_stats.daily_pnl or 0) }}
+              </span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Open Positions</span>
+              <span id="stockOpenPositions" class="font-semibold">{{ stock_stats.open_positions or 0 }}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Strategies Active</span>
+              <span id="stockStrategiesActive" class="font-semibold text-blue-600">{{ stock_stats.strategies_active or 0 }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Crypto Performance -->
+        <div id="cryptoPerformance" class="hidden">
+          <div class="text-center mb-4">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+              ₿ Crypto Performance
+            </span>
+          </div>
+          <div class="space-y-4">
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Total Trades</span>
+              <span id="cryptoTotalTrades" class="font-semibold">{{ crypto_stats.total_trades or 0 }}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Win Rate</span>
+              <span id="cryptoWinRate" class="font-semibold text-green-600">{{ "%.1f"|format(crypto_stats.win_rate or 0) }}%</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">24h P&L</span>
+              <span id="cryptoDailyPnL" class="font-semibold {% if crypto_stats.daily_pnl >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                ${{ "%.4f"|format(crypto_stats.daily_pnl or 0) }}
+              </span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Open Positions</span>
+              <span id="cryptoOpenPositions" class="font-semibold">{{ crypto_stats.open_positions or 0 }}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Strategies Active</span>
+              <span id="cryptoStrategiesActive" class="font-semibold text-yellow-600">{{ crypto_stats.strategies_active or 0 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Trading Sessions -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-semibold text-gray-900">🔴 Live Trading Sessions</h3>
+        <button onclick="refreshTradingSessions()" class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Refresh
+        </button>
+      </div>
+
+      <!-- Stock Market Sessions -->
+      <div id="stockTradingSessions">
+        <div class="flex items-center mb-4">
+          <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+          <h4 class="text-lg font-medium text-gray-900">Stock Market Sessions (NSE/BSE)</h4>
+          <span id="stockMarketStatus" class="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Market Open
+          </span>
+        </div>
+        
+        <div class="space-y-3" id="stockSessionsList">
+          {% for session in stock_sessions %}
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <div class="w-2 h-2 bg-green-400 rounded-full mr-3 animate-pulse"></div>
+                <div>
+                  <h5 class="font-medium text-gray-900">{{ session.strategy_name }}</h5>
+                  <p class="text-sm text-gray-600">{{ session.symbol }} • Started: {{ session.start_time.strftime('%H:%M') }}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-medium {% if session.pnl >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                  ₹{{ "%.2f"|format(session.pnl) }}
+                </div>
+                <div class="text-xs text-gray-500">{{ session.trades_count }} trades</div>
+              </div>
+            </div>
+            <div class="mt-2 text-xs text-gray-500">
+              <span class="mr-4">Entry: ₹{{ "%.2f"|format(session.entry_price) }}</span>
+              <span class="mr-4">Current: ₹{{ "%.2f"|format(session.current_price) }}</span>
+              <span>Qty: {{ session.quantity }}</span>
+            </div>
+          </div>
+          {% else %}
+          <div class="text-center py-8 text-gray-500">
+            <svg class="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            <p class="text-sm">No active stock trading sessions</p>
+            <p class="text-xs text-gray-400 mt-1">Start a bot to see live trading activity</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Crypto Market Sessions -->
+      <div id="cryptoTradingSessions" class="hidden">
+        <div class="flex items-center mb-4">
+          <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+          <h4 class="text-lg font-medium text-gray-900">Cryptocurrency Sessions (24/7)</h4>
+          <span id="cryptoMarketStatus" class="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            24/7 Active
+          </span>
+        </div>
+        
+        <div class="space-y-3" id="cryptoSessionsList">
+          {% for session in crypto_sessions %}
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <div class="w-2 h-2 bg-yellow-400 rounded-full mr-3 animate-pulse"></div>
+                <div>
+                  <h5 class="font-medium text-gray-900">{{ session.strategy_name }}</h5>
+                  <p class="text-sm text-gray-600">{{ session.symbol }} • Started: {{ session.start_time.strftime('%H:%M UTC') }}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-medium {% if session.pnl >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                  ${{ "%.4f"|format(session.pnl) }}
+                </div>
+                <div class="text-xs text-gray-500">{{ session.trades_count }} trades</div>
+              </div>
+            </div>
+            <div class="mt-2 text-xs text-gray-500">
+              <span class="mr-4">Entry: ${{ "%.4f"|format(session.entry_price) }}</span>
+              <span class="mr-4">Current: ${{ "%.4f"|format(session.current_price) }}</span>
+              <span>Qty: {{ session.quantity }}</span>
+            </div>
+          </div>
+          {% else %}
+          <div class="text-center py-8 text-gray-500">
+            <svg class="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+            </svg>
+            <p class="text-sm">No active crypto trading sessions</p>
+            <p class="text-xs text-gray-400 mt-1">Start a crypto bot to see live trading activity</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Strategy Information -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+      <h3 class="text-xl font-semibold text-gray-900 mb-4">🎯 Trading Strategies</h3>
+      
+      <!-- Stock Strategies -->
+      <div id="stockStrategies">
+        <p class="text-gray-600 mb-6">Our automated trading bot uses multiple intelligent strategies to maximize profits in the Indian stock market:</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-center mb-2">
+              <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-bold text-sm">1</span>
+              </div>
+              <h4 class="font-semibold text-blue-900">RSI Trend Following</h4>
+            </div>
+            <p class="text-blue-800 text-sm">Identifies oversold and overbought conditions using RSI indicator for optimal entry and exit points.</p>
+            <div class="mt-2 text-xs text-blue-700">Stocks: Top 10 large-cap Indian stocks</div>
+          </div>
+
+          <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-center mb-2">
+              <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-bold text-sm">2</span>
+              </div>
+              <h4 class="font-semibold text-green-900">Momentum Breakout</h4>
+            </div>
+            <p class="text-green-800 text-sm">Captures strong momentum moves with volume confirmation above 20-day highs.</p>
+            <div class="mt-2 text-xs text-green-700">Stocks: Mid-cap growth stocks</div>
+          </div>
+
+          <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <div class="flex items-center mb-2">
+              <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-bold text-sm">3</span>
+              </div>
+              <h4 class="font-semibold text-purple-900">Mean Reversion</h4>
+            </div>
+            <p class="text-purple-800 text-sm">Trades reversals at Bollinger Band extremes for consistent profits.</p>
+            <div class="mt-2 text-xs text-purple-700">Stocks: Stable large-cap stocks</div>
+          </div>
+
+          <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <div class="flex items-center mb-2">
+              <div class="w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-bold text-sm">4</span>
+              </div>
+              <h4 class="font-semibold text-orange-900">Intraday Scalping</h4>
+            </div>
+            <p class="text-purple-800 text-sm">Quick profits from small price movements in highly liquid stocks.</p>
+            <div class="mt-2 text-xs text-orange-700">Stocks: RELIANCE, TCS, INFY, HDFCBANK</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Crypto Strategies -->
+      <div id="cryptoStrategies" class="hidden">
+        <p class="text-gray-600 mb-6">Same proven strategies adapted for cryptocurrency markets with 24/7 trading capabilities:</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="flex items-center mb-2">
+              <div class="w-8 h-8 bg-yellow-600 rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-bold text-sm">₿</span>
+              </div>
+              <h4 class="font-semibold text-yellow-900">Crypto Momentum</h4>
+            </div>
+            <p class="text-yellow-800 text-sm">Captures crypto momentum with moving averages and RSI, optimized for high volatility.</p>
+            <div class="mt-2 text-xs text-yellow-700">Cryptos: BTC, ETH, BNB, ADA, SOL, DOT</div>
+          </div>
+
+          <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+            <div class="flex items-center mb-2">
+              <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-bold text-sm">⟲</span>
+              </div>
+              <h4 class="font-semibold text-indigo-900">Crypto Mean Reversion</h4>
+            </div>
+            <p class="text-indigo-800 text-sm">Trades crypto oversold/overbought levels using Bollinger Bands adapted for crypto volatility.</p>
+            <div class="mt-2 text-xs text-indigo-700">Cryptos: Top 10 USDT pairs by volume</div>
+          </div>
+
+          <div class="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
+            <div class="flex items-center mb-2">
+              <div class="w-8 h-8 bg-cyan-600 rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-bold text-sm">📈</span>
+              </div>
+              <h4 class="font-semibold text-cyan-900">Crypto Breakout</h4>
+            </div>
+            <p class="text-cyan-800 text-sm">Captures crypto breakouts with volume confirmation for explosive moves.</p>
+            <div class="mt-2 text-xs text-cyan-700">Cryptos: High-volume altcoins</div>
+          </div>
+
+          <div class="bg-pink-50 border border-pink-200 rounded-lg p-4">
+            <div class="flex items-center mb-2">
+              <div class="w-8 h-8 bg-pink-600 rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-bold text-sm">🚀</span>
+              </div>
+              <h4 class="font-semibold text-pink-900">24/7 Trading</h4>
+            </div>
+            <p class="text-pink-800 text-sm">Unlike stocks, crypto markets never close. Bot trades around the clock for maximum opportunities.</p>
+            <div class="mt-2 text-xs text-pink-700">Features: Weekend trading, global market coverage</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Safety Features -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+      <h3 class="text-xl font-semibold text-gray-900 mb-4">🛡️ Built-in Safety Features</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="text-center">
+          <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.618 5.984A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            </svg>
+          </div>
+          <h4 class="font-semibold text-gray-900">3% Stop Loss</h4>
+          <p class="text-gray-600 text-sm">Automatic stop loss to limit downside risk</p>
+        </div>
+
+        <div class="text-center">
+          <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <h4 class="font-semibold text-gray-900">6% Take Profit</h4>
+          <p class="text-gray-600 text-sm">Secure profits with 2:1 risk-reward ratio</p>
+        </div>
+
+        <div class="text-center">
+          <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <h4 class="font-semibold text-gray-900">Trading Hours</h4>
+          <p class="text-gray-600 text-sm">Only trades during market hours (9 AM - 3:30 PM)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Important Notes -->
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+      <div class="flex items-start">
+        <svg class="w-6 h-6 text-yellow-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+        </svg>
+        <div>
+          <h4 class="font-semibold text-yellow-800 mb-2">⚠️ Important Trading Notes</h4>
+          <ul class="text-yellow-700 text-sm space-y-1">
+            <li>• Automated trading uses real money when connected to live broker accounts</li>
+            <li>• Always monitor your trades and be prepared to stop the bot if needed</li>
+            <li>• The bot follows strict risk management rules with built-in stop losses</li>
+            <li>• All positions are closed automatically at the end of trading day</li>
+            <li>• For first-time users, consider starting with paper trading mode</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript for Automation -->
+  <script>
+  let statusUpdateInterval;
+
+  // Get CSRF token
+  function getCSRFToken() {
+    return document.querySelector('meta[name=csrf-token]').getAttribute('content');
+  }
+
+  // Start automated trading
+  async function startAutomatedTrading() {
+    const startBtn = document.getElementById('startTradingBtn');
+    const startText = document.getElementById('startBtnText');
+    
+    // Disable button and show loading
+    startBtn.disabled = true;
+    startText.innerHTML = '<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-r-transparent rounded-full mr-2"></span>Starting...';
+    
+    try {
+      const response = await fetch('/user/automation/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCSRFToken(),
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        showAlert(result.message, 'success');
+        updateBotStatus(true);
+        startStatusUpdates();
+      } else {
+        showAlert(result.message, 'error');
+        startBtn.disabled = false;
+        startText.textContent = '🚀 Start Automated Trading';
+      }
+    } catch (error) {
+      showAlert('Failed to start trading: ' + error.message, 'error');
+      startBtn.disabled = false;
+      startText.textContent = '🚀 Start Automated Trading';
+    }
+  }
+
+  // Stop automated trading
+  async function stopAutomatedTrading() {
+    const stopBtn = document.getElementById('stopTradingBtn');
+    const stopText = document.getElementById('stopBtnText');
+    
+    // Confirm before stopping
+    if (!confirm('Are you sure you want to stop automated trading? All open positions will be closed.')) {
+      return;
+    }
+    
+    // Disable button and show loading
+    stopBtn.disabled = true;
+    stopText.innerHTML = '<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-r-transparent rounded-full mr-2"></span>Stopping...';
+    
+    try {
+      const response = await fetch('/user/automation/stop', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCSRFToken(),
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        showAlert(result.message, 'success');
+        updateBotStatus(false);
+        stopStatusUpdates();
+      } else {
+        showAlert(result.message, 'error');
+      }
+    } catch (error) {
+      showAlert('Failed to stop trading: ' + error.message, 'error');
+    } finally {
+      stopBtn.disabled = false;
+      stopText.textContent = 'Stop Trading';
+    }
+  }
+
+  // Update bot status display
+  function updateBotStatus(isRunning) {
+    const statusDot = document.querySelector('#botStatus .w-3');
+    const statusText = document.querySelector('#botStatus span');
+    const startBtn = document.getElementById('startTradingBtn');
+    const stopBtn = document.getElementById('stopTradingBtn');
+    const startText = document.getElementById('startBtnText');
+    
+    if (isRunning) {
+      statusDot.className = 'w-3 h-3 rounded-full bg-green-500 mr-2';
+      statusText.textContent = 'Running';
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      startText.textContent = 'Trading Active';
+    } else {
+      statusDot.className = 'w-3 h-3 rounded-full bg-red-500 mr-2';
+      statusText.textContent = 'Stopped';
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      startText.textContent = '🚀 Start Automated Trading';
+    }
+  }
+
+  // Update performance metrics
+  function updatePerformanceMetrics(status) {
+    document.getElementById('totalTrades').textContent = status.total_trades || 0;
+    document.getElementById('winRate').textContent = (status.win_rate || 0).toFixed(1) + '%';
+    document.getElementById('openPositions').textContent = status.open_positions || 0;
+    document.getElementById('strategiesActive').textContent = status.strategies_active || 0;
+    
+    const dailyPnLElement = document.getElementById('dailyPnL');
+    const dailyPnL = status.daily_pnl || 0;
+    dailyPnLElement.textContent = '₹' + dailyPnL.toFixed(2);
+    dailyPnLElement.className = 'font-semibold ' + (dailyPnL >= 0 ? 'text-green-600' : 'text-red-600');
+  }
+
+  // Start periodic status updates
+  function startStatusUpdates() {
+    if (statusUpdateInterval) {
+      clearInterval(statusUpdateInterval);
+    }
+    
+    statusUpdateInterval = setInterval(async () => {
+      try {
+        const response = await fetch('/user/automation/status');
+        const result = await response.json();
+        
+        if (result.success) {
+          updatePerformanceMetrics(result.status);
+          updateBotStatus(result.status.is_running);
+          
+          if (!result.status.is_running) {
+            stopStatusUpdates();
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching status:', error);
+      }
+    }, 10000); // Update every 10 seconds
+  }
+
+  // Stop status updates
+  function stopStatusUpdates() {
+    if (statusUpdateInterval) {
+      clearInterval(statusUpdateInterval);
+      statusUpdateInterval = null;
+    }
+  }
+
+  // Show alert message
+  function showAlert(message, type) {
+    const alertDiv = document.getElementById('statusAlert');
+    const bgColor = type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800';
+    const icon = type === 'success' ? 
+      '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>' :
+      '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+    
+    alertDiv.innerHTML = `
+      <div class="border rounded-lg p-4 ${bgColor}">
+        <div class="flex items-center">
+          ${icon}
+          <span>${message}</span>
+        </div>
+      </div>
+    `;
+    
+    // Auto-hide success messages after 5 seconds
+    if (type === 'success') {
+      setTimeout(() => {
+        alertDiv.innerHTML = '';
+      }, 5000);
+    }
+  }
+
+  // Market selection functions
+  let selectedMarket = 'stocks'; // Default to stocks
+
+  function selectMarket(market) {
+    selectedMarket = market;
+    
+    const stockCard = document.getElementById('stockMarketCard');
+    const cryptoCard = document.getElementById('cryptoMarketCard');
+    const stockSection = document.getElementById('stockTradingSection');
+    const cryptoSection = document.getElementById('cryptoTradingSection');
+    const stockStrategies = document.getElementById('stockStrategies');
+    const cryptoStrategies = document.getElementById('cryptoStrategies');
+    const stockConnectionStatus = document.getElementById('stockConnectionStatus');
+    const cryptoConnectionStatus = document.getElementById('cryptoConnectionStatus');
+    const stockPerformance = document.getElementById('stockPerformance');
+    const cryptoPerformance = document.getElementById('cryptoPerformance');
+    const stockTradingSessions = document.getElementById('stockTradingSessions');
+    const cryptoTradingSessions = document.getElementById('cryptoTradingSessions');
+    
+    if (market === 'stocks') {
+      // Update card styling
+      stockCard.className = 'border-2 border-blue-500 bg-blue-50 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md';
+      cryptoCard.className = 'border-2 border-gray-300 bg-gray-50 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md';
+      
+      // Update checkmarks
+      stockCard.querySelector('.w-6').innerHTML = `
+        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+        </svg>
+      `;
+      stockCard.querySelector('.w-6').className = 'w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center';
+      
+      cryptoCard.querySelector('.w-6').innerHTML = `
+        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="2" fill="none"></circle>
+        </svg>
+      `;
+      cryptoCard.querySelector('.w-6').className = 'w-6 h-6 bg-gray-400 rounded-full flex items-center justify-center';
+      
+      // Show/hide sections
+      stockSection.classList.remove('hidden');
+      cryptoSection.classList.add('hidden');
+      if (stockStrategies) {
+        stockStrategies.classList.remove('hidden');
+      }
+      if (cryptoStrategies) {
+        cryptoStrategies.classList.add('hidden');
+      }
+      
+      // Show/hide connection status
+      stockConnectionStatus.classList.remove('hidden');
+      cryptoConnectionStatus.classList.add('hidden');
+
+      // Show/hide performance sections
+      if (stockPerformance) {
+        stockPerformance.classList.remove('hidden');
+      }
+      if (cryptoPerformance) {
+        cryptoPerformance.classList.add('hidden');
+      }
+
+      // Show/hide trading sessions
+      if (stockTradingSessions) {
+        stockTradingSessions.classList.remove('hidden');
+      }
+      if (cryptoTradingSessions) {
+        cryptoTradingSessions.classList.add('hidden');
+      }
+      
+    } else if (market === 'crypto') {
+      // Update card styling
+      cryptoCard.className = 'border-2 border-yellow-500 bg-yellow-50 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md';
+      stockCard.className = 'border-2 border-gray-300 bg-gray-50 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md';
+      
+      // Update checkmarks
+      cryptoCard.querySelector('.w-6').innerHTML = `
+        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+        </svg>
+      `;
+      cryptoCard.querySelector('.w-6').className = 'w-6 h-6 bg-yellow-600 rounded-full flex items-center justify-center';
+      
+      stockCard.querySelector('.w-6').innerHTML = `
+        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="2" fill="none"></circle>
+        </svg>
+      `;
+      stockCard.querySelector('.w-6').className = 'w-6 h-6 bg-gray-400 rounded-full flex items-center justify-center';
+      
+      // Show/hide sections
+      cryptoSection.classList.remove('hidden');
+      stockSection.classList.add('hidden');
+      if (stockStrategies) {
+        stockStrategies.classList.add('hidden');
+      }
+      if (cryptoStrategies) {
+        cryptoStrategies.classList.remove('hidden');
+      }
+      
+      // Show/hide connection status
+      stockConnectionStatus.classList.add('hidden');
+      cryptoConnectionStatus.classList.remove('hidden');
+
+      // Show/hide performance sections
+      if (stockPerformance) {
+        stockPerformance.classList.add('hidden');
+      }
+      if (cryptoPerformance) {
+        cryptoPerformance.classList.remove('hidden');
+      }
+
+      // Show/hide trading sessions
+      if (stockTradingSessions) {
+        stockTradingSessions.classList.add('hidden');
+      }
+      if (cryptoTradingSessions) {
+        cryptoTradingSessions.classList.remove('hidden');
+      }
+    }
+  }
+
+  // Crypto trading functions
+  async function startCryptoTrading() {
+    const startBtn = document.getElementById('startCryptoTradingBtn');
+    const stopBtn = document.getElementById('stopCryptoTradingBtn');
+    const startBtnText = document.getElementById('startCryptoBtnText');
+    
+    startBtn.disabled = true;
+    startBtnText.textContent = 'Starting Crypto Bot...';
+    
+    try {
+      const response = await fetch('/user/automation/start-crypto', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({
+          strategies: ['crypto_momentum', 'crypto_mean_reversion', 'crypto_breakout'],
+          is_paper: true
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        showAlert('Crypto trading started successfully! 🚀', 'success');
+        startBtnText.textContent = 'Crypto Bot Active';
+        stopBtn.disabled = false;
+        updateCryptoBotStatus(true);
+        // startCryptoStatusUpdates();
+      } else {
+        throw new Error(result.message || 'Failed to start crypto trading');
+      }
+    } catch (error) {
+      showAlert('Error starting crypto trading: ' + error.message, 'error');
+      startBtn.disabled = false;
+      startBtnText.textContent = '₿ Start Crypto Trading';
+    }
+  }
+
+  async function stopCryptoTrading() {
+    const startBtn = document.getElementById('startCryptoTradingBtn');
+    const stopBtn = document.getElementById('stopCryptoTradingBtn');
+    const startBtnText = document.getElementById('startCryptoBtnText');
+    
+    try {
+      const response = await fetch('/user/automation/stop-crypto', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCSRFToken()
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        showAlert('Crypto trading stopped successfully', 'success');
+        startBtnText.textContent = '₿ Start Crypto Trading';
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        updateCryptoBotStatus(false);
+        // stopCryptoStatusUpdates();
+      } else {
+        throw new Error(result.message || 'Failed to stop crypto trading');
+      }
+    } catch (error) {
+      showAlert('Error stopping crypto trading: ' + error.message, 'error');
+    }
+  }
+
+  function updateCryptoBotStatus(isRunning) {
+    const statusElement = document.getElementById('cryptoBotStatus');
+    const statusDot = statusElement.querySelector('.w-3');
+    const statusText = statusElement.querySelector('.text-sm');
+    
+    if (isRunning) {
+      statusDot.className = 'w-3 h-3 rounded-full bg-green-500 mr-2';
+      statusText.textContent = 'Running';
+    } else {
+      statusDot.className = 'w-3 h-3 rounded-full bg-red-500 mr-2';
+      statusText.textContent = 'Stopped';
+    }
+  }
+
+  // Refresh trading sessions
+  async function refreshTradingSessions() {
+    try {
+      const response = await fetch('/user/automation/sessions', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        updateTradingSessions(result.data);
+      } else {
+        console.error('Failed to refresh trading sessions:', result.message);
+      }
+    } catch (error) {
+      console.error('Error refreshing trading sessions:', error);
+    }
+  }
+
+  // Update trading sessions display
+  function updateTradingSessions(data) {
+    const stockSessionsList = document.getElementById('stockSessionsList');
+    const cryptoSessionsList = document.getElementById('cryptoSessionsList');
+    
+    // Update stock sessions
+    if (stockSessionsList && data.stock_sessions) {
+      if (data.stock_sessions.length === 0) {
+        stockSessionsList.innerHTML = `
+          <div class="text-center py-8 text-gray-500">
+            <svg class="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            <p class="text-sm">No active stock trading sessions</p>
+            <p class="text-xs text-gray-400 mt-1">Start a bot to see live trading activity</p>
+          </div>
+        `;
+      } else {
+        stockSessionsList.innerHTML = data.stock_sessions.map(session => `
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <div class="w-2 h-2 bg-green-400 rounded-full mr-3 animate-pulse"></div>
+                <div>
+                  <h5 class="font-medium text-gray-900">${session.strategy_name}</h5>
+                  <p class="text-sm text-gray-600">${session.symbol} • Started: ${session.start_time}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-medium ${session.pnl >= 0 ? 'text-green-600' : 'text-red-600'}">
+                  ₹${session.pnl.toFixed(2)}
+                </div>
+                <div class="text-xs text-gray-500">${session.trades_count} trades</div>
+              </div>
+            </div>
+            <div class="mt-2 text-xs text-gray-500">
+              <span class="mr-4">Entry: ₹${session.entry_price.toFixed(2)}</span>
+              <span class="mr-4">Current: ₹${session.current_price.toFixed(2)}</span>
+              <span>Qty: ${session.quantity}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+    
+    // Update crypto sessions
+    if (cryptoSessionsList && data.crypto_sessions) {
+      if (data.crypto_sessions.length === 0) {
+        cryptoSessionsList.innerHTML = `
+          <div class="text-center py-8 text-gray-500">
+            <svg class="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+            </svg>
+            <p class="text-sm">No active crypto trading sessions</p>
+            <p class="text-xs text-gray-400 mt-1">Start a crypto bot to see live trading activity</p>
+          </div>
+        `;
+      } else {
+        cryptoSessionsList.innerHTML = data.crypto_sessions.map(session => `
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <div class="w-2 h-2 bg-yellow-400 rounded-full mr-3 animate-pulse"></div>
+                <div>
+                  <h5 class="font-medium text-gray-900">${session.strategy_name}</h5>
+                  <p class="text-sm text-gray-600">${session.symbol} • Started: ${session.start_time}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-medium ${session.pnl >= 0 ? 'text-green-600' : 'text-red-600'}">
+                  $${session.pnl.toFixed(4)}
+                </div>
+                <div class="text-xs text-gray-500">${session.trades_count} trades</div>
+              </div>
+            </div>
+            <div class="mt-2 text-xs text-gray-500">
+              <span class="mr-4">Entry: $${session.entry_price.toFixed(4)}</span>
+              <span class="mr-4">Current: $${session.current_price.toFixed(4)}</span>
+              <span>Qty: ${session.quantity}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+  }
+
+  // Auto-refresh trading sessions every 10 seconds
+  setInterval(refreshTradingSessions, 10000);
+
+  // Initialize status updates if bot is running
+  document.addEventListener('DOMContentLoaded', function() {
+    {% if automation_status.is_running %}
+      startStatusUpdates();
+    {% endif %}
+    
+    // Refresh sessions on page load
+    setTimeout(refreshTradingSessions, 1000);
+  });
+  </script>
+{% endblock %}

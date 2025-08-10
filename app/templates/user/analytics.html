@@ -1,0 +1,162 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+  Portfolio Analytics - TradeMantra
+{% endblock %}
+
+{% block content %}
+  <div class="p-6 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Portfolio Analytics</h1>
+      <p class="text-gray-600">Comprehensive performance analysis and risk metrics</p>
+    </div>
+
+    <!-- Performance Metrics Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-600">Total Return</p>
+            <p class="text-2xl font-bold text-green-600">{{ '%.1f'|format(analytics.performance_metrics.total_return) }}%</p>
+          </div>
+          <div class="p-3 bg-green-100 rounded-full">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-600">Sharpe Ratio</p>
+            <p class="text-2xl font-bold text-blue-600">{{ analytics.performance_metrics.sharpe_ratio }}</p>
+          </div>
+          <div class="p-3 bg-blue-100 rounded-full">
+            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-600">Max Drawdown</p>
+            <p class="text-2xl font-bold text-red-600">{{ analytics.performance_metrics.max_drawdown }}%</p>
+          </div>
+          <div class="p-3 bg-red-100 rounded-full">
+            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-600">Win Rate</p>
+            <p class="text-2xl font-bold text-purple-600">{{ '%.1f'|format(analytics.performance_metrics.win_rate) }}%</p>
+          </div>
+          <div class="p-3 bg-purple-100 rounded-full">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <!-- Monthly Returns Chart -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Monthly Returns</h3>
+        <div class="space-y-3">
+          {% for month_data in analytics.monthly_returns %}
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-gray-600">{{ month_data.month }}</span>
+              <div class="flex items-center">
+                <div class="w-32 bg-gray-200 rounded-full h-2 mr-3">
+                  {% set bar_width = month_data.return|abs / 10 * 100 %}
+                  <div class="bg-{% if month_data.return > 0 %}
+                      
+                      green
+
+                    {% else %}
+                      
+                      red
+
+                    {% endif %}-500 h-2 rounded-full"
+                    style="width: {{ [bar_width, 100]|min }}%"></div>
+                </div>
+                <span class="text-sm font-semibold {% if month_data.return > 0 %}
+                    
+                    text-green-600
+
+                  {% else %}
+                    
+                    text-red-600
+
+                  {% endif %}">
+                  {{ '%.1f'|format(month_data.return) }}%
+                </span>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Top Strategies -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Performing Strategies</h3>
+        <div class="space-y-4">
+          {% for strategy in analytics.top_performing_strategies %}
+            <div class="border-l-4 border-blue-500 pl-4">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h4 class="font-medium text-gray-900">{{ strategy.name }}</h4>
+                  <p class="text-sm text-gray-600">{{ strategy.trades }} trades</p>
+                </div>
+                <span class="text-green-600 font-semibold">+{{ '%.1f'|format(strategy.return) }}%</span>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Risk Metrics -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-6">Risk Analysis</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="text-center">
+          <p class="text-2xl font-bold text-gray-900">₹{{ '{:,.0f}'.format(analytics.risk_metrics.var_95) }}</p>
+          <p class="text-sm text-gray-600 mt-1">Value at Risk (95%)</p>
+        </div>
+        <div class="text-center">
+          <p class="text-2xl font-bold text-gray-900">{{ analytics.risk_metrics.beta }}</p>
+          <p class="text-sm text-gray-600 mt-1">Beta</p>
+        </div>
+        <div class="text-center">
+          <p class="text-2xl font-bold text-gray-900">{{ '%.1f'|format(analytics.risk_metrics.volatility) }}%</p>
+          <p class="text-sm text-gray-600 mt-1">Volatility</p>
+        </div>
+        <div class="text-center">
+          <p class="text-2xl font-bold text-gray-900">{{ '%.2f'|format(analytics.risk_metrics.correlation_market) }}</p>
+          <p class="text-sm text-gray-600 mt-1">Market Correlation</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Options -->
+    <div class="mt-8 flex justify-end space-x-4">
+      <button class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200">Export PDF</button>
+      <button class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors duration-200">Download Report</button>
+    </div>
+  </div>
+{% endblock %}

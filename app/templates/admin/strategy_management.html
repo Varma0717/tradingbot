@@ -1,0 +1,162 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+  Strategy Management - TradeMantra Admin
+{% endblock %}
+
+{% block content %}
+  <div class="bg-white shadow">
+    <div class="px-4 sm:px-6 lg:max-w-6xl lg:mx-auto lg:px-8">
+      <div class="py-6 md:flex md:items-center md:justify-between lg:border-t lg:border-gray-200">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center">
+            <div>
+              <div class="flex items-center">
+                <h1 class="ml-3 text-2xl font-bold leading-7 text-gray-900 sm:leading-9 sm:truncate">Strategy Management</h1>
+              </div>
+              <dl class="mt-6 flex flex-col sm:ml-3 sm:mt-1 sm:flex-row sm:flex-wrap">
+                <dt class="sr-only">Strategies pending approval</dt>
+                <dd class="flex items-center text-sm text-gray-500 font-medium capitalize sm:mr-6">
+                  <svg class="flex-shrink-0 mr-1.5 h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                  </svg>
+                  {{ pending_approval }} pending approval
+                </dd>
+                <dt class="sr-only">Active strategies</dt>
+                <dd class="mt-3 flex items-center text-sm text-gray-500 font-medium sm:mr-6 sm:mt-0">
+                  <svg class="flex-shrink-0 mr-1.5 h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                  </svg>
+                  {{ active_strategies }} active
+                </dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-8">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h2 class="text-lg leading-6 font-medium text-gray-900 mb-4">All Trading Strategies</h2>
+
+      <!-- Strategies Table -->
+      <div class="flex flex-col">
+        <div class="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+          <div class="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
+            <div class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Strategy</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                    <th scope="col" class="relative px-6 py-3">
+                      <span class="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  {% for strategy in strategies %}
+                    <tr>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                          <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-900">{{ strategy.name }}</div>
+                            <div class="text-sm text-gray-500">ID: {{ strategy.id }}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ strategy.user.username }}</div>
+                        <div class="text-sm text-gray-500">{{ strategy.user.email }}</div>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                      {% if strategy.status == 'approved' %}
+                            
+                        bg-green-100 text-green-800
+
+                          {% elif strategy.status == 'pending' %}
+                            
+                        bg-yellow-100 text-yellow-800
+
+                          {% else %}
+                            
+                        bg-red-100 text-red-800
+
+                          {% endif %}">
+                          {{ strategy.status|title }}
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                      {% if strategy.is_active %}
+                            
+                        bg-green-100 text-green-800
+
+                          {% else %}
+                            
+                        bg-gray-100 text-gray-800
+
+                          {% endif %}">
+                          {% if strategy.is_active %}
+                            Active
+                          {% else %}
+                            Inactive
+                          {% endif %}
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ strategy.created_at.strftime('%b %d, %Y') }}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div class="flex space-x-2">
+                          {% if strategy.status == 'pending' %}
+                            <button class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors duration-200">Approve</button>
+                            <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors duration-200">Reject</button>
+                          {% endif %}
+                          <button class="text-indigo-600 hover:text-indigo-900 text-xs font-medium">View Details</button>
+                        </div>
+                      </td>
+                    </tr>
+                  {% else %}
+                    <tr>
+                      <td colspan="6" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">No strategies found.</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Strategy Details Modal (placeholder for future implementation) -->
+  <div id="strategy-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+      <div class="mt-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-medium text-gray-900">Strategy Details</h3>
+          <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="mt-4">
+          <p class="text-sm text-gray-500">Strategy details will be displayed here.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function closeModal() {
+      document.getElementById('strategy-modal').classList.add('hidden')
+    }
+  </script>
+{% endblock %}

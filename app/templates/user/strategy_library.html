@@ -1,0 +1,275 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+  Strategy Library - TradeMantra
+{% endblock %}
+
+{% block content %}
+  <div class="p-6 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">📚 Strategy Library</h1>
+      <p class="text-gray-600">Pre-built automated trading strategies proven successful in Indian and global markets</p>
+    </div>
+
+    <!-- Strategy Categories -->
+    <div class="flex flex-wrap gap-2 mb-6">
+      <button onclick="filterStrategies('all')" class="filter-btn bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">All Strategies</button>
+      <button onclick="filterStrategies('momentum')" class="filter-btn bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-300">Momentum</button>
+      <button onclick="filterStrategies('mean-reversion')" class="filter-btn bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-300">Mean Reversion</button>
+      <button onclick="filterStrategies('breakout')" class="filter-btn bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-300">Breakout</button>
+      <button onclick="filterStrategies('crypto')" class="filter-btn bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-300">Crypto</button>
+    </div>
+
+    <!-- Strategy Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- RSI Trend Following -->
+      <div class="strategy-card bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-category="momentum">
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+            </svg>
+          </div>
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">RSI Trend Following</h3>
+        <p class="text-sm text-gray-600 mb-4">Identifies oversold (RSI < 30) and overbought (RSI > 70) conditions for optimal entry and exit points.</p>
+
+        <div class="space-y-2 mb-4">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Win Rate:</span>
+            <span class="font-medium text-green-600">68%</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Avg Return:</span>
+            <span class="font-medium text-blue-600">4.2%</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Markets:</span>
+            <span class="font-medium text-gray-900">Stocks, Crypto</span>
+          </div>
+        </div>
+
+        <div class="flex space-x-2">
+          <button class="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700">View Details</button>
+          <button class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">Configure</button>
+        </div>
+      </div>
+
+      <!-- Momentum Breakout -->
+      <div class="strategy-card bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-category="breakout momentum">
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Momentum Breakout</h3>
+        <p class="text-sm text-gray-600 mb-4">Captures strong momentum moves with volume confirmation above 20-day highs for explosive gains.</p>
+
+        <div class="space-y-2 mb-4">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Win Rate:</span>
+            <span class="font-medium text-green-600">72%</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Avg Return:</span>
+            <span class="font-medium text-blue-600">6.8%</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Markets:</span>
+            <span class="font-medium text-gray-900">Stocks, Crypto</span>
+          </div>
+        </div>
+
+        <div class="flex space-x-2">
+          <button class="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700">View Details</button>
+          <button class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">Configure</button>
+        </div>
+      </div>
+
+      <!-- Mean Reversion -->
+      <div class="strategy-card bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-category="mean-reversion">
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+          </div>
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Bollinger Band Reversion</h3>
+        <p class="text-sm text-gray-600 mb-4">Trades reversals at Bollinger Band extremes for consistent profits in ranging markets.</p>
+
+        <div class="space-y-2 mb-4">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Win Rate:</span>
+            <span class="font-medium text-green-600">65%</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Avg Return:</span>
+            <span class="font-medium text-blue-600">3.8%</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Markets:</span>
+            <span class="font-medium text-gray-900">Stocks</span>
+          </div>
+        </div>
+
+        <div class="flex space-x-2">
+          <button class="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700">View Details</button>
+          <button class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">Configure</button>
+        </div>
+      </div>
+
+      <!-- Crypto Momentum -->
+      <div class="strategy-card bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-category="crypto momentum">
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+            </svg>
+          </div>
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">New</span>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Crypto Momentum</h3>
+        <p class="text-sm text-gray-600 mb-4">24/7 cryptocurrency momentum strategy optimized for high volatility and market conditions.</p>
+
+        <div class="space-y-2 mb-4">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Win Rate:</span>
+            <span class="font-medium text-green-600">71%</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Avg Return:</span>
+            <span class="font-medium text-blue-600">8.5%</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Markets:</span>
+            <span class="font-medium text-gray-900">Crypto</span>
+          </div>
+        </div>
+
+        <div class="flex space-x-2">
+          <button class="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700">View Details</button>
+          <button class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">Configure</button>
+        </div>
+      </div>
+
+      <!-- Crypto Mean Reversion -->
+      <div class="strategy-card bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-category="crypto mean-reversion">
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+          </div>
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">New</span>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Crypto Mean Reversion</h3>
+        <p class="text-sm text-gray-600 mb-4">Trades crypto oversold/overbought levels using Bollinger Bands adapted for crypto volatility.</p>
+
+        <div class="space-y-2 mb-4">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Win Rate:</span>
+            <span class="font-medium text-green-600">69%</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Avg Return:</span>
+            <span class="font-medium text-blue-600">5.2%</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Markets:</span>
+            <span class="font-medium text-gray-900">Crypto</span>
+          </div>
+        </div>
+
+        <div class="flex space-x-2">
+          <button class="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700">View Details</button>
+          <button class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">Configure</button>
+        </div>
+      </div>
+
+      <!-- Crypto Breakout -->
+      <div class="strategy-card bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-category="crypto breakout">
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-10 h-10 bg-cyan-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">New</span>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Crypto Breakout</h3>
+        <p class="text-sm text-gray-600 mb-4">Captures crypto breakouts with volume confirmation for explosive price movements.</p>
+
+        <div class="space-y-2 mb-4">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Win Rate:</span>
+            <span class="font-medium text-green-600">74%</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Avg Return:</span>
+            <span class="font-medium text-blue-600">9.2%</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Markets:</span>
+            <span class="font-medium text-gray-900">Crypto</span>
+          </div>
+        </div>
+
+        <div class="flex space-x-2">
+          <button class="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700">View Details</button>
+          <button class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">Configure</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Strategy Performance Summary -->
+    <div class="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">📈 Overall Strategy Performance</h3>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="text-center">
+          <div class="text-2xl font-bold text-green-600">69.5%</div>
+          <div class="text-sm text-gray-600">Average Win Rate</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-blue-600">6.2%</div>
+          <div class="text-sm text-gray-600">Average Return</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-purple-600">6</div>
+          <div class="text-sm text-gray-600">Active Strategies</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-yellow-600">2.1</div>
+          <div class="text-sm text-gray-600">Risk/Reward Ratio</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function filterStrategies(category) {
+      // Remove active class from all filter buttons
+      document.querySelectorAll('.filter-btn').forEach((btn) => {
+        btn.className = 'filter-btn bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-300'
+      })
+    
+      // Add active class to clicked button
+      event.target.className = 'filter-btn bg-blue-600 text-white px-4 py-2 rounded-lg text-sm'
+    
+      // Show/hide strategy cards
+      document.querySelectorAll('.strategy-card').forEach((card) => {
+        if (category === 'all' || card.dataset.category.includes(category)) {
+          card.style.display = 'block'
+        } else {
+          card.style.display = 'none'
+        }
+      })
+    }
+  </script>
+{% endblock %}
