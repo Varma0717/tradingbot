@@ -1,0 +1,144 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+  <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="px-4 py-6 sm:px-0">
+      
+      <!-- Header -->
+      <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-6 py-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+                <span class="text-2xl mr-2">🤖</span>
+                AI Trading Signals
+              </h1>
+              <p class="text-gray-600">Real-time AI-powered trading recommendations</p>
+            </div>
+            <div class="flex items-center space-x-4">
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                ✓ AI Enabled
+              </span>
+              <button onclick="refreshSignals()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                Refresh Signals
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Signals Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
+        {% for signal in signals %}
+        <div class="bg-white shadow rounded-lg p-6 hover:shadow-lg transition-shadow">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">{{ signal.symbol }}</h3>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+              {% if signal.action == 'BUY' %}bg-green-100 text-green-800
+              {% elif signal.action == 'SELL' %}bg-red-100 text-red-800
+              {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+              {{ signal.action }}
+            </span>
+          </div>
+          
+          <div class="space-y-3">
+            <!-- Confidence Score -->
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">Confidence</span>
+              <div class="flex items-center">
+                <div class="w-20 bg-gray-200 rounded-full h-2 mr-2">
+                  <div class="bg-blue-600 h-2 rounded-full" style="width: {{ signal.confidence }}%"></div>
+                </div>
+                <span class="text-sm font-medium">{{ signal.confidence }}%</span>
+              </div>
+            </div>
+            
+            <!-- Price Targets -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <span class="text-xs text-gray-500">Target Price</span>
+                <p class="text-lg font-semibold text-green-600">₹{{ "%.2f"|format(signal.price_target) }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-gray-500">Stop Loss</span>
+                <p class="text-lg font-semibold text-red-600">₹{{ "%.2f"|format(signal.stop_loss) }}</p>
+              </div>
+            </div>
+            
+            <!-- Strategy -->
+            <div>
+              <span class="text-xs text-gray-500">Strategy</span>
+              <p class="text-sm font-medium text-gray-900">{{ signal.strategy.replace('_', ' ').title() }}</p>
+            </div>
+            
+            <!-- Reasoning -->
+            <div>
+              <span class="text-xs text-gray-500">AI Reasoning</span>
+              <p class="text-sm text-gray-700">{{ signal.reasoning }}</p>
+            </div>
+            
+            <!-- Timestamp -->
+            <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+              <span class="text-xs text-gray-500">Generated at {{ signal.created_at }}</span>
+              <button onclick="executeSignal('{{ signal.symbol }}', '{{ signal.action }}')" 
+                      class="text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded hover:bg-blue-100 transition-colors">
+                Execute Trade
+              </button>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if not signals %}
+      <div class="bg-white shadow rounded-lg p-12 text-center">
+        <div class="text-6xl mb-4">🤖</div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No AI Signals Available</h3>
+        <p class="text-gray-600 mb-6">Our AI engine is analyzing market conditions. Check back in a few minutes.</p>
+        <button onclick="refreshSignals()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+          Refresh Now
+        </button>
+      </div>
+      {% endif %}
+
+      <!-- AI Insights Panel -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <span class="text-xl mr-2">🧠</span>
+          AI Market Insights
+        </h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="text-center p-4 bg-blue-50 rounded-lg">
+            <div class="text-2xl font-bold text-blue-600">{{ signals|length }}</div>
+            <div class="text-sm text-gray-600">Active Signals</div>
+          </div>
+          
+          <div class="text-center p-4 bg-green-50 rounded-lg">
+            <div class="text-2xl font-bold text-green-600">{{ ((signals|selectattr('action', 'equalto', 'BUY')|list|length / signals|length) * 100)|round|int if signals else 0 }}%</div>
+            <div class="text-sm text-gray-600">Buy Signals</div>
+          </div>
+          
+          <div class="text-center p-4 bg-purple-50 rounded-lg">
+            <div class="text-2xl font-bold text-purple-600">{{ (signals|sum(attribute='confidence') / signals|length)|round|int if signals else 0 }}%</div>
+            <div class="text-sm text-gray-600">Avg Confidence</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function refreshSignals() {
+  window.location.reload();
+}
+
+function executeSignal(symbol, action) {
+  // Redirect to automation page with pre-filled signal
+  window.location.href = `/user/automation?symbol=${symbol}&action=${action}`;
+}
+</script>
+{% endblock %}

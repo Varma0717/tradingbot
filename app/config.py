@@ -12,11 +12,12 @@ class Config:
 
     # CSRF Protection
     WTF_CSRF_ENABLED = True
-    WTF_CSRF_TIME_LIMIT = 3600  # 1 hour
+    WTF_CSRF_TIME_LIMIT = 7200  # 2 hours for development
+    WTF_CSRF_SECRET_KEY = SECRET_KEY  # Use app secret key explicitly
 
     # Rate limiting
     RATELIMIT_STORAGE_URL = "memory://"  # In production, use Redis
-    RATELIMIT_DEFAULT = "100/hour"
+    RATELIMIT_DEFAULT = "300/hour"  # 5 requests per minute - reasonable for dashboard
 
     # Security headers
     SEND_FILE_MAX_AGE_DEFAULT = 31536000  # 1 year for static files

@@ -147,6 +147,13 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for("user.dashboard"))
     form = LoginForm()
+
+    # Debug logging for form validation
+    if request.method == "POST":
+        current_app.logger.info(f"Login attempt for email: {form.email.data}")
+        if not form.validate_on_submit():
+            current_app.logger.warning(f"Form validation failed: {form.errors}")
+
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
         if user is None or not user.check_password(form.password.data):

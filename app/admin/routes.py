@@ -26,10 +26,36 @@ def before_request():
 
 @admin.route("/")
 def dashboard():
+    from datetime import datetime, timedelta
+    from collections import defaultdict
+
+    # Basic user metrics
     user_count = User.query.count()
-    pro_subscriptions = Subscription.query.filter_by(
-        plan="pro", status="active"
-    ).count()
+
+    # Users registered today
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    new_users_today = User.query.filter(User.created_at >= today_start).count()
+
+    # Active users in last 24 hours (users with recent login)
+    yesterday = datetime.now() - timedelta(days=1)
+    active_users_24h = (
+        User.query.filter(User.last_seen >= yesterday).count()
+        if hasattr(User, "last_seen")
+        else 0
+    )
+
+    # Subscription distribution
+    subscription_distribution = defaultdict(int)
+    for user in User.query.all():
+        tier = getattr(user, "subscription_tier", "starter") or "starter"
+        subscription_distribution[tier] += 1
+
+    # Active subscriptions (non-starter tiers)
+    active_subscriptions = sum(
+        count for tier, count in subscription_distribution.items() if tier != "starter"
+    )
+
+    # Revenue metrics
     total_payments = (
         db.session.query(db.func.sum(Payment.amount))
         .filter(Payment.status == "captured")
@@ -37,22 +63,72 @@ def dashboard():
         or 0
     )
 
-    # Get recent users (last 5)
-    recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
+    # Monthly recurring revenue calculation
+    monthly_revenue = 0
+    mrr = 0
+    for tier, count in subscription_distribution.items():
+        tier_prices = {
+            "starter": 0,
+            "basic": 999,
+            "pro": 2999,
+            "premium": 9999,
+            "institutional": 25000,
+        }
+        monthly_revenue += count * tier_prices.get(tier, 0)
+        if tier != "starter":
+            mrr += count * tier_prices.get(tier, 0)
 
-    # Count active strategies (count strategies across all users)
-    from ..models import Strategy
+    # Average revenue per user
+    arpu = monthly_revenue / user_count if user_count > 0 else 0
 
-    active_strategies = Strategy.query.count() or 0
+    # Mock system alerts (in real implementation, get from monitoring system)
+    system_alerts = 2
+    critical_alerts = 0
+
+    # Mock churn rate (in real implementation, calculate from cancellations)
+    churn_rate = 2.3
+
+    # Mock login sessions (in real implementation, get from session tracking)
+    login_sessions_24h = user_count * 2  # Rough estimate
+
+    # Recent administrative actions (mock data - in real implementation, get from audit log)
+    recent_admin_actions = [
+        {
+            "description": "Updated subscription pricing tiers",
+            "admin_user": "admin",
+            "timestamp": datetime.now() - timedelta(hours=2),
+            "type_color": "blue",
+        },
+        {
+            "description": "Activated new user verification system",
+            "admin_user": "admin",
+            "timestamp": datetime.now() - timedelta(hours=5),
+            "type_color": "green",
+        },
+        {
+            "description": "Database maintenance completed",
+            "admin_user": "system",
+            "timestamp": datetime.now() - timedelta(hours=8),
+            "type_color": "yellow",
+        },
+    ]
 
     return render_template(
-        "admin/dashboard.html",
-        title="Admin Dashboard",
+        "admin/enhanced_dashboard.html",
+        title="Admin Control Center",
         user_count=user_count,
-        pro_subscriptions=pro_subscriptions,
-        total_payments=total_payments,
-        recent_users=recent_users,
-        active_strategies=active_strategies,
+        new_users_today=new_users_today,
+        active_users_24h=active_users_24h,
+        subscription_distribution=dict(subscription_distribution),
+        active_subscriptions=active_subscriptions,
+        monthly_revenue=monthly_revenue,
+        mrr=mrr,
+        arpu=arpu,
+        system_alerts=system_alerts,
+        critical_alerts=critical_alerts,
+        churn_rate=churn_rate,
+        login_sessions_24h=login_sessions_24h,
+        recent_admin_actions=recent_admin_actions,
     )
 
 
@@ -123,7 +199,7 @@ def audit_trail():
 
 
 @admin.route("/subscriptions")
-def subscription_management():
+def subscription_overview():
     """Manage user subscriptions and billing"""
     from ..models import User, Subscription, Payment
 
@@ -315,6 +391,103 @@ def system_health():
         memory_usage=memory_usage,
         disk_usage=disk_usage,
         services=services,
+    )
+
+
+@admin.route("/subscription_management")
+def subscription_management():
+    """Manage subscription plans and pricing"""
+    from collections import defaultdict
+
+    # Get subscription statistics
+    subscription_stats = defaultdict(int)
+    for user in User.query.all():
+        tier = getattr(user, "subscription_tier", "starter") or "starter"
+        subscription_stats[tier] += 1
+
+    # Enhanced subscription data with pricing
+    subscription_tiers = [
+        {
+            "name": "Starter",
+            "price": 0,
+            "users": subscription_stats["starter"],
+            "features": ["Basic Trading", "Market Data", "1 Strategy"],
+            "monthly_revenue": 0,
+        },
+        {
+            "name": "Basic",
+            "price": 999,
+            "users": subscription_stats["basic"],
+            "features": ["Advanced Trading", "Real-time Data", "5 Strategies"],
+            "monthly_revenue": subscription_stats["basic"] * 999,
+        },
+        {
+            "name": "Pro",
+            "price": 2999,
+            "users": subscription_stats["pro"],
+            "features": ["AI Signals", "Risk Management", "15 Strategies"],
+            "monthly_revenue": subscription_stats["pro"] * 2999,
+        },
+        {
+            "name": "Premium",
+            "price": 9999,
+            "users": subscription_stats["premium"],
+            "features": ["Copy Trading", "Advanced Analytics", "Unlimited"],
+            "monthly_revenue": subscription_stats["premium"] * 9999,
+        },
+        {
+            "name": "Institutional",
+            "price": 25000,
+            "users": subscription_stats["institutional"],
+            "features": ["White Label", "Custom Integration", "Dedicated Support"],
+            "monthly_revenue": subscription_stats["institutional"] * 25000,
+        },
+    ]
+
+    total_mrr = sum(tier["monthly_revenue"] for tier in subscription_tiers)
+
+    return render_template(
+        "admin/subscription_management.html",
+        title="Subscription Management",
+        subscription_tiers=subscription_tiers,
+        total_mrr=total_mrr,
+    )
+
+
+@admin.route("/payments_overview")
+def payments_overview():
+    """Overview of payments and financial metrics"""
+    from datetime import datetime, timedelta
+
+    # Payment statistics
+    total_payments = Payment.query.filter_by(status="captured").count()
+    total_revenue = (
+        db.session.query(db.func.sum(Payment.amount))
+        .filter(Payment.status == "captured")
+        .scalar()
+        or 0
+    )
+
+    # Recent payments
+    recent_payments = Payment.query.order_by(Payment.created_at.desc()).limit(10).all()
+
+    # Monthly revenue trend (mock data)
+    monthly_trend = [
+        {"month": "Jan", "revenue": 45000},
+        {"month": "Feb", "revenue": 52000},
+        {"month": "Mar", "revenue": 48000},
+        {"month": "Apr", "revenue": 61000},
+        {"month": "May", "revenue": 58000},
+        {"month": "Jun", "revenue": 67000},
+    ]
+
+    return render_template(
+        "admin/payments_overview.html",
+        title="Payments Overview",
+        total_payments=total_payments,
+        total_revenue=total_revenue,
+        recent_payments=recent_payments,
+        monthly_trend=monthly_trend,
     )
 
 

@@ -1,0 +1,141 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+  <div class="min-h-screen bg-gray-50">
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <div class="px-4 py-6 sm:px-0">
+        <!-- Header -->
+        <div class="bg-white shadow rounded-lg mb-6">
+          <div class="px-6 py-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+                  <span class="text-2xl mr-2">📊</span>
+                  AI Portfolio Optimization
+                </h1>
+                <p class="text-gray-600">AI-powered recommendations to optimize your portfolio</p>
+              </div>
+              <div class="flex items-center space-x-4">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">✓ AI Enabled</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Current vs Recommended Allocation -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <!-- Current Allocation -->
+          <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Current Allocation</h3>
+            <div class="space-y-4">
+              {% for asset, percentage in optimization.current_allocation.items() %}
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-700">{{ asset }}</span>
+                  <div class="flex items-center">
+                    <div class="w-24 bg-gray-200 rounded-full h-2 mr-3">
+                      <div class="bg-blue-600 h-2 rounded-full" style="width: {{ percentage }}%"></div>
+                    </div>
+                    <span class="text-sm font-medium w-8">{{ percentage }}%</span>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Recommended Allocation -->
+          <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">AI Recommended Allocation</h3>
+            <div class="space-y-4">
+              {% for asset, percentage in optimization.recommended_allocation.items() %}
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-700">{{ asset }}</span>
+                  <div class="flex items-center">
+                    <div class="w-24 bg-gray-200 rounded-full h-2 mr-3">
+                      <div class="bg-green-600 h-2 rounded-full" style="width: {{ percentage }}%"></div>
+                    </div>
+                    <span class="text-sm font-medium w-8">{{ percentage }}%</span>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Risk and Return Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <!-- Risk Score -->
+          <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Risk Assessment</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="text-center p-4 bg-red-50 rounded-lg">
+                <div class="text-2xl font-bold text-red-600">{{ optimization.risk_score.current }}</div>
+                <div class="text-sm text-gray-600">Current Risk</div>
+              </div>
+              <div class="text-center p-4 bg-green-50 rounded-lg">
+                <div class="text-2xl font-bold text-green-600">{{ optimization.risk_score.optimized }}</div>
+                <div class="text-sm text-gray-600">Optimized Risk</div>
+              </div>
+            </div>
+            <div class="mt-4 text-center">
+              <span class="text-sm text-green-600 font-medium">{{ (optimization.risk_score.current - optimization.risk_score.optimized / optimization.risk_score.current * 100)|round(1) }}% Risk Reduction</span>
+            </div>
+          </div>
+
+          <!-- Expected Return -->
+          <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Expected Returns</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="text-center p-4 bg-blue-50 rounded-lg">
+                <div class="text-2xl font-bold text-blue-600">{{ optimization.expected_return.current }}</div>
+                <div class="text-sm text-gray-600">Current Return</div>
+              </div>
+              <div class="text-center p-4 bg-purple-50 rounded-lg">
+                <div class="text-2xl font-bold text-purple-600">{{ optimization.expected_return.optimized }}</div>
+                <div class="text-sm text-gray-600">Optimized Return</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Suggestions -->
+        <div class="bg-white shadow rounded-lg p-6 mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <span class="text-xl mr-2">💡</span>
+            AI Optimization Suggestions
+          </h3>
+
+          <div class="space-y-4">
+            {% for suggestion in optimization.suggestions %}
+              <div class="border-l-4 border-blue-500 bg-blue-50 p-4 rounded-r-lg">
+                <div class="flex">
+                  <div class="flex-1">
+                    <h4 class="text-sm font-medium text-blue-800">{{ suggestion.action }}</h4>
+                    <p class="mt-1 text-sm text-blue-700">{{ suggestion.reason }}</p>
+                    <p class="mt-2 text-xs text-blue-600 font-medium">Impact: {{ suggestion.impact }}</p>
+                  </div>
+                  <div class="ml-4">
+                    <button class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors">Apply</button>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="bg-white shadow rounded-lg p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Ready to Optimize?</h3>
+              <p class="text-gray-600">Apply AI recommendations to improve your portfolio performance</p>
+            </div>
+            <div class="flex space-x-4">
+              <button class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors">Schedule Rebalancing</button>
+              <button class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">Apply Optimization</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

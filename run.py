@@ -8,6 +8,15 @@ from flask_login import current_user
 # Create the Flask app instance from the app factory
 app = create_app(os.getenv("FLASK_CONFIG") or "default")
 
+# Register Grid Trading Blueprint
+try:
+    from app.strategies.grid_integration import grid_bp
+
+    app.register_blueprint(grid_bp)
+    print("✅ Grid Trading API registered successfully")
+except Exception as e:
+    print(f"❌ Failed to register Grid Trading API: {e}")
+
 
 @app.shell_context_processor
 def make_shell_context():

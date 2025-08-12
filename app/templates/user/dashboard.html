@@ -59,31 +59,176 @@
         </div>
       </div>
 
-      <!-- Stats Grid -->
+      <!-- Enhanced Stats Grid with Real-time Updates -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-white p-6 rounded-lg shadow">
           <h2 class="text-lg font-medium text-gray-500">Portfolio Value</h2>
-          <p class="mt-1 text-3xl font-semibold text-blue-600">
-            ₹{{ '%.2f'|format(portfolio.summary.total_value if portfolio else 0) }}
+          <p id="portfolio-value" class="mt-1 text-3xl font-semibold text-blue-600">
+            Loading...
           </p>
         </div>
         <div class="bg-white p-6 rounded-lg shadow">
           <h2 class="text-lg font-medium text-gray-500">Total P&L</h2>
-          <p class="mt-1 text-3xl font-semibold {% if portfolio and portfolio.summary.total_pnl >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
-            ₹{{ '%.2f'|format(portfolio.summary.total_pnl if portfolio else 0) }}
+          <p id="total-pnl" class="mt-1 text-3xl font-semibold text-gray-600">
+            Loading...
           </p>
         </div>
         <div class="bg-white p-6 rounded-lg shadow">
           <h2 class="text-lg font-medium text-gray-500">Daily P&L</h2>
-          <p class="mt-1 text-3xl font-semibold {% if portfolio and portfolio.performance.daily_pnl >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
-            ₹{{ '%.2f'|format(portfolio.performance.daily_pnl if portfolio else 0) }}
-          </p>
+          <div class="mt-1">
+            <p id="daily-pnl" class="text-3xl font-semibold text-gray-600">Loading...</p>
+            <p id="daily-pnl-percent" class="text-sm text-gray-500"></p>
+          </div>
         </div>
         <div class="bg-white p-6 rounded-lg shadow">
-          <h2 class="text-lg font-medium text-gray-500">Active Positions</h2>
-          <p class="mt-1 text-3xl font-semibold text-gray-900">
-            {{ portfolio.positions|length if portfolio else 0 }}
+          <h2 class="text-lg font-medium text-gray-500">Active Trades</h2>
+          <p id="active-trades" class="mt-1 text-3xl font-semibold text-gray-900">
+            Loading...
           </p>
+        </div>
+      </div>
+
+      <!-- Pionex-Style Grid Trading Section -->
+      <div id="grid-trading-panel" class="grid-trading-panel mb-6">
+        <!-- Grid Trading Dashboard will be loaded here by JavaScript -->
+      </div>
+
+      <!-- Real-time Trading Dashboard -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- Bot Status Panel -->
+        <div class="lg:col-span-1">
+          <div class="bg-white p-6 rounded-lg shadow">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold">Trading Bots</h3>
+              <div class="flex items-center space-x-2">
+                <div id="overall-status" class="w-3 h-3 rounded-full bg-gray-400"></div>
+                <span id="overall-status-text" class="text-sm text-gray-600">All Inactive</span>
+              </div>
+            </div>
+            
+            <!-- Stock Bot -->
+            <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-2">
+                  <div id="stock-status-indicator" class="w-3 h-3 rounded-full bg-gray-400"></div>
+                  <span class="font-medium">Stock Bot</span>
+                </div>
+                <div class="flex space-x-2">
+                  <button id="stock-bot-start" class="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors">
+                    Start
+                  </button>
+                  <button id="stock-bot-stop" class="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors hidden">
+                    Stop
+                  </button>
+                </div>
+              </div>
+              <div class="grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <p class="text-gray-500">Uptime</p>
+                  <p id="stock-bot-uptime" class="font-medium">N/A</p>
+                </div>
+                <div>
+                  <p class="text-gray-500">Trades</p>
+                  <p id="stock-bot-trades" class="font-medium">0</p>
+                </div>
+                <div>
+                  <p class="text-gray-500">Profit</p>
+                  <p id="stock-bot-profit" class="font-medium text-green-600">$0</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Crypto Bot -->
+            <div class="p-4 bg-gray-50 rounded-lg">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-2">
+                  <div id="crypto-status-indicator" class="w-3 h-3 rounded-full bg-gray-400"></div>
+                  <span class="font-medium">Crypto Bot</span>
+                </div>
+                <div class="flex space-x-2">
+                  <button id="crypto-bot-start" class="px-3 py-1 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 transition-colors">
+                    Start
+                  </button>
+                  <button id="crypto-bot-stop" class="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors hidden">
+                    Stop
+                  </button>
+                </div>
+              </div>
+              <div class="grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <p class="text-gray-500">Uptime</p>
+                  <p id="crypto-bot-uptime" class="font-medium">N/A</p>
+                </div>
+                <div>
+                  <p class="text-gray-500">Trades</p>
+                  <p id="crypto-bot-trades" class="font-medium">0</p>
+                </div>
+                <div>
+                  <p class="text-gray-500">Profit</p>
+                  <p id="crypto-bot-profit" class="font-medium text-green-600">$0</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Portfolio Display -->
+        <div class="lg:col-span-1">
+          <div class="bg-white p-6 rounded-lg shadow">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold">Live Portfolio</h3>
+              <button id="refresh-dashboard" class="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
+                Refresh
+              </button>
+            </div>
+            
+            <div class="space-y-4">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600">Portfolio Change</span>
+                <span id="portfolio-change" class="font-medium">Loading...</span>
+              </div>
+              
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600">Cash Available</span>
+                <span id="cash-available" class="font-medium">Loading...</span>
+              </div>
+              
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600">Total Invested</span>
+                <span id="total-invested" class="font-medium">Loading...</span>
+              </div>
+              
+              <div class="border-t pt-4">
+                <h4 class="font-medium mb-2">Today's Performance</h4>
+                <div class="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p class="text-gray-500">Trades</p>
+                    <p id="total-trades-today" class="font-medium">0</p>
+                  </div>
+                  <div>
+                    <p class="text-gray-500">Profit</p>
+                    <p id="total-profit-today" class="font-medium text-green-600">$0</p>
+                  </div>
+                  <div>
+                    <p class="text-gray-500">Win Rate</p>
+                    <p id="average-win-rate" class="font-medium">0%</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="lg:col-span-1">
+          <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4">Recent Live Trades</h3>
+            <div id="recent-activity" class="space-y-3">
+              <div class="text-center text-gray-500 py-8">
+                <p>Loading recent activity...</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -589,5 +734,30 @@
         }
       }, 5000);
     }
+  </script>
+  
+  <!-- Enhanced Dashboard JavaScript -->
+  <script src="{{ url_for('static', filename='js/enhanced_dashboard.js') }}"></script>
+  
+  <!-- Grid Trading Dashboard JavaScript -->
+  <script src="{{ url_for('static', filename='js/grid_trading_dashboard.js') }}"></script>
+  
+  <!-- Initialize Dashboard -->
+  <script>
+    // Initialize dashboard with demo data display
+    document.addEventListener('DOMContentLoaded', function() {
+      // Show loading initially
+      const loadingElements = document.querySelectorAll('.loading');
+      loadingElements.forEach(el => {
+        el.style.display = 'block';
+      });
+      
+      // Load dashboard data immediately
+      setTimeout(() => {
+        if (window.enhancedDashboard) {
+          window.enhancedDashboard.generateDemoData();
+        }
+      }, 1000);
+    });
   </script>
 {% endblock %}

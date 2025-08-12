@@ -1,0 +1,330 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <div class="min-h-screen bg-gray-50">
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <div class="px-4 py-6 sm:px-0">
+        
+        <!-- Header with User Info -->
+        <div class="bg-white shadow rounded-lg mb-6">
+          <div class="px-6 py-4">
+            <div class="flex justify-between items-start">
+              <div class="flex items-center space-x-4">
+                <div class="h-16 w-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                  {{ current_user.username[0].upper() }}
+                </div>
+                <div>
+                  <h1 class="text-2xl font-bold text-gray-900">Welcome back, {{ current_user.username }}!</h1>
+                  <p class="text-gray-600">{{ current_user.email }}</p>
+                  <div class="flex items-center space-x-4 mt-2">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{ 'green' if current_user.subscription_tier != 'starter' else 'gray' }}-100 text-{{ 'green' if current_user.subscription_tier != 'starter' else 'gray' }}-800">
+                      {{ current_user.subscription_tier.title() if current_user.subscription_tier else 'Starter' }}
+                    </span>
+                    {% if current_user.ai_enabled %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      🤖 AI Enabled
+                    </span>
+                    {% endif %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      ⭐ {{ '{:.1f}'.format(current_user.trader_rating or 0) }} Rating
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="text-right">
+                {% if current_user.subscription_expires %}
+                <p class="text-sm text-gray-600">Subscription expires</p>
+                <p class="text-sm font-medium text-gray-900">{{ current_user.subscription_expires.strftime('%B %d, %Y') }}</p>
+                {% endif %}
+                <a href="{{ url_for('user.automation_dashboard') }}" class="mt-2 bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-2 rounded-lg font-medium hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg inline-block">
+                  🚀 Start Trading
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Profile Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <!-- Total Profit -->
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Total Profit</dt>
+                    <dd class="text-lg font-medium text-{{ 'green' if (current_user.total_profit or 0) >= 0 else 'red' }}-600">
+                      ₹{{ '{:,.2f}'.format(current_user.total_profit or 0) }}
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Win Rate -->
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <svg class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Win Rate</dt>
+                    <dd class="text-lg font-medium text-gray-900">{{ '{:.1f}'.format(current_user.win_rate or 0) }}%</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Social Following -->
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <svg class="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Followers</dt>
+                    <dd class="text-lg font-medium text-gray-900">{{ current_user.total_followers or 0 }}</dd>
+                    <dd class="text-xs text-gray-500">{{ current_user.total_copiers or 0 }} copiers</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Risk Profile -->
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <svg class="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.664-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Risk Tolerance</dt>
+                    <dd class="text-lg font-medium text-gray-900">
+                      {% set risk_level = (current_user.risk_tolerance or 0.5) * 100 %}
+                      {% if risk_level < 30 %}Conservative
+                      {% elif risk_level < 60 %}Moderate
+                      {% elif risk_level < 80 %}Aggressive
+                      {% else %}High Risk
+                      {% endif %}
+                    </dd>
+                    <dd class="text-xs text-gray-500">{{ '{:.0f}'.format(risk_level) }}% tolerance</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Enhanced Features Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          
+          <!-- Subscription & Features -->
+          <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Your Subscription</h3>
+              <div class="space-y-4">
+                <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <h4 class="font-medium text-gray-900">{{ (current_user.subscription_tier or 'starter').title() }} Plan</h4>
+                    <p class="text-sm text-gray-600">
+                      {% if current_user.subscription_tier == 'starter' %}Free Plan - Basic features
+                      {% elif current_user.subscription_tier == 'basic' %}₹999/month - Enhanced trading
+                      {% elif current_user.subscription_tier == 'pro' %}₹2,999/month - AI + Advanced features
+                      {% elif current_user.subscription_tier == 'premium' %}₹9,999/month - Premium features
+                      {% elif current_user.subscription_tier == 'institutional' %}₹25,000/month - Enterprise solution
+                      {% endif %}
+                    </p>
+                  </div>
+                  <div class="text-right">
+                    {% if current_user.subscription_auto_renew %}
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Auto-renew ON</span>
+                    {% else %}
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Auto-renew OFF</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <!-- Feature List -->
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="flex items-center text-sm">
+                    <svg class="h-4 w-4 {{ 'text-green-500' if current_user.ai_enabled else 'text-gray-400' }} mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    AI Trading {{ 'Enabled' if current_user.ai_enabled else 'Disabled' }}
+                  </div>
+                  <div class="flex items-center text-sm">
+                    <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    Market Data
+                  </div>
+                  <div class="flex items-center text-sm">
+                    <svg class="h-4 w-4 {{ 'text-green-500' if current_user.subscription_tier in ['pro', 'premium', 'institutional'] else 'text-gray-400' }} mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    Risk Management
+                  </div>
+                  <div class="flex items-center text-sm">
+                    <svg class="h-4 w-4 {{ 'text-green-500' if current_user.subscription_tier in ['premium', 'institutional'] else 'text-gray-400' }} mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    Social Trading
+                  </div>
+                </div>
+
+                <div class="pt-4 border-t">
+                  <a href="/subscriptions" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium text-center block">
+                    Upgrade Subscription
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Performance Analytics -->
+          <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Performance Analytics</h3>
+              <div class="space-y-4">
+                
+                <!-- Sharpe Ratio -->
+                <div class="flex justify-between items-center">
+                  <span class="text-sm text-gray-600">Sharpe Ratio</span>
+                  <span class="text-sm font-medium {{ 'text-green-600' if (current_user.sharpe_ratio or 0) > 1 else 'text-yellow-600' if (current_user.sharpe_ratio or 0) > 0.5 else 'text-red-600' }}">
+                    {{ '{:.2f}'.format(current_user.sharpe_ratio or 0) }}
+                  </span>
+                </div>
+
+                <!-- Performance Visualization -->
+                <div class="space-y-2">
+                  <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Win Rate</span>
+                    <span class="font-medium">{{ '{:.1f}'.format(current_user.win_rate or 0) }}%</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-blue-600 h-2 rounded-full" style="width: {{ current_user.win_rate or 0 }}%"></div>
+                  </div>
+                </div>
+
+                <div class="space-y-2">
+                  <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Risk Tolerance</span>
+                    <span class="font-medium">{{ '{:.0f}'.format((current_user.risk_tolerance or 0.5) * 100) }}%</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-{{ 'red' if (current_user.risk_tolerance or 0.5) > 0.7 else 'yellow' if (current_user.risk_tolerance or 0.5) > 0.4 else 'green' }}-600 h-2 rounded-full" style="width: {{ (current_user.risk_tolerance or 0.5) * 100 }}%"></div>
+                  </div>
+                </div>
+
+                <!-- Social Stats -->
+                <div class="pt-4 border-t">
+                  <div class="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                      <p class="text-2xl font-bold text-purple-600">{{ current_user.total_followers or 0 }}</p>
+                      <p class="text-xs text-gray-500">Followers</p>
+                    </div>
+                    <div>
+                      <p class="text-2xl font-bold text-green-600">{{ current_user.total_copiers or 0 }}</p>
+                      <p class="text-xs text-gray-500">Copy Traders</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white shadow rounded-lg">
+          <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Quick Actions</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              
+              <a href="{{ url_for('user.automation_dashboard') }}" class="flex items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+                <svg class="h-8 w-8 text-green-600 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <div>
+                  <p class="font-medium text-gray-900">Start Trading</p>
+                  <p class="text-xs text-gray-500">Access trading bot</p>
+                </div>
+              </a>
+
+              <a href="{{ url_for('user.portfolio') }}" class="flex items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                <svg class="h-8 w-8 text-blue-600 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <div>
+                  <p class="font-medium text-gray-900">Portfolio</p>
+                  <p class="text-xs text-gray-500">View holdings</p>
+                </div>
+              </a>
+
+              {% if current_user.ai_enabled %}
+              <a href="{{ url_for('user.ai_signals') }}" class="flex items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+                <svg class="h-8 w-8 text-purple-600 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                <div>
+                  <p class="font-medium text-gray-900">AI Signals</p>
+                  <p class="text-xs text-gray-500">Smart recommendations</p>
+                </div>
+              </a>
+
+              <a href="{{ url_for('user.ai_portfolio_optimization') }}" class="flex items-center p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
+                <svg class="h-8 w-8 text-indigo-600 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <div>
+                  <p class="font-medium text-gray-900">AI Portfolio</p>
+                  <p class="text-xs text-gray-500">Optimize allocations</p>
+                </div>
+              </a>
+
+              <a href="{{ url_for('user.ai_market_analysis') }}" class="flex items-center p-4 bg-pink-50 hover:bg-pink-100 rounded-lg transition-colors">
+                <svg class="h-8 w-8 text-pink-600 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                </svg>
+                <div>
+                  <p class="font-medium text-gray-900">Market Analysis</p>
+                  <p class="text-xs text-gray-500">AI market insights</p>
+                </div>
+              </a>
+              {% endif %}
+
+              <a href="{{ url_for('user.settings') }}" class="flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                <svg class="h-8 w-8 text-gray-600 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <div>
+                  <p class="font-medium text-gray-900">Settings</p>
+                  <p class="text-xs text-gray-500">Account & preferences</p>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+{% endblock %}

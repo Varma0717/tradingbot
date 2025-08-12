@@ -1,0 +1,190 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+  <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="px-4 py-6 sm:px-0">
+      
+      <!-- Header -->
+      <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-6 py-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+                <span class="text-2xl mr-2">📈</span>
+                AI Market Analysis
+              </h1>
+              <p class="text-gray-600">AI-powered insights into market trends and opportunities</p>
+            </div>
+            <div class="flex items-center space-x-4">
+              <span class="text-sm text-gray-500">Last updated: {{ analysis.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+              <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                Refresh Analysis
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Market Overview -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white shadow rounded-lg p-6">
+          <div class="flex items-center">
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-gray-900">Market Sentiment</h3>
+              <p class="text-3xl font-bold text-{{ 'green' if analysis.market_sentiment == 'Bullish' else 'red' if analysis.market_sentiment == 'Bearish' else 'yellow' }}-600">
+                {{ analysis.market_sentiment }}
+              </p>
+            </div>
+            <div class="text-3xl">
+              {% if analysis.market_sentiment == 'Bullish' %}📈
+              {% elif analysis.market_sentiment == 'Bearish' %}📉
+              {% else %}➡️{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white shadow rounded-lg p-6">
+          <div class="flex items-center">
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-gray-900">Volatility Index</h3>
+              <p class="text-3xl font-bold text-purple-600">{{ analysis.volatility_index }}</p>
+            </div>
+            <div class="text-3xl">📊</div>
+          </div>
+        </div>
+
+        <div class="bg-white shadow rounded-lg p-6">
+          <div class="flex items-center">
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-gray-900">Trend Strength</h3>
+              <p class="text-3xl font-bold text-blue-600">{{ analysis.trend_strength }}</p>
+            </div>
+            <div class="text-3xl">💪</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Opportunities -->
+      <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">🎯 Top Trading Opportunities</h3>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for opportunity in analysis.top_opportunities %}
+            <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-lg font-semibold text-gray-900">{{ opportunity.symbol }}</h4>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  {{ opportunity.signal }}
+                </span>
+              </div>
+              <div class="space-y-2">
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Confidence:</span>
+                  <span class="font-medium">{{ opportunity.confidence }}%</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Expected Move:</span>
+                  <span class="font-medium text-green-600">{{ opportunity.expected_move }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Time Frame:</span>
+                  <span class="font-medium">{{ opportunity.timeframe }}</span>
+                </div>
+              </div>
+              <p class="mt-3 text-sm text-gray-700">{{ opportunity.reason }}</p>
+              <button class="mt-4 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                Create Strategy
+              </button>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Market Sectors Analysis -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Sector Performance -->
+        <div class="bg-white shadow rounded-lg">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Sector Performance</h3>
+          </div>
+          <div class="p-6">
+            <div class="space-y-4">
+              {% for sector in analysis.sector_analysis %}
+              <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                  <span class="text-lg mr-3">{{ sector.icon }}</span>
+                  <span class="text-gray-700">{{ sector.name }}</span>
+                </div>
+                <div class="flex items-center">
+                  <span class="text-sm font-medium mr-2 {% if sector.performance > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                    {{ sector.performance }}%
+                  </span>
+                  <div class="w-16 bg-gray-200 rounded-full h-2">
+                    <div class="bg-{% if sector.performance > 0 %}green{% else %}red{% endif %}-600 h-2 rounded-full" 
+                         style="width: {{ (sector.performance|abs / 10 * 100)|min(100) }}%"></div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Risk Factors -->
+        <div class="bg-white shadow rounded-lg">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Key Risk Factors</h3>
+          </div>
+          <div class="p-6">
+            <div class="space-y-4">
+              {% for risk in analysis.risk_factors %}
+              <div class="border-l-4 border-{{ risk.severity }}-500 bg-{{ risk.severity }}-50 p-4 rounded-r-lg">
+                <div class="flex items-center">
+                  <span class="text-lg mr-2">{{ risk.icon }}</span>
+                  <h4 class="text-sm font-medium text-{{ risk.severity }}-800">{{ risk.factor }}</h4>
+                </div>
+                <p class="mt-1 text-sm text-{{ risk.severity }}-700">{{ risk.description }}</p>
+                <p class="mt-1 text-xs text-{{ risk.severity }}-600">Impact: {{ risk.impact }}</p>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Insights -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+            <span class="text-xl mr-2">🤖</span>
+            AI Market Insights
+          </h3>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for insight in analysis.ai_insights %}
+            <div class="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
+              <div class="flex items-start">
+                <span class="text-2xl mr-3">{{ insight.icon }}</span>
+                <div>
+                  <h4 class="font-semibold text-gray-900">{{ insight.title }}</h4>
+                  <p class="text-sm text-gray-700 mt-1">{{ insight.description }}</p>
+                  <span class="inline-block mt-2 text-xs font-medium px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                    Confidence: {{ insight.confidence }}%
+                  </span>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

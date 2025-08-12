@@ -1,0 +1,1078 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="min-h-screen bg-gray-50 w-full">
+  <div class="w-full px-4 py-4 lg:px-6">
+    <div class="w-full">
+      
+      <!-- Enhanced Header with User Info & Trading Status -->
+      <div class="bg-white shadow-lg rounded-xl mb-6 border border-gray-200">
+        <div class="px-6 py-5">
+          <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
+            <!-- User Profile Section -->
+            <div class="flex items-center space-x-4">
+              <div class="h-16 w-16 bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow-lg">
+                {{ current_user.username[0].upper() }}
+              </div>
+              <div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-1">Trading Dashboard</h1>
+                <p class="text-gray-600 text-sm">{{ current_user.email }}</p>
+                <div class="flex items-center space-x-3 mt-2">
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-{{ 'green' if current_user.subscription_tier != 'starter' else 'gray' }}-100 text-{{ 'green' if current_user.subscription_tier != 'starter' else 'gray' }}-800 border border-{{ 'green' if current_user.subscription_tier != 'starter' else 'gray' }}-200">
+                    💎 {{ current_user.subscription_tier.title() if current_user.subscription_tier else 'Starter' }}
+                  </span>
+                  {% if current_user.ai_enabled %}
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200">
+                    🤖 AI Enabled
+                  </span>
+                  {% endif %}
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+                    ⭐ {{ '{:.1f}'.format(current_user.trader_rating or 0) }} Rating
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Trading Mode Indicator -->
+            <div class="flex items-center space-x-4">
+              <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div class="flex items-center space-x-3">
+                  <div id="trading-mode-indicator" class="w-4 h-4 rounded-full bg-blue-500 shadow-lg"></div>
+                  <div>
+                    <p class="text-sm font-semibold text-gray-700" id="current-mode">Paper Trading</p>
+                    <p class="text-xs text-gray-500">Current Mode</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Quick Status -->
+              <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div class="text-center">
+                  <p class="text-sm font-semibold text-gray-700" id="quick-status">Dashboard Ready</p>
+                  <p class="text-xs text-gray-500" id="last-update">Last Updated: Now</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enhanced Real-Time Stats Dashboard -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">
+        <!-- Total Portfolio Value -->
+        <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-200 hover:shadow-xl transition-shadow duration-300">
+          <div class="p-6">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <span class="text-white text-lg">💰</span>
+                </div>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-semibold text-gray-500 truncate uppercase tracking-wide">Portfolio Value</dt>
+                  <dd class="text-2xl font-bold text-gray-900" id="portfolio-value">$0.00</dd>
+                  <dd class="text-sm font-medium" id="portfolio-change">
+                    <span class="text-green-600">+0.00 (0.00%)</span>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Today's P&L -->
+        <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-200 hover:shadow-xl transition-shadow duration-300">
+          <div class="p-6">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <span class="text-white text-lg">📊</span>
+                </div>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-semibold text-gray-500 truncate uppercase tracking-wide">Today's P&L</dt>
+                  <dd class="text-2xl font-bold text-gray-900" id="daily-pnl">$0.00</dd>
+                  <dd class="text-sm font-medium" id="daily-pnl-percent">
+                    <span class="text-green-600">+0.00%</span>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Trades -->
+        <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-200 hover:shadow-xl transition-shadow duration-300">
+          <div class="p-6">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <div class="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <span class="text-white text-lg">🔄</span>
+                </div>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-semibold text-gray-500 truncate uppercase tracking-wide">Active Trades</dt>
+                  <dd class="text-2xl font-bold text-gray-900" id="active-trades">0</dd>
+                  <dd class="text-sm font-medium text-gray-600" id="pending-orders">0 pending orders</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bot Status -->
+        <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-200 hover:shadow-xl transition-shadow duration-300">
+          <div class="p-6">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <span class="text-white text-lg">🤖</span>
+                </div>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-semibold text-gray-500 truncate uppercase tracking-wide">Bot Status</dt>
+                  <dd class="text-2xl font-bold text-gray-900" id="bot-status">Inactive</dd>
+                  <dd class="text-sm font-medium text-gray-600" id="bot-uptime">--</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enhanced Main Content Grid -->
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 lg:gap-6">
+        
+        <!-- Left Column: Trading Data & Controls (8 columns) -->
+        <div class="xl:col-span-8 space-y-6">
+          
+          <!-- Live vs Paper Trading Tabs -->
+          <div class="bg-white shadow rounded-lg">
+            <div class="border-b border-gray-200">
+              <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                <button class="tab-button active border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="live">
+                  🔴 Live Trading
+                </button>
+                <button class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="paper">
+                  📊 Paper Trading
+                </button>
+                <button class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="history">
+                  📈 Trade History
+                </button>
+              </nav>
+            </div>
+            
+            <!-- Live Trading Tab -->
+            <div id="live-tab" class="tab-content p-6">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 class="text-lg font-medium text-gray-900 mb-4">Live Portfolio</h4>
+                  <div class="space-y-3" id="live-holdings">
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      <div>
+                        <p class="font-medium">Loading...</p>
+                        <p class="text-sm text-gray-500">--</p>
+                      </div>
+                      <div class="text-right">
+                        <p class="font-medium">--</p>
+                        <p class="text-sm text-gray-500">--</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h4 class="text-lg font-medium text-gray-900 mb-4">Recent Live Trades</h4>
+                  <div class="space-y-3" id="live-trades">
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      <div>
+                        <p class="font-medium">No trades yet</p>
+                        <p class="text-sm text-gray-500">Start live trading to see results</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Paper Trading Tab -->
+            <div id="paper-tab" class="tab-content p-6 hidden">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 class="text-lg font-medium text-gray-900 mb-4">Paper Portfolio</h4>
+                  <div class="space-y-3" id="paper-holdings">
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      <div>
+                        <p class="font-medium">Loading...</p>
+                        <p class="text-sm text-gray-500">--</p>
+                      </div>
+                      <div class="text-right">
+                        <p class="font-medium">--</p>
+                        <p class="text-sm text-gray-500">--</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h4 class="text-lg font-medium text-gray-900 mb-4">Recent Paper Trades</h4>
+                  <div class="space-y-3" id="paper-trades">
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      <div>
+                        <p class="font-medium">No trades yet</p>
+                        <p class="text-sm text-gray-500">Start paper trading to see results</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Trade History Tab -->
+            <div id="history-tab" class="tab-content p-6 hidden">
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Symbol</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">P&L</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody id="trade-history" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                      <td colspan="6" class="px-6 py-4 text-center text-gray-500">No trade history available</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Performance Charts -->
+          <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-medium text-gray-900">Portfolio Performance</h3>
+              <select id="chart-timeframe" class="border border-gray-300 rounded px-3 py-1 text-sm">
+                <option value="1D">1 Day</option>
+                <option value="1W">1 Week</option>
+                <option value="1M" selected>1 Month</option>
+                <option value="3M">3 Months</option>
+                <option value="1Y">1 Year</option>
+              </select>
+            </div>
+            <div class="h-64 bg-gray-100 rounded flex items-center justify-center">
+              <p class="text-gray-500">Portfolio performance chart will be displayed here</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Right Column: AI Features & Controls (4 columns) -->
+        <div class="xl:col-span-4 space-y-6">
+          
+          <!-- Enhanced Bot Controls Panel -->
+          <div class="bg-white shadow-lg rounded-xl border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                  <span class="text-white text-lg">🤖</span>
+                </div>
+                <div>
+                  <h3 class="text-xl font-bold text-gray-900">Trading Bots</h3>
+                  <p class="text-sm text-gray-500">Manage automated trading systems</p>
+                </div>
+              </div>
+              <div class="flex items-center space-x-2">
+                <div id="overall-status" class="w-3 h-3 rounded-full bg-gray-400"></div>
+                <span class="text-sm font-medium text-gray-600" id="overall-status-text">All Inactive</span>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              
+              <!-- Stock Bot Card -->
+              <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                      <span class="text-white text-sm font-bold">📈</span>
+                    </div>
+                    <div>
+                      <h4 class="font-bold text-gray-900">Stock Trading Bot</h4>
+                      <p class="text-sm font-medium" id="stock-bot-status">Inactive • Ready to start</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <div id="stock-status-indicator" class="w-3 h-3 rounded-full bg-gray-400"></div>
+                  </div>
+                </div>
+                <div class="flex space-x-2">
+                  <button id="stock-bot-start" class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
+                    ▶️ Start Stock Bot
+                  </button>
+                  <button id="stock-bot-stop" class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors hidden">
+                    ⏸️ Stop Stock Bot
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Crypto Bot Card -->
+              <div class="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                      <span class="text-white text-sm font-bold">₿</span>
+                    </div>
+                    <div>
+                      <h4 class="font-bold text-gray-900">Crypto Trading Bot</h4>
+                      <p class="text-sm font-medium" id="crypto-bot-status">Inactive • Ready to start</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <div id="crypto-status-indicator" class="w-3 h-3 rounded-full bg-gray-400"></div>
+                  </div>
+                </div>
+                <div class="flex space-x-2">
+                  <button id="crypto-bot-start" class="flex-1 bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-orange-700 transition-colors">
+                    ▶️ Start Crypto Bot
+                  </button>
+                  <button id="crypto-bot-stop" class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors hidden">
+                    ⏸️ Stop Crypto Bot
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Emergency Stop Control -->
+              <div class="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg p-5">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
+                      <span class="text-white text-sm font-bold">🛑</span>
+                    </div>
+                    <div>
+                      <h4 class="font-bold text-gray-900">Emergency Stop</h4>
+                      <p class="text-sm text-gray-600">Immediately halt all trading bots</p>
+                    </div>
+                  </div>
+                </div>
+                <button id="stop-all-bots" class="w-full bg-red-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors">
+                  ⚠️ STOP ALL BOTS IMMEDIATELY
+                </button>
+              </div>
+              
+              <!-- Trading Mode Selection -->
+              <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-5">
+                <div class="flex items-center space-x-3 mb-4">
+                  <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                    <span class="text-white text-sm font-bold">⚙️</span>
+                  </div>
+                  <div>
+                    <h4 class="font-bold text-gray-900">Trading Mode</h4>
+                    <p class="text-sm text-gray-600">Switch between paper and live trading</p>
+                  </div>
+                </div>
+                
+                <!-- Mode Toggle Switch -->
+                <div class="flex items-center justify-center space-x-4 p-3 bg-white rounded-lg border border-blue-200">
+                  <span class="text-sm font-medium text-gray-700">Paper</span>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="trading-mode-toggle" class="sr-only peer">
+                    <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-red-500"></div>
+                  </label>
+                  <span class="text-sm font-medium text-gray-700">Live</span>
+                </div>
+                
+                <!-- Current Mode Display -->
+                <div class="mt-3 text-center">
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" id="current-trading-mode">
+                    <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                    Paper Trading Mode
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- AI Features (if enabled) -->
+          {% if current_user.ai_enabled %}
+          <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">🤖 AI Trading Assistant</h3>
+            
+            <!-- AI Signals Preview -->
+            <div class="mb-4">
+              <h4 class="font-medium text-gray-900 mb-2">Latest AI Signals</h4>
+              <div class="space-y-2" id="ai-signals-preview">
+                <div class="flex justify-between items-center p-2 bg-green-50 rounded">
+                  <span class="text-sm font-medium">Loading...</span>
+                  <span class="text-xs text-green-600">--</span>
+                </div>
+              </div>
+              <button onclick="loadAISignals()" class="mt-2 text-blue-600 text-sm hover:text-blue-800">View All Signals →</button>
+            </div>
+            
+            <!-- Quick AI Actions -->
+            <div class="space-y-2">
+              <button onclick="optimizePortfolio()" class="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 text-sm">
+                📊 Optimize Portfolio
+              </button>
+              <button onclick="getMarketAnalysis()" class="w-full bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 text-sm">
+                📈 Market Analysis
+              </button>
+            </div>
+          </div>
+          {% endif %}
+          
+          <!-- Quick Stats -->
+          <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Performance Stats</h3>
+            <div class="space-y-3">
+              <div class="flex justify-between">
+                <span class="text-sm text-gray-500">Win Rate</span>
+                <span class="text-sm font-medium" id="win-rate">{{ '{:.1f}'.format(current_user.win_rate or 0) }}%</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-sm text-gray-500">Sharpe Ratio</span>
+                <span class="text-sm font-medium" id="sharpe-ratio">{{ '{:.2f}'.format(current_user.sharpe_ratio or 0) }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-sm text-gray-500">Total Trades</span>
+                <span class="text-sm font-medium" id="total-trades">0</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-sm text-gray-500">Followers</span>
+                <span class="text-sm font-medium">{{ current_user.total_followers or 0 }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Recent Trades -->
+          <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Recent Trades</h3>
+            <div class="space-y-3" id="recent-trades">
+              <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <div>
+                  <p class="font-medium">Loading...</p>
+                  <p class="text-sm text-gray-500">--</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-medium">--</p>
+                  <p class="text-sm text-gray-500">--</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Market Overview -->
+          <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Market Overview</h3>
+            <div class="space-y-3" id="market-overview">
+              <div class="flex justify-between">
+                <span class="text-sm text-gray-500">S&P 500</span>
+                <span class="text-sm font-medium text-green-600">+0.5%</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-sm text-gray-500">NASDAQ</span>
+                <span class="text-sm font-medium text-green-600">+0.8%</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-sm text-gray-500">Bitcoin</span>
+                <span class="text-sm font-medium text-red-600">-1.2%</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-sm text-gray-500">VIX</span>
+                <span class="text-sm font-medium">18.5</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript for Real-time Updates -->
+<script>
+// CSRF Token helper function
+function getCSRFToken() {
+  const metaTag = document.querySelector('meta[name="csrf-token"]');
+  if (!metaTag) {
+    console.error('CSRF token meta tag not found');
+    return '';
+  }
+  const token = metaTag.getAttribute('content');
+  console.log('CSRF Token:', token ? 'Found' : 'Not found');
+  return token;
+}
+
+// Throttling mechanism to prevent excessive API calls
+let isUpdating = false;
+let lastUpdateTime = 0;
+const MIN_UPDATE_INTERVAL = 5000; // Minimum 5 seconds between updates
+
+// Real-time data update functions
+function updateDashboardData() {
+  // Throttle updates to prevent rate limiting
+  const now = Date.now();
+  if (isUpdating || (now - lastUpdateTime) < MIN_UPDATE_INTERVAL) {
+    console.log('Update throttled - too many requests');
+    return;
+  }
+  
+  isUpdating = true;
+  lastUpdateTime = now;
+  
+  // Update portfolio summary and bot status simultaneously
+  const portfolioPromise = fetch('/user/api/portfolio-summary')
+    .then(response => {
+      if (!response.ok) throw new Error('Portfolio API error');
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        const portfolioValue = document.getElementById('portfolio-value');
+        const dailyPnl = document.getElementById('daily-pnl');
+        const dailyPnlPercent = document.getElementById('daily-pnl-percent');
+        const activeTrades = document.getElementById('active-trades');
+        
+        if (portfolioValue) portfolioValue.textContent = `$${Number(data.total_value || 0).toLocaleString()}`;
+        if (dailyPnl) dailyPnl.textContent = `$${Number(data.daily_pnl || 0).toLocaleString()}`;
+        
+        if (dailyPnlPercent) {
+          const dailyPnlPercentValue = data.daily_pnl_percent || 0;
+          dailyPnlPercent.textContent = `${dailyPnlPercentValue >= 0 ? '+' : ''}${dailyPnlPercentValue.toFixed(2)}%`;
+          dailyPnlPercent.className = `text-xs ${dailyPnlPercentValue >= 0 ? 'text-green-600' : 'text-red-600'}`;
+        }
+        
+        if (activeTrades) activeTrades.textContent = data.positions_count || '0';
+      }
+    })
+    .catch(error => {
+      console.error('Portfolio summary error:', error);
+      showNotification('Failed to update portfolio data', 'error');
+    });
+
+  const botStatusPromise = fetch('/user/api/bot-status')
+    .then(response => {
+      if (!response.ok) throw new Error('Bot status API error');
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        const stockRunning = data.stock_bot?.is_running || false;
+        const cryptoRunning = data.crypto_bot?.is_running || false;
+        
+        const stockBotStatus = document.getElementById('stock-bot-status');
+        const cryptoBotStatus = document.getElementById('crypto-bot-status');
+        const botStatus = document.getElementById('bot-status');
+        
+        if (stockBotStatus) {
+          stockBotStatus.textContent = stockRunning ? 'Running' : 'Stopped';
+          stockBotStatus.className = `text-sm ${stockRunning ? 'text-green-600' : 'text-gray-500'}`;
+        }
+        
+        if (cryptoBotStatus) {
+          cryptoBotStatus.textContent = cryptoRunning ? 'Running' : 'Stopped';
+          cryptoBotStatus.className = `text-sm ${cryptoRunning ? 'text-green-600' : 'text-gray-500'}`;
+        }
+        
+        // Update button visibility and states
+        const stockBotStartBtn = document.getElementById('stock-bot-start');
+        const stockBotStopBtn = document.getElementById('stock-bot-stop');
+        const cryptoBotStartBtn = document.getElementById('crypto-bot-start');
+        const cryptoBotStopBtn = document.getElementById('crypto-bot-stop');
+        
+        if (stockBotStartBtn && stockBotStopBtn) {
+          stockBotStartBtn.style.display = stockRunning ? 'none' : 'inline-block';
+          stockBotStopBtn.style.display = stockRunning ? 'inline-block' : 'none';
+        }
+        
+        if (cryptoBotStartBtn && cryptoBotStopBtn) {
+          cryptoBotStartBtn.style.display = cryptoRunning ? 'none' : 'inline-block';
+          cryptoBotStopBtn.style.display = cryptoRunning ? 'inline-block' : 'none';
+        }
+        
+        // Update overall bot status
+        if (botStatus) {
+          const overallStatus = stockRunning || cryptoRunning ? 'Active' : 'Inactive';
+          botStatus.textContent = overallStatus;
+        }
+        
+        // Update daily P&L from bot data if available
+        const totalPnl = (data.stock_bot?.daily_pnl || 0) + (data.crypto_bot?.daily_pnl || 0);
+        if (totalPnl !== 0) {
+          const dailyPnl = document.getElementById('daily-pnl');
+          if (dailyPnl) dailyPnl.textContent = `$${Number(totalPnl).toLocaleString()}`;
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Bot status error:', error);
+      showNotification('Failed to update bot status', 'error');
+    });
+
+  // Wait for both promises to complete before resetting throttling
+  Promise.allSettled([portfolioPromise, botStatusPromise])
+    .finally(() => {
+      // Reset throttling flag
+      isUpdating = false;
+    });
+
+  // Portfolio tabs will be updated manually by user clicks to avoid rate limiting
+}
+
+// Function to update portfolio summary display
+function updatePortfolioSummary(data) {
+  // Update total value
+  if (data.total_value !== undefined) {
+    const totalValueElement = document.querySelector('.text-2xl.font-bold.text-gray-900');
+    if (totalValueElement) {
+      totalValueElement.textContent = `$${Number(data.total_value || 0).toLocaleString()}`;
+    }
+  }
+  
+  // Update daily P&L
+  if (data.daily_pnl !== undefined) {
+    const pnlElements = document.querySelectorAll('.text-sm');
+    pnlElements.forEach(element => {
+      if (element.textContent.includes('$') && element.textContent.includes('%')) {
+        const pnl = Number(data.daily_pnl || 0);
+        const pnlPercent = Number(data.daily_pnl_percent || 0);
+        element.textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toLocaleString()} (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)`;
+        element.className = `text-sm ${pnl >= 0 ? 'text-green-600' : 'text-red-600'}`;
+      }
+    });
+  }
+}
+
+
+// Bot control functions
+function startStockBot() {
+  fetch('/user/automation/start', { 
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCSRFToken(),
+    },
+    body: JSON.stringify({})
+  })
+    .then(response => {
+      if (!response.ok) throw new Error('Stock bot start API error');
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        showNotification('Stock bot started successfully', 'success');
+        // Update will happen automatically via throttled interval
+      } else {
+        showNotification(data.message || 'Failed to start stock bot', 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Start stock bot error:', error);
+      showNotification('Failed to start stock bot', 'error');
+    });
+}
+
+function startCryptoBot() {
+  fetch('/user/automation/start-crypto', { 
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCSRFToken(),
+    },
+    body: JSON.stringify({})
+  })
+    .then(response => {
+      if (!response.ok) throw new Error('Crypto bot start API error');
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        showNotification('Crypto bot started successfully', 'success');
+        // Update will happen automatically via throttled interval
+      } else {
+        showNotification(data.message || 'Failed to start crypto bot', 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Start crypto bot error:', error);
+      showNotification('Failed to start crypto bot', 'error');
+    });
+}
+
+function stopAllBots() {
+  // Stop stock bot
+  fetch('/user/automation/stop', { 
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCSRFToken(),
+      'Content-Type': 'application/json',
+    }
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        console.log('Stock bot stopped');
+      }
+    })
+    .catch(console.error);
+  
+  // Stop crypto bot
+  fetch('/user/automation/stop-crypto', { 
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCSRFToken(),
+      'Content-Type': 'application/json',
+    }
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        console.log('Crypto bot stopped');
+      }
+    })
+    .catch(console.error);
+  
+  showNotification('All bots stopped', 'info');
+  // Update will happen automatically via throttled interval
+}
+
+function updateTradingMode(mode) {
+  fetch('/user/preferences/api', {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRFToken': getCSRFToken()
+    },
+    body: JSON.stringify({ trading_mode: mode })
+  })
+  .then(response => {
+    if (!response.ok) throw new Error('Trading mode API error');
+    return response.json();
+  })
+  .then(data => {
+    if (data.success) {
+      showNotification(`Switched to ${mode} trading mode`, 'info');
+      // Update will happen automatically via throttled interval
+    } else {
+      showNotification(data.error || 'Failed to update trading mode', 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Trading mode error:', error);
+    showNotification('Failed to update trading mode', 'error');
+  });
+}
+
+// AI Functions
+function loadAISignals() {
+  {% if current_user.ai_enabled %}
+  fetch('/user/api/ai/signals')
+    .then(response => {
+      if (!response.ok) throw new Error('AI signals API error');
+      return response.json();
+    })
+    .then(data => {
+      const container = document.getElementById('ai-signals-preview');
+      if (data.success && data.signals && data.signals.length > 0) {
+        container.innerHTML = data.signals.slice(0, 3).map(signal => `
+          <div class="flex justify-between items-center p-2 bg-${signal.action === 'BUY' ? 'green' : signal.action === 'SELL' ? 'red' : 'yellow'}-50 rounded">
+            <span class="text-sm font-medium">${signal.symbol} - ${signal.action}</span>
+            <span class="text-xs" style="color: ${signal.action === 'BUY' ? '#16a34a' : signal.action === 'SELL' ? '#dc2626' : '#ca8a04'};">${signal.confidence}%</span>
+          </div>
+        `).join('');
+      } else {
+        container.innerHTML = '<p class="text-gray-500 text-center py-2">No AI signals available</p>';
+      }
+    })
+    .catch(error => {
+      console.error('AI signals error:', error);
+      const container = document.getElementById('ai-signals-preview');
+      if (container) {
+        container.innerHTML = '<p class="text-red-500 text-center py-2">Error loading AI signals</p>';
+      }
+    });
+  {% else %}
+  const container = document.getElementById('ai-signals-preview');
+  if (container) {
+    container.innerHTML = '<p class="text-gray-500 text-center py-2">AI features not enabled</p>';
+  }
+  {% endif %}
+}
+
+function optimizePortfolio() {
+  {% if current_user.ai_enabled %}
+  window.location.href = '{{ url_for("user.ai_portfolio_optimization") }}';
+  {% endif %}
+}
+
+function getMarketAnalysis() {
+  {% if current_user.ai_enabled %}
+  window.location.href = '{{ url_for("user.ai_market_analysis") }}';
+  {% endif %}
+}
+
+function showNotification(message, type) {
+  // Simple notification system
+  const notification = document.createElement('div');
+  notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${
+    type === 'success' ? 'bg-green-500' : 
+    type === 'error' ? 'bg-red-500' : 
+    'bg-blue-500'
+  }`;
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.remove();
+  }, 3000);
+}
+
+// Portfolio loading functions to avoid rate limiting
+function loadLivePortfolio() {
+  fetch('/user/api/portfolio?mode=live', {
+    headers: {
+      'X-CSRFToken': getCSRFToken()
+    }
+  })
+  .then(response => {
+    if (!response.ok) throw new Error('Live portfolio API error');
+    return response.json();
+  })
+  .then(data => {
+    const container = document.getElementById('live-holdings');
+    if (data.success && data.positions && data.positions.length > 0) {
+      container.innerHTML = data.positions.map(position => `
+        <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+          <div>
+            <p class="font-medium">${position.symbol}</p>
+            <p class="text-sm text-gray-500">${position.quantity} shares</p>
+          </div>
+          <div class="text-right">
+            <p class="font-medium">$${Number(position.current_value || 0).toLocaleString()}</p>
+            <p class="text-sm ${(position.pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'}">${(position.pnl || 0) >= 0 ? '+' : ''}$${Number(position.pnl || 0).toLocaleString()}</p>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      container.innerHTML = '<p class="text-gray-500 text-center py-4">No live holdings</p>';
+    }
+  })
+  .catch(error => {
+    console.error('Live portfolio error:', error);
+    document.getElementById('live-holdings').innerHTML = '<p class="text-red-500 text-center py-4">Error loading live holdings</p>';
+  });
+}
+
+function loadPaperPortfolio() {
+  fetch('/user/api/portfolio?mode=paper', {
+    headers: {
+      'X-CSRFToken': getCSRFToken()
+    }
+  })
+  .then(response => {
+    if (!response.ok) throw new Error('Paper portfolio API error');
+    return response.json();
+  })
+  .then(data => {
+    const container = document.getElementById('paper-holdings');
+    if (data.success && data.positions && data.positions.length > 0) {
+      container.innerHTML = data.positions.map(position => `
+        <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+          <div>
+            <p class="font-medium">${position.symbol}</p>
+            <p class="text-sm text-gray-500">${position.quantity} shares</p>
+          </div>
+          <div class="text-right">
+            <p class="font-medium">$${Number(position.current_value || 0).toLocaleString()}</p>
+            <p class="text-sm ${(position.pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'}">${(position.pnl || 0) >= 0 ? '+' : ''}$${Number(position.pnl || 0).toLocaleString()}</p>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      container.innerHTML = '<p class="text-gray-500 text-center py-4">No paper holdings</p>';
+    }
+  })
+  .catch(error => {
+    console.error('Paper portfolio error:', error);
+    document.getElementById('paper-holdings').innerHTML = '<p class="text-red-500 text-center py-4">Error loading paper holdings</p>';
+  });
+}
+
+function loadTradeHistory() {
+  // Placeholder for trade history loading
+  console.log('Loading trade history...');
+}
+
+function loadRecentActivity() {
+  fetch('/user/api/recent-activity', {
+    headers: {
+      'X-CSRFToken': getCSRFToken()
+    }
+  })
+  .then(response => {
+    if (!response.ok) throw new Error('Recent activity API error');
+    return response.json();
+  })
+  .then(data => {
+    const container = document.getElementById('recent-trades');
+    if (data.success && data.recent_trades && data.recent_trades.length > 0) {
+      container.innerHTML = data.recent_trades.slice(0, 5).map(trade => `
+        <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+          <div>
+            <p class="font-medium">${trade.symbol}</p>
+            <p class="text-sm text-gray-500">${trade.side.toUpperCase()} ${trade.quantity}</p>
+          </div>
+          <div class="text-right">
+            <p class="font-medium">$${Number(trade.price || 0).toFixed(2)}</p>
+            <p class="text-sm text-gray-500">${new Date(trade.timestamp).toLocaleTimeString()}</p>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      container.innerHTML = '<p class="text-gray-500 text-center py-4">No recent trades</p>';
+    }
+  })
+  .catch(error => {
+    console.error('Recent trades error:', error);
+    document.getElementById('recent-trades').innerHTML = '<p class="text-red-500 text-center py-4">Error loading recent trades</p>';
+  });
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', () => {
+  // Add tab switching event listeners
+  document.querySelectorAll('.tab-button').forEach(button => {
+    button.addEventListener('click', function() {
+      const tabName = this.getAttribute('data-tab');
+      
+      // Remove active class from all buttons and tabs
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active', 'border-blue-500', 'text-blue-600');
+        btn.classList.add('border-transparent', 'text-gray-500');
+      });
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.add('hidden');
+      });
+      
+      // Add active class to clicked button
+      this.classList.add('active', 'border-blue-500', 'text-blue-600');
+      this.classList.remove('border-transparent', 'text-gray-500');
+      
+      // Show corresponding tab
+      const targetTab = document.getElementById(tabName + '-tab');
+      if (targetTab) {
+        targetTab.classList.remove('hidden');
+        
+        // Load data for the selected tab to avoid rate limiting
+        if (tabName === 'live') {
+          loadLivePortfolio();
+        } else if (tabName === 'paper') {
+          loadPaperPortfolio();
+        } else if (tabName === 'history') {
+          loadTradeHistory();
+        }
+      }
+    });
+  });
+
+  // Initialize dashboard
+  updateDashboardData();
+  {% if current_user.ai_enabled %}
+  loadAISignals();
+  {% endif %}
+  
+  // Set up real-time updates (reduced frequency to avoid rate limiting)
+  const updateInterval = setInterval(updateDashboardData, 60000); // Update every 60 seconds
+  
+  // Load recent activity less frequently
+  setInterval(loadRecentActivity, 120000); // Update recent activity every 2 minutes
+  
+  // Load recent activity on initial load
+  setTimeout(loadRecentActivity, 2000);
+  
+  // Bot control buttons - with null checks
+  const stockBotStart = document.getElementById('stock-bot-start');
+  const cryptoBotStart = document.getElementById('crypto-bot-start');
+  const stockBotStop = document.getElementById('stock-bot-stop');
+  const cryptoBotStop = document.getElementById('crypto-bot-stop');
+  const stopAllBtn = document.getElementById('stop-all-bots');
+  const tradingModeSelect = document.getElementById('trading-mode');
+  
+  if (stockBotStart) stockBotStart.addEventListener('click', startStockBot);
+  if (cryptoBotStart) cryptoBotStart.addEventListener('click', startCryptoBot);
+  if (stopAllBtn) stopAllBtn.addEventListener('click', stopAllBots);
+  
+  if (stockBotStop) {
+    stockBotStop.addEventListener('click', () => {
+      fetch('/user/automation/stop', { 
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCSRFToken(),
+          'Content-Type': 'application/json',
+        }
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showNotification('Stock bot stopped', 'info');
+            // Update will happen automatically via throttled interval
+          }
+        })
+        .catch(error => {
+          console.error('Stop stock bot error:', error);
+          showNotification('Failed to stop stock bot', 'error');
+        });
+    });
+  }
+  
+  if (cryptoBotStop) {
+    cryptoBotStop.addEventListener('click', () => {
+      fetch('/user/automation/stop-crypto', { 
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCSRFToken(),
+          'Content-Type': 'application/json',
+        }
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showNotification('Crypto bot stopped', 'info');
+            // Update will happen automatically via throttled interval
+          }
+        })
+        .catch(error => {
+          console.error('Stop crypto bot error:', error);
+          showNotification('Failed to stop crypto bot', 'error');
+        });
+    });
+  }
+  
+  // Trading mode selector
+  if (tradingModeSelect) {
+    tradingModeSelect.addEventListener('change', (e) => {
+      updateTradingMode(e.target.value);
+    });
+  }
+  
+  // Trading mode radio buttons
+  document.querySelectorAll('input[name="mode"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      const mode = e.target.value;
+      updateTradingMode(mode);
+    });
+  });
+  
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    clearInterval(updateInterval);
+  });
+});
+</script>
+{% endblock %}

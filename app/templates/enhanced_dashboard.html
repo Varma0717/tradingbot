@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Enhanced Dashboard Header -->
+        <div class="col-12">
+            <div class="card bg-primary text-white mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h1 class="h3 mb-0">Trade Mantra Dashboard</h1>
+                            <p class="mb-0">{{ current_user.subscription_tier|title }} Tier</p>
+                        </div>
+                        <div class="col-auto">
+                            <div class="btn-group">
+                                <button class="btn btn-light" onclick="upgradeSubscription()">
+                                    <i class="fas fa-crown"></i> Upgrade
+                                </button>
+                                <button class="btn btn-outline-light" onclick="openMarketplace()">
+                                    <i class="fas fa-store"></i> Marketplace
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- AI Trading Signals -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-robot text-primary"></i> AI Trading Signals</h5>
+                    <span class="badge badge-success">Live</span>
+                </div>
+                <div class="card-body">
+                    <div id="ai-signals">Loading AI signals...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Social Trading Feed -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-users text-info"></i> Social Trading Feed</h5>
+                </div>
+                <div class="card-body">
+                    <div id="social-feed">Loading social feed...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Portfolio Analytics -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line text-success"></i> Portfolio Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div id="portfolio-chart">Loading portfolio analytics...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-tachometer-alt text-warning"></i> Quick Stats</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <h4 class="text-success">{{ "%.1f"|format(current_user.total_profit) }}%</h4>
+                            <small class="text-muted">Total Return</small>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <h4 class="text-info">{{ "%.1f"|format(current_user.win_rate) }}%</h4>
+                            <small class="text-muted">Win Rate</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-primary">{{ current_user.total_followers }}</h4>
+                            <small class="text-muted">Followers</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-warning">{{ "%.2f"|format(current_user.sharpe_ratio) }}</h4>
+                            <small class="text-muted">Sharpe Ratio</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load enhanced dashboard features
+document.addEventListener('DOMContentLoaded', function() {
+    loadAISignals();
+    loadSocialFeed();
+    loadPortfolioAnalytics();
+    
+    // Refresh every 30 seconds
+    setInterval(function() {
+        loadAISignals();
+        loadSocialFeed();
+    }, 30000);
+});
+
+function loadAISignals() {
+    fetch('/api/ai/signals')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayAISignals(data.signals);
+            }
+        })
+        .catch(error => console.error('Error loading AI signals:', error));
+}
+
+function loadSocialFeed() {
+    fetch('/api/social/feed?limit=5')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displaySocialFeed(data.feed);
+            }
+        })
+        .catch(error => console.error('Error loading social feed:', error));
+}
+
+function loadPortfolioAnalytics() {
+    fetch('/api/analytics/performance')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayPortfolioChart(data.analytics);
+            }
+        })
+        .catch(error => console.error('Error loading analytics:', error));
+}
+
+function upgradeSubscription() {
+    window.location.href = '/subscriptions';
+}
+
+function openMarketplace() {
+    window.location.href = '/marketplace';
+}
+</script>
+{% endblock %}

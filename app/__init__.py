@@ -9,6 +9,16 @@ from flask_limiter.util import get_remote_address
 from flask_mail import Mail
 from apscheduler.schedulers.background import BackgroundScheduler
 from .config import config
+
+# Enhanced Features Import
+from .utils.enhanced_subscription_manager import EnhancedSubscriptionManager
+
+from .strategies.ai_trading_engine import AITradingEngine
+from .marketplace.strategy_marketplace import StrategyMarketplace
+from .social.copy_trading_platform import SocialTradingPlatform
+from .compliance.risk_management import RiskManager
+from .analytics.reporting_engine import ReportGenerator
+
 from .utils.logger import setup_logging
 
 db = SQLAlchemy()
@@ -32,6 +42,15 @@ def create_app(config_name="default"):
 
     # Initialize extensions
     db.init_app(app)
+
+    # Initialize enhanced feature managers
+    app.subscription_manager = EnhancedSubscriptionManager()
+    app.ai_engine = AITradingEngine()
+    app.marketplace = StrategyMarketplace()
+    app.copy_trading = SocialTradingPlatform()
+    app.risk_manager = RiskManager()
+    app.reporting_engine = ReportGenerator()
+
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
@@ -41,6 +60,20 @@ def create_app(config_name="default"):
     # Setup logging
     setup_logging(app)
     app.logger.info("Trading Bot application starting up...")
+
+    # Add CSRF error handler
+    from flask_wtf.csrf import CSRFError
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        app.logger.warning(f"CSRF error: {e.description}")
+        from flask import flash, redirect, url_for, request
+
+        flash("Your session has expired. Please try again.", "warning")
+        # If it's a login attempt, redirect to login page
+        if request.endpoint == "auth.login":
+            return redirect(url_for("auth.login"))
+        return redirect(url_for("pages.index"))
 
     # Add security headers middleware
     from .utils.security import add_security_headers
@@ -73,6 +106,11 @@ def create_app(config_name="default"):
     from .payments.razorpay_webhook import webhook as webhook_blueprint
 
     app.register_blueprint(webhook_blueprint, url_prefix="/webhook")
+
+    # Register enhanced API blueprints
+    from .api import register_api_blueprints
+
+    register_api_blueprints(app)
 
     # Root route
     @app.route("/")

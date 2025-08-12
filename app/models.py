@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from passlib.hash import bcrypt
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from . import db, login_manager
 
@@ -9,7 +9,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, index=True, nullable=False)
     email = db.Column(db.String(120), unique=True, index=True, nullable=False)
-    password_hash = db.Column(db.String(128))
+    password_hash = db.Column(db.String(255))
     role = db.Column(db.String(20), default="user", nullable=False)  # 'user' or 'admin'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -24,10 +24,10 @@ class User(UserMixin, db.Model):
     audit_logs = db.relationship("AuditLog", backref="user", lazy="dynamic")
 
     def set_password(self, password):
-        self.password_hash = bcrypt.hash(password)
+        self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        return bcrypt.verify(password, self.password_hash)
+        return check_password_hash(self.password_hash, password)
 
     @property
     def is_admin(self):
@@ -40,6 +40,25 @@ class User(UserMixin, db.Model):
             and self.subscription.plan == "pro"
             and self.subscription.is_active
         )
+
+    # Enhanced subscription fields
+    subscription_tier = db.Column(db.String(20), default="starter")
+    subscription_expires = db.Column(db.DateTime)
+    subscription_auto_renew = db.Column(db.Boolean, default=True)
+
+    # AI trading preferences
+    ai_enabled = db.Column(db.Boolean, default=False)
+    risk_tolerance = db.Column(db.Float, default=0.5)
+
+    # Social trading fields
+    trader_rating = db.Column(db.Float, default=0.0)
+    total_followers = db.Column(db.Integer, default=0)
+    total_copiers = db.Column(db.Integer, default=0)
+
+    # Performance tracking
+    total_profit = db.Column(db.Float, default=0.0)
+    win_rate = db.Column(db.Float, default=0.0)
+    sharpe_ratio = db.Column(db.Float, default=0.0)
 
 
 @login_manager.user_loader

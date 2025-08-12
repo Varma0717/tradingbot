@@ -38,6 +38,7 @@ class PortfolioManager:
             "performance": self._get_performance_metrics(trading_mode),
             "recent_trades": self._get_recent_trades(trading_mode),
             "exchange_details": self._get_exchange_connections(trading_mode),
+            "allocations": self._get_allocations(trading_mode),
         }
 
         return portfolio_data
@@ -616,3 +617,64 @@ class PortfolioManager:
             return Order.query.filter_by(user_id=self.user_id, is_paper=False).count()
         except:
             return 0
+
+    def _get_allocations(self, trading_mode: str) -> Dict[str, Any]:
+        """Calculate portfolio allocations by asset type"""
+        try:
+            positions = self._get_all_positions(trading_mode)
+
+            stocks_value = 0
+            crypto_value = 0
+
+            for position in positions:
+                market_value = position.get("market_value", 0)
+                exchange = position.get("exchange", "")
+
+                # Categorize by exchange type
+                if exchange in [
+                    "zerodha",
+                    "upstox",
+                    "angelbroking",
+                    "iifl",
+                    "fyers",
+                    "aliceblue",
+                ]:
+                    stocks_value += market_value
+                elif exchange in ["binance", "binance_testnet"]:
+                    crypto_value += market_value
+                else:
+                    # Default categorization based on symbol patterns
+                    symbol = position.get("symbol", "")
+                    if any(
+                        crypto in symbol.upper()
+                        for crypto in ["BTC", "ETH", "USDT", "BNB"]
+                    ):
+                        crypto_value += market_value
+                    else:
+                        stocks_value += market_value
+
+            total_value = stocks_value + crypto_value
+
+            return {
+                "stocks": {
+                    "value": stocks_value,
+                    "percentage": (
+                        (stocks_value / total_value * 100) if total_value > 0 else 0
+                    ),
+                },
+                "crypto": {
+                    "value": crypto_value,
+                    "percentage": (
+                        (crypto_value / total_value * 100) if total_value > 0 else 0
+                    ),
+                },
+                "total_value": total_value,
+            }
+
+        except Exception as e:
+            current_app.logger.error(f"Error calculating allocations: {e}")
+            return {
+                "stocks": {"value": 0, "percentage": 0},
+                "crypto": {"value": 0, "percentage": 0},
+                "total_value": 0,
+            }

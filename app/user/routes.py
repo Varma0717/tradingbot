@@ -42,7 +42,7 @@ def before_request():
 
 @user.route("/dashboard")
 def dashboard():
-    """Enhanced dashboard with proper portfolio data."""
+    """Enhanced dashboard with proper portfolio data and user profile."""
     from ..utils.portfolio_manager import PortfolioManager
     from ..utils.subscription_enforcer import get_plan_summary
 
@@ -55,7 +55,7 @@ def dashboard():
         plan_summary = get_plan_summary(current_user.id)
 
         return render_template(
-            "user/dashboard.html",
+            "user/unified_dashboard.html",
             title="Dashboard",
             portfolio=portfolio_data,
             plan_summary=plan_summary,
@@ -403,57 +403,301 @@ def create_strategy():
         return redirect(url_for("user.strategies"))
 
 
-# API Endpoints
-@user.route("/api/dashboard/data")
-@limiter.limit("60/minute")  # Limit API calls for real-time updates
-def api_dashboard_data():
-    """API endpoint for real-time dashboard updates"""
+# API Endpoints for Real-time Updates
+@user.route("/api/bot-status")
+@login_required
+def api_bot_status():
+    """API endpoint for real-time bot status updates"""
     try:
-        # Get fresh data
-        last_trades = (
+        from ..automation.bot_manager import BotManager
+
+        # Get bot instances
+        stock_bot = BotManager.get_bot(current_user.id, bot_type="stock")
+        crypto_bot = BotManager.get_bot(current_user.id, bot_type="crypto")
+
+        # Get current statuses
+        stock_status = stock_bot.get_status() if stock_bot else {"is_running": False}
+        crypto_status = (
+            crypto_bot.get_trading_status() if crypto_bot else {"is_running": False}
+        )
+
+        # Format response
+        response = {
+            "success": True,
+            "timestamp": datetime.now().isoformat(),
+            "stock_bot": {
+                "is_running": stock_status.get("is_running", False),
+                "total_trades": stock_status.get("total_trades", 0),
+                "daily_pnl": round(stock_status.get("daily_pnl", 0), 2),
+                "win_rate": round(stock_status.get("win_rate", 0), 1),
+                "active_positions": len(stock_status.get("positions", {})),
+                "strategies_active": stock_status.get("strategies_active", 0),
+                "start_time": stock_status.get("start_time", ""),
+                "uptime": stock_status.get("uptime", "00:00:00"),
+            },
+            "crypto_bot": {
+                "is_running": crypto_status.get("is_running", False),
+                "total_trades": crypto_status.get("total_trades", 0),
+                "daily_pnl": round(crypto_status.get("daily_pnl", 0), 6),
+                "win_rate": round(crypto_status.get("win_rate", 0), 1),
+                "active_positions": len(crypto_status.get("active_strategies", {})),
+                "strategies_active": len(
+                    [
+                        s
+                        for s in crypto_status.get("active_strategies", {}).values()
+                        if s.get("running", False)
+                    ]
+                ),
+                "start_time": crypto_status.get("start_time", ""),
+                "uptime": crypto_status.get("uptime", "00:00:00"),
+            },
+        }
+
+        return jsonify(response)
+
+    except Exception as e:
+        logger.error(f"Error getting bot status: {e}")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": str(e),
+                    "stock_bot": {"is_running": False},
+                    "crypto_bot": {"is_running": False},
+                }
+            ),
+            500,
+        )
+
+
+@user.route("/api/portfolio-summary")
+@login_required
+def api_portfolio_summary():
+    """API endpoint for real-time portfolio summary"""
+    try:
+        from ..utils.portfolio_manager import PortfolioManager
+
+        portfolio_manager = PortfolioManager(current_user.id)
+        portfolio_data = portfolio_manager.get_comprehensive_portfolio()
+
+        # Format for API response
+        summary = {
+            "success": True,
+            "timestamp": datetime.now().isoformat(),
+            "total_value": portfolio_data["summary"].get("total_value", 0),
+            "daily_pnl": portfolio_data["performance"].get("daily_pnl", 0),
+            "daily_pnl_percent": portfolio_data["performance"].get(
+                "daily_pnl_percent", 0
+            ),
+            "total_pnl": portfolio_data["summary"].get("total_pnl", 0),
+            "unrealized_pnl": portfolio_data["summary"].get(
+                "total_pnl", 0
+            ),  # Use total_pnl as fallback
+            "realized_pnl": 0,  # Default to 0 since not calculated separately
+            "available_balance": portfolio_data["summary"].get("cash_balance", 0),
+            "trading_mode": portfolio_data["user_info"]["trading_mode"],
+            "positions_count": len(portfolio_data["positions"]),
+            "active_orders": portfolio_data["summary"].get("active_orders", 0),
+            "allocations": {
+                "stocks": portfolio_data.get("allocations", {})
+                .get("stocks", {})
+                .get("percentage", 0),
+                "crypto": portfolio_data.get("allocations", {})
+                .get("crypto", {})
+                .get("percentage", 0),
+            },
+        }
+
+        return jsonify(summary)
+
+    except Exception as e:
+        logger.error(f"Error getting portfolio summary: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@user.route("/api/recent-activity")
+@login_required
+def api_recent_activity():
+    """API endpoint for recent trading activity"""
+    try:
+        # Get recent trades and orders
+        recent_trades = (
             Trade.query.filter_by(user_id=current_user.id)
             .order_by(Trade.timestamp.desc())
-            .limit(5)
+            .limit(10)
             .all()
         )
 
-        # Calculate P&L
-        total_pnl = sum(
-            [
-                (trade.price * trade.quantity * (1 if trade.side == "sell" else -1))
-                for trade in Trade.query.filter_by(user_id=current_user.id).all()
-            ]
+        recent_orders = (
+            Order.query.filter_by(user_id=current_user.id)
+            .order_by(Order.created_at.desc())
+            .limit(10)
+            .all()
         )
 
-        pnl_data = {
-            "daily": total_pnl * 0.1,
-            "monthly": total_pnl * 0.3,
-            "total": total_pnl,
-        }
+        # Format trades
+        trades_data = []
+        for trade in recent_trades:
+            trades_data.append(
+                {
+                    "id": trade.id,
+                    "symbol": trade.symbol,
+                    "side": trade.side,
+                    "quantity": trade.quantity,
+                    "price": trade.price,
+                    "fees": trade.fees if trade.fees else 0,
+                    "timestamp": trade.timestamp.isoformat(),
+                    "exchange_type": trade.exchange_type,
+                }
+            )
 
-        # Mock positions (in real app, calculate from current holdings)
-        positions = [
-            {"symbol": "RELIANCE", "quantity": 10, "avg_price": 2450.00, "pnl": 150.00},
-            {"symbol": "TCS", "quantity": 20, "avg_price": 3300.00, "pnl": -400.00},
-        ]
-
-        recent_trades = [
-            {
-                "symbol": trade.symbol,
-                "side": trade.side,
-                "quantity": trade.quantity,
-                "price": trade.price,
-                "timestamp": trade.timestamp.isoformat(),
-            }
-            for trade in last_trades
-        ]
+        # Format orders
+        orders_data = []
+        for order in recent_orders:
+            orders_data.append(
+                {
+                    "id": order.id,
+                    "symbol": order.symbol,
+                    "side": order.side,
+                    "quantity": order.quantity,
+                    "price": order.price,
+                    "status": order.status,
+                    "is_paper": order.is_paper,
+                    "exchange_type": order.exchange_type,
+                    "created_at": (
+                        order.created_at.isoformat() if order.created_at else None
+                    ),
+                }
+            )
 
         return jsonify(
-            {"pnl": pnl_data, "positions": positions, "recent_trades": recent_trades}
+            {
+                "success": True,
+                "timestamp": datetime.now().isoformat(),
+                "recent_trades": trades_data,
+                "recent_orders": orders_data,
+            }
         )
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error getting recent activity: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@user.route("/api/market-overview")
+@login_required
+def api_market_overview():
+    """API endpoint for market overview data"""
+    try:
+        # Mock market data - in production this would come from real market feeds
+        market_data = {
+            "indices": {
+                "nifty50": {
+                    "value": 21735.60,
+                    "change": 145.30,
+                    "change_percent": 0.67,
+                    "status": "open",
+                },
+                "sensex": {
+                    "value": 72240.26,
+                    "change": 498.58,
+                    "change_percent": 0.69,
+                    "status": "open",
+                },
+                "bitcoin": {
+                    "value": 43875.50,
+                    "change": 1250.25,
+                    "change_percent": 2.93,
+                    "status": "24h",
+                },
+                "ethereum": {
+                    "value": 2650.80,
+                    "change": -45.20,
+                    "change_percent": -1.68,
+                    "status": "24h",
+                },
+            },
+            "news": [
+                {
+                    "title": "RBI keeps repo rate unchanged at 6.50%",
+                    "time": "2 hours ago",
+                    "sentiment": "neutral",
+                },
+                {
+                    "title": "Tech stocks rally on strong Q4 results",
+                    "time": "4 hours ago",
+                    "sentiment": "positive",
+                },
+                {
+                    "title": "Bitcoin surges past $43,000 mark",
+                    "time": "6 hours ago",
+                    "sentiment": "positive",
+                },
+            ],
+        }
+
+        return jsonify(
+            {
+                "success": True,
+                "timestamp": datetime.now().isoformat(),
+                "market_data": market_data,
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error getting market overview: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@user.route("/api/performance-chart")
+@login_required
+def api_performance_chart():
+    """API endpoint for performance chart data"""
+    try:
+        from ..utils.portfolio_manager import PortfolioManager
+
+        portfolio_manager = PortfolioManager(current_user.id)
+        portfolio_data = portfolio_manager.get_comprehensive_portfolio()
+
+        # Generate mock performance data - in production this would be calculated from historical trades
+        import random
+        from datetime import timedelta
+
+        chart_data = []
+        base_value = 100000  # Starting portfolio value
+        current_date = datetime.now() - timedelta(days=30)
+
+        for i in range(30):
+            # Simulate daily performance
+            daily_change = random.uniform(
+                -2, 3
+            )  # Random daily change between -2% and +3%
+            base_value *= 1 + daily_change / 100
+
+            chart_data.append(
+                {
+                    "date": (current_date + timedelta(days=i)).strftime("%Y-%m-%d"),
+                    "value": round(base_value, 2),
+                    "daily_pnl": round(base_value * daily_change / 100, 2),
+                    "daily_pnl_percent": round(daily_change, 2),
+                }
+            )
+
+        return jsonify(
+            {
+                "success": True,
+                "timestamp": datetime.now().isoformat(),
+                "chart_data": chart_data,
+                "current_value": portfolio_data["summary"]["total_value"],
+                "total_return": portfolio_data["performance"].get(
+                    "total_return_pct", 0
+                ),
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error getting performance chart: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @user.route("/analytics")
@@ -1908,3 +2152,163 @@ def update_user_preferences():
         db.session.rollback()
         logger.error(f"Error updating user preferences: {e}")
         return jsonify({"success": False, "error": "Failed to update preferences"}), 500
+
+
+# AI TRADING FEATURES
+@user.route("/ai-signals")
+@login_required
+def ai_signals():
+    """AI-powered trading signals dashboard."""
+    from ..strategies.ai_trading_engine import AITradingEngine
+
+    # Check if user has AI access
+    if not current_user.ai_enabled:
+        flash(
+            "AI features are only available for Pro and Institutional subscribers.",
+            "warning",
+        )
+        return redirect(url_for("user.dashboard"))
+
+    try:
+        ai_engine = AITradingEngine()
+
+        # Get AI signals for user's watchlist/portfolio
+        portfolio_symbols = [
+            "RELIANCE",
+            "TCS",
+            "INFY",
+            "HDFCBANK",
+            "ICICIBANK",
+        ]  # Example symbols
+
+        signals = []
+        for symbol in portfolio_symbols:
+            signal = ai_engine.generate_signal(symbol)
+            if signal:
+                signals.append(
+                    {
+                        "symbol": signal.symbol,
+                        "action": signal.action.value,
+                        "confidence": round(signal.confidence * 100, 1),
+                        "price_target": signal.price_target,
+                        "stop_loss": signal.stop_loss,
+                        "strategy": signal.strategy_type.value,
+                        "reasoning": signal.reasoning,
+                        "created_at": signal.created_at.strftime("%H:%M"),
+                    }
+                )
+
+        return render_template(
+            "user/ai_signals.html",
+            title="AI Trading Signals",
+            signals=signals,
+            user=current_user,
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading AI signals: {e}")
+        flash("Unable to load AI signals at this time.", "danger")
+        return redirect(url_for("user.dashboard"))
+
+
+@user.route("/ai-portfolio-optimization")
+@login_required
+def ai_portfolio_optimization():
+    """AI-powered portfolio optimization suggestions."""
+    from ..strategies.ai_trading_engine import AITradingEngine
+
+    # Check if user has AI access
+    if not current_user.ai_enabled:
+        flash(
+            "AI features are only available for Pro and Institutional subscribers.",
+            "warning",
+        )
+        return redirect(url_for("user.dashboard"))
+
+    try:
+        ai_engine = AITradingEngine()
+
+        # Get portfolio optimization suggestions
+        optimization = ai_engine.optimize_portfolio(current_user.id)
+
+        return render_template(
+            "user/ai_portfolio_optimization.html",
+            title="AI Portfolio Optimization",
+            optimization=optimization,
+            user=current_user,
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading portfolio optimization: {e}")
+        flash("Unable to load portfolio optimization at this time.", "danger")
+        return redirect(url_for("user.dashboard"))
+
+
+@user.route("/ai-market-analysis")
+@login_required
+def ai_market_analysis():
+    """AI-powered market analysis and insights."""
+    from ..strategies.ai_trading_engine import AITradingEngine
+
+    # Check if user has AI access
+    if not current_user.ai_enabled:
+        flash(
+            "AI features are only available for Pro and Institutional subscribers.",
+            "warning",
+        )
+        return redirect(url_for("user.dashboard"))
+
+    try:
+        ai_engine = AITradingEngine()
+
+        # Get market analysis
+        analysis = ai_engine.get_market_analysis()
+
+        return render_template(
+            "user/ai_market_analysis.html",
+            title="AI Market Analysis",
+            analysis=analysis,
+            user=current_user,
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading market analysis: {e}")
+        flash("Unable to load market analysis at this time.", "danger")
+        return redirect(url_for("user.dashboard"))
+
+
+@user.route("/api/ai/signals")
+@login_required
+def api_ai_signals():
+    """API endpoint for real-time AI signals."""
+    from ..strategies.ai_trading_engine import AITradingEngine
+
+    if not current_user.ai_enabled:
+        return jsonify({"error": "AI features not available"}), 403
+
+    try:
+        ai_engine = AITradingEngine()
+        symbols = request.args.getlist("symbols") or ["RELIANCE", "TCS", "INFY"]
+
+        signals = []
+        for symbol in symbols:
+            signal = ai_engine.generate_signal(symbol)
+            if signal:
+                signals.append(
+                    {
+                        "symbol": signal.symbol,
+                        "action": signal.action.value,
+                        "confidence": signal.confidence,
+                        "price_target": signal.price_target,
+                        "stop_loss": signal.stop_loss,
+                        "strategy": signal.strategy_type.value,
+                        "reasoning": signal.reasoning,
+                        "timestamp": signal.created_at.isoformat(),
+                    }
+                )
+
+        return jsonify({"signals": signals, "count": len(signals)})
+
+    except Exception as e:
+        logger.error(f"Error generating AI signals: {e}")
+        return jsonify({"error": "Failed to generate signals"}), 500
