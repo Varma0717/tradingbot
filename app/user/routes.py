@@ -1996,7 +1996,7 @@ def risk_management():
 @user.route("/market-research")
 def market_research():
     """Market research and analysis tools."""
-    return render_template("user/market_research.html")
+    return render_template("user/analytics.html")
 
 
 @user.route("/strategy-library")

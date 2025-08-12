@@ -482,7 +482,7 @@ def payments_overview():
     ]
 
     return render_template(
-        "admin/payments_overview.html",
+        "admin/subscription_management.html",
         title="Payments Overview",
         total_payments=total_payments,
         total_revenue=total_revenue,
