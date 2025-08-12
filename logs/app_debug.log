@@ -5358,3 +5358,5 @@ KeyboardInterrupt
 2025-08-12 22:30:30,939 INFO: Crypto strategy crypto_momentum executed successfully [in C:\xampp\htdocs\application\app\strategies\crypto_engine.py:87]
 2025-08-12 22:30:31,020 INFO: Crypto strategy crypto_mean_reversion executed successfully [in C:\xampp\htdocs\application\app\strategies\crypto_engine.py:87]
 2025-08-12 22:30:31,042 INFO: Crypto strategy crypto_breakout executed successfully [in C:\xampp\htdocs\application\app\strategies\crypto_engine.py:87]
+2025-08-12 22:34:34,134 INFO: Scheduler running for 0 active strategies. [in C:\xampp\htdocs\application\app\strategies\engine.py:128]
+2025-08-12 22:34:39,418 INFO: Scheduler running for 0 active strategies. [in C:\xampp\htdocs\application\app\strategies\engine.py:128]
