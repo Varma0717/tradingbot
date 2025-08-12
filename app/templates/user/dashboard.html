@@ -1,50 +1,57 @@
 {% extends 'layout.html' %}
-{% block content %}
-  <div class="py-6">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-      <div class="flex justify-between items-center mb-6">
-        <div class="flex items-center space-x-4">
-          <h1 class="text-3xl font-bold text-gray-900">Trading Overview</h1>
-          <span class="trading-mode-badge inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">📝 PAPER</span>
-        </div>
-        <div class="flex items-center space-x-4">
-          <!-- Main Trading Button -->
-          <a href="{{ url_for('user.automation_dashboard') }}" class="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-4 rounded-lg font-bold hover:from-green-600 hover:to-green-700 transform hover:scale-105 transition-all duration-200 shadow-lg text-lg">
-            <div class="flex items-center">
-              <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-              </svg>🚀 Go to Trading Dashboard
-            </div>
-          </a>
-        </div>
-      </div>
 
-      <!-- Trading Mode Alert -->
-      <div id="tradingModeAlert" class="paper-trading mb-6">
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center">
-              <svg class="w-5 h-5 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              <div>
-                <h4 class="text-sm font-semibold text-blue-800">Paper Trading Mode Active</h4>
-                <p class="text-sm text-blue-700">You're in practice mode. No real money will be used for trades.</p>
-              </div>
-            </div>
-            <div class="flex space-x-2">
-              <button id="generateDemoBtn" onclick="generateDemoPortfolio()" 
-                      class="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
-                Generate Demo Portfolio
-              </button>
-              <button id="resetDemoBtn" onclick="resetDemoPortfolio()" 
-                      class="px-3 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700 transition-colors">
-                Reset Demo
-              </button>
-            </div>
+{% block content %}
+<div class="py-6">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+    <!-- Header Section -->
+    <div class="flex justify-between items-center mb-6">
+      <div class="flex items-center space-x-4">
+        <h1 class="text-3xl font-bold text-gray-900">Trading Dashboard</h1>
+        <span id="trading-mode-badge" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+          📝 PAPER TRADING
+        </span>
+      </div>
+      <div class="flex items-center space-x-4">
+        <button id="refresh-dashboard" 
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          🔄 Refresh
+        </button>
+        <a href="{{ url_for('user.automation_dashboard') }}" 
+           class="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transform hover:scale-105 transition-all duration-200 shadow-lg">
+          <div class="flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            🚀 Go to Trading Dashboard
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Trading Mode Alert -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center">
+          <svg class="w-5 h-5 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <div>
+            <h4 class="text-sm font-semibold text-blue-800">Paper Trading Mode Active</h4>
+            <p class="text-sm text-blue-700">You're in practice mode. No real money will be used for trades.</p>
           </div>
         </div>
+        <div class="flex space-x-2">
+          <button id="generateDemoBtn" 
+                  class="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
+            Generate Demo Portfolio
+          </button>
+          <button id="resetDemoBtn" 
+                  class="px-3 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700 transition-colors">
+            Reset Demo
+          </button>
+        </div>
       </div>
+    </div>
 
       <!-- Info Banner -->
       <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
@@ -744,20 +751,53 @@
   
   <!-- Initialize Dashboard -->
   <script>
-    // Initialize dashboard with demo data display
+    // Initialize dashboard with proper error handling
     document.addEventListener('DOMContentLoaded', function() {
-      // Show loading initially
-      const loadingElements = document.querySelectorAll('.loading');
-      loadingElements.forEach(el => {
-        el.style.display = 'block';
-      });
+      console.log('🚀 Dashboard page loaded, initializing...');
       
-      // Load dashboard data immediately
-      setTimeout(() => {
-        if (window.enhancedDashboard) {
-          window.enhancedDashboard.generateDemoData();
+      // Initialize Enhanced Dashboard
+      if (window.EnhancedDashboard) {
+        window.enhancedDashboard = new EnhancedDashboard();
+        console.log('✅ Enhanced Dashboard initialized');
+      } else {
+        console.warn('⚠️ Enhanced Dashboard class not found, loading fallback data');
+        setTimeout(() => {
+          loadFallbackData();
+        }, 1000);
+      }
+      
+      // Auto-refresh every 30 seconds
+      setInterval(() => {
+        if (window.enhancedDashboard && window.enhancedDashboard.updateDashboard) {
+          window.enhancedDashboard.updateDashboard();
         }
-      }, 1000);
+      }, 30000);
     });
+    
+    function loadFallbackData() {
+      console.log('📊 Loading fallback demo data...');
+      
+      // Portfolio metrics
+      const portfolioValue = document.getElementById('portfolio-value');
+      const totalPnl = document.getElementById('total-pnl');
+      const dailyPnl = document.getElementById('daily-pnl');
+      const dailyPnlPercent = document.getElementById('daily-pnl-percent');
+      const activeTrades = document.getElementById('active-trades');
+      
+      if (portfolioValue) portfolioValue.textContent = '$52,450.75';
+      if (totalPnl) totalPnl.textContent = '$2,450.75 (+4.89%)';
+      if (dailyPnl) dailyPnl.textContent = '$485.20';
+      if (dailyPnlPercent) dailyPnlPercent.textContent = '+0.93%';
+      if (activeTrades) activeTrades.textContent = '6';
+      
+      // Portfolio details
+      const cashElement = document.getElementById('cash-available');
+      const investedElement = document.getElementById('total-invested');
+      
+      if (cashElement) cashElement.textContent = '$15,280.00';
+      if (investedElement) investedElement.textContent = '$37,170.75';
+      
+      showNotification('📊 Demo data loaded successfully!', 'success');
+    }
   </script>
 {% endblock %}
