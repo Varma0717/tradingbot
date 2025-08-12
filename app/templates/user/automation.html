@@ -1026,15 +1026,41 @@
         }
       });
       
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const result = await response.json();
       
       if (result.success) {
         updateTradingSessions(result.data);
+        
+        // Update UI indicators based on active sessions
+        const hasCryptoSessions = result.data.crypto_sessions && result.data.crypto_sessions.length > 0;
+        const hasStockSessions = result.data.stock_sessions && result.data.stock_sessions.length > 0;
+        
+        // Update crypto status indicator
+        const cryptoStatusIndicator = document.querySelector('#cryptoStatus');
+        if (cryptoStatusIndicator) {
+          cryptoStatusIndicator.textContent = hasCryptoSessions ? 'Running' : 'Stopped';
+          cryptoStatusIndicator.className = hasCryptoSessions ? 'text-green-600' : 'text-red-600';
+        }
+        
+        // Update stock status indicator
+        const stockStatusIndicator = document.querySelector('#stockStatus');
+        if (stockStatusIndicator) {
+          stockStatusIndicator.textContent = hasStockSessions ? 'Running' : 'Stopped';
+          stockStatusIndicator.className = hasStockSessions ? 'text-green-600' : 'text-red-600';
+        }
+        
+        console.log(`Sessions refreshed: ${result.data.crypto_sessions.length} crypto, ${result.data.stock_sessions.length} stock`);
       } else {
         console.error('Failed to refresh trading sessions:', result.message);
+        // Show error in UI if needed
       }
     } catch (error) {
       console.error('Error refreshing trading sessions:', error);
+      // Don't show error to user for network issues, just log it
     }
   }
 
@@ -1124,8 +1150,18 @@
     }
   }
 
-  // Auto-refresh trading sessions every 10 seconds
-  setInterval(refreshTradingSessions, 10000);
+  // Auto-refresh trading sessions every 5 seconds for better responsiveness
+  let sessionRefreshInterval;
+  
+  function startSessionRefresh() {
+    // Clear any existing interval
+    if (sessionRefreshInterval) {
+      clearInterval(sessionRefreshInterval);
+    }
+    
+    // Start new interval with shorter duration
+    sessionRefreshInterval = setInterval(refreshTradingSessions, 5000);
+  }
 
   // Initialize status updates if bot is running
   document.addEventListener('DOMContentLoaded', function() {
@@ -1133,8 +1169,18 @@
       startStatusUpdates();
     {% endif %}
     
-    // Refresh sessions on page load
-    setTimeout(refreshTradingSessions, 1000);
+    // Refresh sessions immediately on page load, then start regular refresh
+    refreshTradingSessions().then(() => {
+      startSessionRefresh();
+    });
+  });
+  
+  // Also refresh when page becomes visible again (user returns from other tab/page)
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+      // Page became visible, refresh sessions immediately
+      refreshTradingSessions();
+    }
   });
   </script>
 {% endblock %}

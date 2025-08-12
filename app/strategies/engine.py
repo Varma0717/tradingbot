@@ -1,4 +1,5 @@
 from flask import current_app
+from .. import db
 from ..models import Strategy, User
 from .top_strategies import STRATEGY_MAP
 from ..orders.manager import place_order
@@ -6,6 +7,7 @@ from ..exchange_adapter.kite_adapter import exchange_adapter
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+from sqlalchemy.orm import joinedload
 
 
 def get_mock_market_data(symbols):
@@ -50,12 +52,19 @@ def run_strategy(strategy_id):
     if not strategy_model or not strategy_model.is_active:
         return
 
-    user = User.query.get(strategy_model.user_id)
+    # Eagerly load user with subscription to avoid lazy loading issues
+    user = User.query.options(joinedload(User.subscription)).get(strategy_model.user_id)
 
     # Check if user subscription is active
-    if not user.subscription or not user.subscription.is_active:
+    try:
+        if not user.subscription or not user.subscription.is_active:
+            current_app.logger.warning(
+                f"Strategy {strategy_id} for user {user.id} skipped due to inactive subscription."
+            )
+            return
+    except Exception as e:
         current_app.logger.warning(
-            f"Strategy {strategy_id} for user {user.id} skipped due to inactive subscription."
+            f"Could not check subscription for user {user.id}: {e}. Skipping strategy {strategy_id}."
         )
         return
 

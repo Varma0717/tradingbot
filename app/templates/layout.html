@@ -184,7 +184,9 @@
         
         
         
+        
         flex
+
 
 
 
@@ -202,7 +204,9 @@
         
         
         
+        
         flex
+
 
 
 
@@ -264,9 +268,7 @@
             <div class="p-4 bg-gray-800 border-b border-gray-700">
               <div class="flex items-center justify-between mb-2">
                 <span class="text-sm font-medium text-gray-300">Trading Mode</span>
-                <div id="tradingModeStatus" class="px-2 py-1 rounded text-xs font-medium">
-                  <!-- Will be populated by JavaScript -->
-                </div>
+                <div id="tradingModeStatus" class="px-2 py-1 rounded text-xs font-medium"></div>
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-xs text-gray-400">Paper</span>
@@ -276,8 +278,15 @@
                 </label>
                 <span class="text-xs text-gray-400">Live</span>
               </div>
-              <div class="mt-2 text-xs text-gray-500" id="tradingModeDescription">
-                <!-- Will be populated by JavaScript -->
+              <p id="tradingModeDescription" class="text-xs text-gray-400 mt-1"></p>
+              <!-- Global Market Selector -->
+              <div class="mt-4">
+                <label for="marketTypeSelector" class="block text-xs font-medium text-gray-300 mb-1">Market</label>
+                <select id="marketTypeSelector" onchange="changeMarketType()" class="w-full bg-gray-700 border border-gray-600 text-gray-200 text-xs rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <option value="stocks">Stocks (India)</option>
+                  <option value="crypto">Cryptocurrency</option>
+                </select>
+                <p id="marketTypeDescription" class="text-[10px] text-gray-500 mt-1">Switch between Indian stock market & crypto</p>
               </div>
             </div>
 
@@ -531,7 +540,9 @@
           
           
           
+          
           md:ml-64
+
 
 
 
@@ -557,7 +568,9 @@
           
           
           
+          
           flex-1 flex flex-col
+
 
 
 
@@ -586,7 +599,9 @@
               
               
               
+              
               bg-white shadow-sm
+
 
 
 
@@ -612,7 +627,9 @@
               
               
               
+              
               fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm shadow-sm z-40
+
 
 
 
@@ -670,7 +687,9 @@
                     
                     
                     
+                    
                     bg-red-50 text-red-800 border-red-500
+
 
 
 
@@ -696,7 +715,9 @@
                     
                     
                     
+                    
                     bg-green-50 text-green-800 border-green-500
+
 
 
 
@@ -722,7 +743,9 @@
                     
                     
                     
+                    
                     bg-blue-50 text-blue-800 border-blue-500
+
 
 
 
@@ -940,19 +963,19 @@
         const modal = document.createElement('div')
         modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
         modal.innerHTML = `
-                                        <div class="bg-white rounded-lg p-8 max-w-md mx-4 text-center transform transition-all duration-300 scale-95">
-                                          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                            </svg>
-                                          </div>
-                                          <h3 class="text-xl font-bold text-gray-900 mb-2">${feature} Coming Soon!</h3>
-                                          <p class="text-gray-600 mb-6">This feature is currently under development and will be available in a future update. Stay tuned for more exciting features from TradeMantra!</p>
-                                          <button onclick="this.closest('.fixed').remove()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                                            Got it
-                                          </button>
-                                        </div>
-                                      `
+                                              <div class="bg-white rounded-lg p-8 max-w-md mx-4 text-center transform transition-all duration-300 scale-95">
+                                                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                  <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                  </svg>
+                                                </div>
+                                                <h3 class="text-xl font-bold text-gray-900 mb-2">${feature} Coming Soon!</h3>
+                                                <p class="text-gray-600 mb-6">This feature is currently under development and will be available in a future update. Stay tuned for more exciting features from TradeMantra!</p>
+                                                <button onclick="this.closest('.fixed').remove()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                                  Got it
+                                                </button>
+                                              </div>
+                                            `
       
         document.body.appendChild(modal)
       
@@ -972,19 +995,26 @@
       
       // Trading Mode Toggle Functions
       let currentTradingMode = 'paper' // Default mode
+      let currentMarketType = 'stocks' // Default market
       
-      function initializeTradingMode() {
-        // Get current trading mode from user preferences
-        fetch('/user/preferences/api')
-          .then((response) => response.json())
+      function loadUserPreferences() {
+        return fetch('/user/preferences/api')
+          .then((r) => r.json())
           .then((data) => {
-            currentTradingMode = data.trading_mode || 'paper'
-            updateTradingModeUI()
+            if (data.success) {
+              currentTradingMode = data.trading_mode || currentTradingMode
+              currentMarketType = data.default_exchange_type || currentMarketType
+            }
           })
-          .catch((error) => {
-            console.error('Error fetching user preferences:', error)
-            updateTradingModeUI() // Use default
-          })
+          .catch((err) => console.error('Error loading user prefs:', err))
+      }
+      
+      function initializeUserContext() {
+        loadUserPreferences().then(() => {
+          updateTradingModeUI()
+          updateMarketUI()
+          dispatchUserContextChanged()
+        })
       }
       
       function updateTradingModeUI() {
@@ -1008,6 +1038,34 @@
           // Update all trading UI elements
           updateTradingUI()
         }
+      }
+      
+      function updateMarketUI() {
+        const selector = document.getElementById('marketTypeSelector')
+        const desc = document.getElementById('marketTypeDescription')
+        if (selector) {
+          selector.value = currentMarketType
+          if (currentMarketType === 'crypto') {
+            desc.textContent = 'Viewing cryptocurrency data'
+          } else {
+            desc.textContent = 'Viewing Indian stock market data'
+          }
+        }
+        // Show/hide market-specific sections
+        document.querySelectorAll('[data-market-section]').forEach((el) => {
+          if (el.getAttribute('data-market-section') === currentMarketType) {
+            el.classList.remove('hidden')
+          } else {
+            el.classList.add('hidden')
+          }
+        })
+      }
+      
+      function changeMarketType() {
+        const selector = document.getElementById('marketTypeSelector')
+        const newType = selector.value
+        if (newType === currentMarketType) return
+        saveUserPreferences({ default_exchange_type: newType })
       }
       
       function toggleTradingMode() {
@@ -1082,22 +1140,41 @@
         })
       }
       
-      function showNotification(message, type = 'success') {
-        const notification = document.createElement('div')
-        notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white font-medium fade-in ${type === 'error' ? 'bg-red-500' : 'bg-green-500'}`
-        notification.textContent = message
+      function saveUserPreferences(payload) {
+        fetch('/user/preferences/api', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify(payload)
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (!data.success) throw new Error(data.error || 'Failed to save preferences')
+            if (payload.trading_mode) currentTradingMode = payload.trading_mode
+            if (payload.default_exchange_type) currentMarketType = payload.default_exchange_type
+            updateTradingModeUI()
+            updateMarketUI()
+            dispatchUserContextChanged()
+            showNotification('Preferences updated', 'success')
+          })
+          .catch((err) => {
+            console.error('Pref save failed:', err)
+            showNotification('Failed to update preferences', 'error')
+            updateTradingModeUI()
+            updateMarketUI()
+          })
+      }
       
-        document.body.appendChild(notification)
-      
-        setTimeout(() => {
-          notification.remove()
-        }, 5000)
+      function dispatchUserContextChanged() {
+        window.dispatchEvent(new CustomEvent('userContextChanged', { detail: { mode: currentTradingMode, market: currentMarketType } }))
       }
       
       // Initialize trading mode when page loads
       document.addEventListener('DOMContentLoaded', function () {
         if (document.getElementById('tradingModeToggle')) {
-          initializeTradingMode()
+          initializeUserContext()
         }
       })
     </script>

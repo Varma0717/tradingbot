@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Bot Status Test</title>
+    <script>
+      async function testAPI() {
+        try {
+          // Test sessions API
+          const sessionsResponse = await fetch('/user/automation/sessions')
+          const sessionsData = await sessionsResponse.json()
+      
+          console.log('Sessions API Response:', sessionsData)
+      
+          document.getElementById('sessions-result').innerHTML = `
+                          <h3>Sessions API</h3>
+                          <p>Success: ${sessionsData.success}</p>
+                          <p>Stock sessions: ${sessionsData.data?.stock_sessions?.length || 0}</p>
+                          <p>Crypto sessions: ${sessionsData.data?.crypto_sessions?.length || 0}</p>
+                          <pre>${JSON.stringify(sessionsData, null, 2)}</pre>
+                      `
+      
+          // Test crypto status API
+          const cryptoResponse = await fetch('/user/crypto/status')
+          const cryptoData = await cryptoResponse.json()
+      
+          console.log('Crypto Status API Response:', cryptoData)
+      
+          document.getElementById('crypto-result').innerHTML = `
+                          <h3>Crypto Status API</h3>
+                          <p>Success: ${cryptoData.success}</p>
+                          <p>Bot running: ${cryptoData.status?.is_running}</p>
+                          <p>Active strategies: ${Object.keys(cryptoData.status?.active_strategies || {}).length}</p>
+                          <pre>${JSON.stringify(cryptoData, null, 2)}</pre>
+                      `
+        } catch (error) {
+          console.error('API Test Error:', error)
+          document.getElementById('error-result').innerHTML = `<p>Error: ${error.message}</p>`
+        }
+      }
+      
+      function startCrypto() {
+        fetch('/user/automation/start-crypto', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            strategies: ['crypto_momentum', 'crypto_mean_reversion', 'crypto_breakout'],
+            is_paper: true
+          })
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            console.log('Start Crypto Response:', data)
+            alert('Crypto bot started: ' + data.message)
+            testAPI() // Refresh data
+          })
+          .catch((error) => {
+            console.error('Start Crypto Error:', error)
+            alert('Error starting crypto bot: ' + error.message)
+          })
+      }
+    </script>
+  </head>
+  <body>
+    <h1>Trading Bot API Test</h1>
+
+    <button onclick="testAPI()">Test API Endpoints</button>
+    <button onclick="startCrypto()">Start Crypto Trading</button>
+
+    <div id="error-result"></div>
+    <div id="sessions-result"></div>
+    <div id="crypto-result"></div>
+
+    <script>
+      // Auto-test on page load
+      testAPI()
+      
+      // Auto-refresh every 5 seconds
+      setInterval(testAPI, 5000)
+    </script>
+  </body>
+</html>

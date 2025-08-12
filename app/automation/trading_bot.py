@@ -15,6 +15,7 @@ from ..exchange_adapter.kite_adapter import exchange_adapter
 from ..orders.manager import place_order
 from .. import db
 import asyncio
+from sqlalchemy.orm import joinedload
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,8 @@ class IndianStockTradingBot:
 
     def __init__(self, user_id: int):
         self.user_id = user_id
-        self.user = User.query.get(user_id)
+        # Eagerly load user with subscription to avoid lazy loading issues
+        self.user = User.query.options(joinedload(User.subscription)).get(user_id)
         self.is_running = False
         self.thread = None
         self.strategies = []
@@ -94,12 +96,18 @@ class IndianStockTradingBot:
             # Initialize comprehensive strategies
             self._initialize_comprehensive_strategies()
 
+            # Sync trade count from database to ensure consistency
+            self._sync_trade_count_from_db()
+
             # Update bot status in database
             self._update_bot_status(is_running=True, started_at=datetime.now())
 
             # Start the trading thread
             self.is_running = True
-            self.thread = threading.Thread(target=self._trading_loop, daemon=True)
+            app = current_app._get_current_object()
+            self.thread = threading.Thread(
+                target=self._trading_loop, args=(app,), daemon=True
+            )
             self.thread.start()
 
             logger.info(f"Automated trading started for user {self.user_id}")
@@ -167,15 +175,11 @@ class IndianStockTradingBot:
             f"Initialized comprehensive strategy engine with {len(self.indian_stocks)} symbols"
         )
 
-    def _trading_loop(self):
+    def _trading_loop(self, app):
         """Main trading loop that runs continuously."""
-        from flask import current_app
-
         logger.info("Starting automated trading loop")
 
-        # Get the Flask app context for database operations
-        app = current_app._get_current_object()
-
+        # Use the provided app context for database operations
         with app.app_context():
             while self.is_running:
                 try:
@@ -198,8 +202,8 @@ class IndianStockTradingBot:
                     # Risk management check
                     self._risk_management_check()
 
-                    # Update heartbeat to show bot is alive
-                    self._update_bot_status()
+                    # Update heartbeat to show bot is alive (maintain current running status)
+                    self._update_bot_status(is_running=self.is_running)
 
                     # Sleep for 2 minutes before next iteration
                     time.sleep(120)
@@ -270,12 +274,16 @@ class IndianStockTradingBot:
                 "order_type": "market",
                 "side": signal["action"].lower(),
                 "price": signal.get("price"),
-                "is_paper": not self.user.has_pro_plan,
+                "is_paper": not self._get_user_pro_status(),
             }
 
             # Place the order using existing order manager
             with current_app.app_context():
-                order = place_order(self.user, order_data)
+                # Get fresh user object to avoid session issues
+                fresh_user = User.query.options(joinedload(User.subscription)).get(
+                    self.user_id
+                )
+                order = place_order(fresh_user, order_data)
 
                 if order and order.status == "filled":
                     self.total_trades += 1
@@ -455,8 +463,8 @@ class IndianStockTradingBot:
             if self.total_trades > 0:
                 win_rate = (self.winning_trades / self.total_trades) * 100
                 logger.info(
-                    f"Portfolio Update - Realized P&L: ₹{self.daily_pnl:.2f}, "
-                    f"Unrealized P&L: ₹{unrealized_pnl:.2f}, "
+                    f"Portfolio Update - Realized P&L: Rs.{self.daily_pnl:.2f}, "
+                    f"Unrealized P&L: Rs.{unrealized_pnl:.2f}, "
                     f"Win Rate: {win_rate:.1f}%"
                 )
 
@@ -514,7 +522,7 @@ class IndianStockTradingBot:
             # Execute the sell order
             self._execute_signal(signal, {"name": "Risk_Management"})
 
-            logger.info(f"Position closed: {symbol} at ₹{price:.2f} - {reason}")
+            logger.info(f"Position closed: {symbol} at Rs.{price:.2f} - {reason}")
 
         except Exception as e:
             logger.error(f"Error closing position {symbol}: {e}")
@@ -538,7 +546,9 @@ class IndianStockTradingBot:
         try:
             from ..models import TradingBotStatus
 
-            bot_status = TradingBotStatus.query.filter_by(user_id=self.user_id).first()
+            bot_status = TradingBotStatus.query.filter_by(
+                user_id=self.user_id, bot_type="stock"
+            ).first()
 
             # If we have database status and it shows bot is running but local state says not,
             # sync the states
@@ -549,13 +559,14 @@ class IndianStockTradingBot:
                 # Database says bot is running but local state doesn't
                 # This can happen after page navigation - restore the running state
                 self.is_running = True
-                self.total_trades = bot_status.total_trades or 0
+                self._sync_trade_count_from_db()  # Sync actual trade count from database
                 self.daily_pnl = bot_status.daily_pnl or 0.0
 
                 # Restart the trading loop if it's not running
                 if not self.thread or not self.thread.is_alive():
+                    app = current_app._get_current_object()
                     self.thread = threading.Thread(
-                        target=self._trading_loop, daemon=True
+                        target=self._trading_loop, args=(app,), daemon=True
                     )
                     self.thread.start()
                     logger.info(f"Restarted trading loop for user {self.user_id}")
@@ -579,7 +590,27 @@ class IndianStockTradingBot:
             "last_signal_time": (
                 self.last_signal_time.isoformat() if self.last_signal_time else None
             ),
+            "positions": self._get_positions_details(),
         }
+
+    def _get_positions_details(self):
+        """Return details of all current open positions for live session display."""
+        positions = {}
+        for symbol, pos in self.current_positions.items():
+            # Get current market price
+            current_data = self._get_market_data(symbol)
+            current_price = current_data.get("current_price", pos.get("entry_price", 0))
+            positions[symbol] = {
+                "symbol": symbol,
+                "quantity": pos.get("quantity", 0),
+                "avg_price": pos.get("entry_price", 0),
+                "current_price": current_price,
+                "unrealized_pnl": (current_price - pos.get("entry_price", 0))
+                * pos.get("quantity", 0),
+                "strategy": pos.get("strategy", "Unknown"),
+                "entry_time": pos.get("entry_time", None),
+            }
+        return positions
 
     def _update_bot_status(self, is_running=None, started_at=None, stopped_at=None):
         """Update bot status in database for persistence."""
@@ -587,9 +618,11 @@ class IndianStockTradingBot:
             from ..models import TradingBotStatus
 
             # Get or create bot status record
-            bot_status = TradingBotStatus.query.filter_by(user_id=self.user_id).first()
+            bot_status = TradingBotStatus.query.filter_by(
+                user_id=self.user_id, bot_type="stock"
+            ).first()
             if not bot_status:
-                bot_status = TradingBotStatus(user_id=self.user_id)
+                bot_status = TradingBotStatus(user_id=self.user_id, bot_type="stock")
                 db.session.add(bot_status)
 
             # Update status fields
@@ -636,6 +669,41 @@ class IndianStockTradingBot:
 
         except Exception as e:
             logger.error(f"Error restoring bot status: {e}")
+
+    def _sync_trade_count_from_db(self):
+        """Sync trade count from database to ensure consistency after restarts."""
+        try:
+            from ..models import Trade
+
+            # Count actual trades in database for this user and exchange type
+            actual_trade_count = Trade.query.filter_by(
+                user_id=self.user_id, exchange_type="stocks"
+            ).count()
+
+            self.total_trades = actual_trade_count
+            logger.info(
+                f"Synced trade count for user {self.user_id}: {actual_trade_count} trades"
+            )
+
+        except Exception as e:
+            logger.error(f"Error syncing trade count from database: {e}")
+
+    def _get_user_pro_status(self):
+        """Safely get user's pro plan status with session management."""
+        try:
+            with current_app.app_context():
+                # Re-query user with subscription to ensure fresh session
+                user = User.query.options(joinedload(User.subscription)).get(
+                    self.user_id
+                )
+                if user and user.subscription:
+                    return (
+                        user.subscription.plan == "pro" and user.subscription.is_active
+                    )
+                return False
+        except Exception as e:
+            logger.warning(f"Failed to check user pro status: {e}")
+            return False  # Default to free/paper trading on error
 
 
 # Global instances for each user

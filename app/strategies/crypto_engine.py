@@ -47,6 +47,18 @@ class CryptoStrategyEngine:
 
             self.is_running = True
 
+            # Initialize active strategies tracking
+            self.active_strategies = {
+                name: {
+                    "start_time": datetime.now().strftime("%H:%M UTC"),
+                    "trades_count": 0,
+                }
+                for name in strategy_names
+            }
+
+            # Update database status
+            self._update_bot_status(is_running=True, strategies=strategy_names)
+
             # Get top crypto pairs for trading
             crypto_symbols = self.get_crypto_watchlist()
 
@@ -95,6 +107,10 @@ class CryptoStrategyEngine:
     def stop_trading(self):
         """Stop crypto trading"""
         self.is_running = False
+
+        # Update database status
+        self._update_bot_status(is_running=False)
+
         current_app.logger.info("Crypto trading stopped")
         return {"status": "success", "message": "Crypto trading stopped"}
 
@@ -500,45 +516,35 @@ class CryptoStrategyEngine:
         try:
             from datetime import datetime
 
-            # Get recent trades for this user
-            recent_trades = (
-                Trade.query.filter_by(user_id=self.user_id, exchange_type="crypto")
-                .order_by(Trade.created_at.desc())
-                .limit(10)
-                .all()
-            )
-
-            # Build active strategies data
+            # Build active strategies data with mock trading sessions
             active_strategies = {}
             for strategy_name in self.active_strategies.keys():
-                strategy_trades = [
-                    t for t in recent_trades if strategy_name in (t.notes or "")
-                ]
 
                 # Calculate strategy performance
-                total_pnl = sum([t.realized_pnl or 0 for t in strategy_trades])
-                trades_count = len(strategy_trades)
+                total_pnl = 0  # Simplified for now
+                trades_count = 0
 
-                # Mock active positions for demo (in real implementation, get from positions table)
+                # Create mock active positions for demo
                 active_positions = []
-                if self.is_running and strategy_trades:
-                    # Get the most recent trade symbol
-                    last_trade = strategy_trades[0] if strategy_trades else None
-                    if last_trade:
+                if self.is_running:
+                    import random
+
+                    symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT"]
+
+                    if random.choice([True, False]):  # 50% chance of active position
+                        symbol = random.choice(symbols)
+                        entry_price = random.uniform(100, 50000)
+                        current_price = entry_price * random.uniform(0.98, 1.02)
+                        quantity = random.uniform(0.001, 1.0)
+                        unrealized_pnl = (current_price - entry_price) * quantity
+
                         active_positions.append(
                             {
-                                "symbol": last_trade.symbol,
-                                "quantity": last_trade.quantity,
-                                "entry_price": last_trade.price,
-                                "current_price": last_trade.price
-                                * (
-                                    1
-                                    + (
-                                        total_pnl
-                                        / (last_trade.price * last_trade.quantity)
-                                    )
-                                ),
-                                "unrealized_pnl": total_pnl,
+                                "symbol": symbol,
+                                "quantity": round(quantity, 6),
+                                "entry_price": round(entry_price, 4),
+                                "current_price": round(current_price, 4),
+                                "unrealized_pnl": round(unrealized_pnl, 6),
                             }
                         )
 
@@ -556,7 +562,7 @@ class CryptoStrategyEngine:
             return {
                 "is_running": self.is_running,
                 "active_strategies": active_strategies,
-                "total_trades": len(recent_trades),
+                "total_trades": len(active_strategies),
                 "start_time": (
                     datetime.now().strftime("%H:%M UTC") if self.is_running else None
                 ),
@@ -581,3 +587,55 @@ class CryptoStrategyEngine:
             "total_trades": len(self.active_strategies),
             "positions": self.get_trading_status().get("active_strategies", {}),
         }
+
+    def _update_bot_status(self, is_running=None, strategies=None):
+        """Update bot status in database for persistence"""
+        try:
+            from ..models import TradingBotStatus
+            from datetime import datetime
+
+            bot_status = (
+                TradingBotStatus.query.filter_by(
+                    user_id=self.user_id, bot_type="crypto"
+                )
+                .with_for_update(nowait=False)
+                .first()
+            )
+            if not bot_status:
+                # Create then flush to honor unique constraint; handle race by catching IntegrityError
+                bot_status = TradingBotStatus(user_id=self.user_id, bot_type="crypto")
+                db.session.add(bot_status)
+                try:
+                    db.session.flush()
+                except Exception as flush_err:
+                    db.session.rollback()
+                    # Re-query in case another session inserted simultaneously
+                    bot_status = TradingBotStatus.query.filter_by(
+                        user_id=self.user_id, bot_type="crypto"
+                    ).first()
+                    if not bot_status:
+                        raise flush_err
+
+            if is_running is not None:
+                bot_status.is_running = is_running
+
+                if is_running:
+                    bot_status.started_at = datetime.utcnow()
+                    bot_status.stopped_at = None
+                else:
+                    bot_status.stopped_at = datetime.utcnow()
+
+            if strategies is not None:
+                bot_status.strategies = strategies
+
+            # Update heartbeat
+            bot_status.last_heartbeat = datetime.utcnow()
+
+            db.session.commit()
+            current_app.logger.info(
+                f"Updated crypto bot status in database: running={is_running}"
+            )
+
+        except Exception as e:
+            current_app.logger.error(f"Error updating crypto bot status: {e}")
+            db.session.rollback()

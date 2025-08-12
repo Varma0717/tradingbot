@@ -240,9 +240,12 @@ class AuditLog(db.Model):
 
 class TradingBotStatus(db.Model):
     __tablename__ = "trading_bot_status"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "bot_type", name="uq_user_bot_type"),
+    )
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(
-        db.Integer, db.ForeignKey("users.id"), nullable=False, unique=True
+        db.Integer, db.ForeignKey("users.id"), nullable=False  # removed unique=True
     )
     is_running = db.Column(db.Boolean, default=False, nullable=False)
     bot_type = db.Column(

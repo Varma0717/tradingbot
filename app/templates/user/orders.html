@@ -16,9 +16,49 @@
       <div class="mt-8">
         <h2 class="text-xl font-semibold text-gray-800">Order History</h2>
         <div class="mt-4 bg-white shadow overflow-hidden sm:rounded-lg">
-          <div class="px-4 py-6 text-center text-gray-500">No order history found.</div>
+          <div id="ordersHistoryContainer" class="px-4 py-6 text-center text-gray-500">Loading...</div>
         </div>
       </div>
     </div>
   </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      fetchAndRenderOrders()
+    })
+    document.addEventListener('userContextChanged', function(){
+      fetchAndRenderOrders()
+    })
+    async function fetchAndRenderOrders(){
+      const container = document.getElementById('ordersHistoryContainer')
+      if(!container) return
+      container.textContent = 'Loading...'
+      try {
+        const url = `/user/api/orders?mode=${encodeURIComponent(window.currentTradingMode)}&market=${encodeURIComponent(window.currentMarketType)}`
+        const res = await fetch(url)
+        if(!res.ok){ container.textContent = 'Failed to load orders'; return }
+        const data = await res.json()
+        if(data.orders.length===0){ container.textContent = 'No order history found.'; return }
+        container.classList.remove('text-center','text-gray-500')
+        container.innerHTML = `<div class='overflow-x-auto'><table class='min-w-full divide-y divide-gray-200'><thead><tr class='bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wider'>
+          <th class='px-4 py-2 text-left'>#</th>
+          <th class='px-4 py-2 text-left'>Symbol</th>
+          <th class='px-4 py-2 text-left'>Side</th>
+          <th class='px-4 py-2 text-left'>Qty</th>
+          <th class='px-4 py-2 text-left'>Price</th>
+          <th class='px-4 py-2 text-left'>Status</th>
+          <th class='px-4 py-2 text-left'>Time</th>
+        </tr></thead><tbody class='divide-y divide-gray-100'>` + data.orders.map(o=>`<tr class='text-sm'>
+          <td class='px-4 py-2'>${o.id}</td>
+          <td class='px-4 py-2 font-medium'>${o.symbol}</td>
+          <td class='px-4 py-2 ${o.side==='buy'?'text-green-600':'text-red-600'}'>${o.side.toUpperCase()}</td>
+          <td class='px-4 py-2'>${o.quantity}</td>
+          <td class='px-4 py-2'>${(window.currentMarketType==='crypto'?'':'₹') + (o.price??'-')}</td>
+          <td class='px-4 py-2'>${o.status}</td>
+          <td class='px-4 py-2 text-xs text-gray-500'>${o.created_at? new Date(o.created_at).toLocaleString(): ''}</td>
+        </tr>`).join('') + '</tbody></table></div>'
+      } catch(err){
+        console.error(err); container.textContent = 'Error loading orders'
+      }
+    }
+  </script>
 {% endblock %}

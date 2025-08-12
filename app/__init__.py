@@ -96,11 +96,19 @@ def create_app(config_name="default"):
         from .automation.bot_manager import BotManager, start_heartbeat_monitor
 
         # Restore any active bots from database
-        BotManager.restore_active_bots()
+        try:
+            BotManager.restore_active_bots()
+            app.logger.info("Bot manager initialized and active bots restored.")
+        except Exception as e:
+            app.logger.error(f"Failed to restore active bots during startup: {e}")
+            app.logger.info("Bot manager initialized without restoring bots.")
 
         # Start heartbeat monitor with app context
-        start_heartbeat_monitor(app)
+        try:
+            start_heartbeat_monitor(app)
+        except Exception as e:
+            app.logger.error(f"Failed to start heartbeat monitor: {e}")
 
-        app.logger.info("Bot manager initialized and active bots restored.")
+        app.logger.info("Bot manager initialization completed.")
 
     return app

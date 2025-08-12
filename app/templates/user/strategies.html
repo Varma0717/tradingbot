@@ -48,3 +48,9 @@
     </div>
   </div>
 {% endblock %}
+<script>
+  document.addEventListener('userContextChanged', function (e) {
+    // Placeholder: In future filter strategies by market/mode
+    console.log('Context changed, market:', window.currentMarketType, 'mode:', window.currentTradingMode)
+  })
+</script>

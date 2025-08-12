@@ -42,78 +42,219 @@ def before_request():
 
 @user.route("/dashboard")
 def dashboard():
-    # Get real data from database
-    recent_orders = (
-        Order.query.filter_by(user_id=current_user.id)
-        .order_by(Order.created_at.desc())
-        .limit(10)
-        .all()
-    )
-    last_10_trades = (
-        Trade.query.filter_by(user_id=current_user.id)
-        .order_by(Trade.timestamp.desc())
-        .limit(10)
-        .all()
-    )
-    active_strategies = Strategy.query.filter_by(
-        user_id=current_user.id, is_active=True
-    ).all()
+    """Enhanced dashboard with proper portfolio data."""
+    from ..utils.portfolio_manager import PortfolioManager
+    from ..utils.subscription_enforcer import get_plan_summary
 
-    # Calculate P&L from trades
-    total_pnl = sum(
-        [
-            (trade.price * trade.quantity * (1 if trade.side == "sell" else -1))
-            for trade in Trade.query.filter_by(user_id=current_user.id).all()
-        ]
+    try:
+        # Get comprehensive portfolio data
+        portfolio_manager = PortfolioManager(current_user.id)
+        portfolio_data = portfolio_manager.get_comprehensive_portfolio()
+
+        # Get plan summary for UI controls
+        plan_summary = get_plan_summary(current_user.id)
+
+        return render_template(
+            "user/dashboard.html",
+            title="Dashboard",
+            portfolio=portfolio_data,
+            plan_summary=plan_summary,
+            # Legacy compatibility
+            pnl={
+                "daily": portfolio_data["performance"].get("daily_pnl", 0),
+                "monthly": portfolio_data["performance"].get("monthly_pnl", 0),
+                "total": portfolio_data["summary"].get("total_pnl", 0),
+            },
+            positions=portfolio_data["positions"][:5],  # Top 5 positions for dashboard
+            recent_trades=portfolio_data["recent_trades"][:5],
+        )
+
+    except Exception as e:
+        logger.error(f"Dashboard error for user {current_user.id}: {e}")
+        # Fallback to basic dashboard
+        return render_template(
+            "user/dashboard.html",
+            title="Dashboard",
+            pnl={"daily": 0, "monthly": 0, "total": 0},
+            positions=[],
+            recent_trades=[],
+            error="Unable to load portfolio data",
+            balance=0,
+            trades=[],
+            recent_orders=[],
+            active_strategies=Strategy.query.filter_by(
+                user_id=current_user.id, is_active=True
+            ).all(),
+        )
+
+
+def _calculate_dashboard_data(user_id, is_paper: bool, exchange_type: str):
+    """Aggregate P&L, balance, positions, trades & recent orders for dashboard.
+
+    Args:
+        user_id: Current user id
+        is_paper: True for paper trading filter
+        exchange_type: 'stocks' or 'crypto'
+    Returns:
+        dict with keys pnl (dict), balance (float), positions (list), trades (list), recent_orders(list)
+    """
+    # Filter orders & trades
+    orders_query = (
+        Order.query.filter_by(user_id=user_id, exchange_type=exchange_type)
+        .filter(Order.is_paper.is_(is_paper))
+        .order_by(Order.created_at.desc())
     )
+    recent_orders = orders_query.limit(10).all()
+
+    trades_query = (
+        Trade.query.join(Order, Trade.order_id == Order.id)
+        .filter(
+            Trade.user_id == user_id,
+            Trade.exchange_type == exchange_type,
+            Order.is_paper.is_(is_paper),
+        )
+        .order_by(Trade.timestamp.desc())
+    )
+    last_trades = trades_query.limit(25).all()
+
+    # P&L (realized) based on trades (sell positive, buy negative)
+    total_pnl = 0.0
+    for t in last_trades:  # limited window; for full use a separate aggregate
+        sign = 1 if t.side == "sell" else -1
+        total_pnl += t.price * t.quantity * sign
 
     pnl_summary = {
-        "daily": total_pnl * 0.1,  # Mock daily calculation
-        "monthly": total_pnl * 0.3,  # Mock monthly calculation
-        "total": total_pnl,
+        "daily": round(total_pnl * 0.1, 2),  # Placeholder logic
+        "monthly": round(total_pnl * 0.3, 2),  # Placeholder logic
+        "total": round(total_pnl, 2),
     }
 
-    balance = 500000.00 + total_pnl  # Starting balance + P&L
+    # Derive open positions from cumulative trade quantities
+    position_map = {}
+    for t in reversed(last_trades):  # chronological
+        key = t.symbol
+        if key not in position_map:
+            position_map[key] = {
+                "symbol": t.symbol,
+                "qty": 0.0,
+                "avg_price": 0.0,
+                "ltp": t.price,  # use last trade price as proxy
+                "pnl": 0.0,
+            }
+        pos = position_map[key]
+        if t.side == "buy":
+            # Adjust average price
+            new_qty = pos["qty"] + t.quantity
+            if new_qty > 0:
+                pos["avg_price"] = (
+                    (pos["avg_price"] * pos["qty"]) + (t.price * t.quantity)
+                ) / new_qty
+            pos["qty"] = new_qty
+        else:  # sell
+            pos["qty"] -= t.quantity
+        pos["ltp"] = t.price
 
-    # Mock active positions
-    active_positions = [
-        {
-            "symbol": "RELIANCE",
-            "qty": 10,
-            "avg_price": 2450.00,
-            "ltp": 2465.00,
-            "pnl": 150.00,
-        },
-        {
-            "symbol": "TCS",
-            "qty": 20,
-            "avg_price": 3300.00,
-            "ltp": 3280.00,
-            "pnl": -400.00,
-        },
-    ]
+    # Compute unrealized P&L for positive qty positions
+    positions = []
+    for p in position_map.values():
+        if abs(p["qty"]) > 1e-9:
+            p["pnl"] = round((p["ltp"] - p["avg_price"]) * p["qty"], 2)
+            # Convert floats cleanly
+            p["qty"] = float(p["qty"])
+            p["avg_price"] = round(float(p["avg_price"]), 2)
+            p["ltp"] = round(float(p["ltp"]), 2)
+            positions.append(p)
 
-    return render_template(
-        "user/dashboard.html",
-        title="Dashboard",
-        pnl=pnl_summary,
-        balance=balance,
-        positions=active_positions,
-        trades=last_10_trades,
-        recent_orders=recent_orders,
-        active_strategies=active_strategies,
-    )
+    # Simplistic balance: base + realized P&L
+    starting_capital = 500000 if exchange_type == "stocks" else 5.0  # 5 BTC eg
+    balance = starting_capital + pnl_summary["total"]
+
+    # Serialize trades & orders
+    def serialize_trade(t: Trade):
+        return {
+            "id": t.id,
+            "symbol": t.symbol,
+            "quantity": t.quantity,
+            "price": t.price,
+            "side": t.side,
+            "timestamp": t.timestamp.isoformat(),
+        }
+
+    def serialize_order(o: Order):
+        return {
+            "id": o.id,
+            "symbol": o.symbol,
+            "quantity": o.quantity,
+            "side": o.side,
+            "status": o.status,
+            "price": o.price,
+            "created_at": o.created_at.isoformat() if o.created_at else None,
+        }
+
+    return {
+        "pnl": pnl_summary,
+        "balance": balance,
+        "positions": positions,
+        "trades": [serialize_trade(t) for t in last_trades],
+        "recent_orders": [serialize_order(o) for o in recent_orders],
+    }
+
+
+@user.route("/api/dashboard")
+@login_required
+def api_dashboard():
+    """Return JSON dashboard data filtered by trading mode & market."""
+    mode = request.args.get("mode", "paper").lower()
+    market = request.args.get("market", "stocks").lower()
+    is_paper = mode != "live"
+    if market not in ("stocks", "crypto"):
+        market = "stocks"
+    data = _calculate_dashboard_data(current_user.id, is_paper, market)
+    return jsonify({"mode": mode, "market": market, **data})
 
 
 @user.route("/orders")
 def orders():
-    page = request.args.get("page", 1, type=int)
-    orders = (
-        Order.query.filter_by(user_id=current_user.id)
+    # Initial render; client will fetch filtered data via API
+    return render_template("user/orders.html", title="Orders")
+
+
+@user.route("/api/orders")
+@login_required
+def api_orders():
+    """Return orders list filtered by mode & market."""
+    mode = request.args.get("mode", "paper").lower()
+    market = request.args.get("market", "stocks").lower()
+    is_paper = mode != "live"
+    if market not in ("stocks", "crypto"):
+        market = "stocks"
+    orders_query = (
+        Order.query.filter_by(user_id=current_user.id, exchange_type=market)
+        .filter(Order.is_paper.is_(is_paper))
         .order_by(Order.created_at.desc())
-        .paginate(page=page, per_page=20, error_out=False)
     )
-    return render_template("user/orders.html", title="Orders", orders=orders)
+    orders = orders_query.limit(200).all()
+
+    def serialize(o: Order):
+        return {
+            "id": o.id,
+            "symbol": o.symbol,
+            "side": o.side,
+            "quantity": o.quantity,
+            "status": o.status,
+            "price": o.price,
+            "is_paper": o.is_paper,
+            "exchange_type": o.exchange_type,
+            "created_at": o.created_at.isoformat() if o.created_at else None,
+        }
+
+    return jsonify(
+        {
+            "mode": mode,
+            "market": market,
+            "orders": [serialize(o) for o in orders],
+        }
+    )
 
 
 @user.route("/strategies")
@@ -130,14 +271,12 @@ def strategies():
     )
 
 
-@user.route("/billing")
-def billing():
-    return render_template("user/billing.html", title="Billing & Subscription")
-
-
 @user.route("/trade", methods=["POST"])
 @limiter.limit("30/minute")  # Limit to 30 trades per minute
 def execute_trade():
+    """Enhanced trade execution with subscription enforcement."""
+    from ..utils.subscription_enforcer import enforce_trading_limits
+
     try:
         if request.is_json:
             data = request.get_json()
@@ -161,21 +300,6 @@ def execute_trade():
             flash("All fields are required for a trade.", "danger")
             return redirect(url_for("user.dashboard"))
 
-        # Subscription check for real trades
-        if not is_paper and not current_user.has_pro_plan:
-            if request.is_json:
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "message": "Pro plan required for real trading",
-                        }
-                    ),
-                    403,
-                )
-            flash("You need a Pro plan to place real trades.", "warning")
-            return redirect(url_for("user.dashboard"))
-
         order_payload = {
             "symbol": symbol.upper(),
             "quantity": quantity,
@@ -184,6 +308,16 @@ def execute_trade():
             "price": price,
             "is_paper": is_paper,
         }
+
+        # Enhanced subscription and limits enforcement
+        limit_check = enforce_trading_limits(order_payload)
+        if limit_check:
+            if request.is_json:
+                return jsonify(limit_check), 403
+            flash(limit_check["message"], "warning")
+            if limit_check.get("upgrade_required"):
+                return redirect(url_for("payments.upgrade"))
+            return redirect(url_for("user.dashboard"))
 
         order = place_order(current_user, order_payload)
 
@@ -325,37 +459,257 @@ def api_dashboard_data():
 @user.route("/analytics")
 @login_required
 def analytics():
-    """Portfolio analytics and performance metrics"""
-    # Sample analytics data
-    analytics_data = {
-        "performance_metrics": {
-            "total_return": 28.5,
-            "sharpe_ratio": 1.85,
-            "max_drawdown": -8.2,
-            "win_rate": 68.5,
-            "profit_factor": 2.1,
-        },
-        "monthly_returns": [
-            {"month": "Jan", "return": 3.2},
-            {"month": "Feb", "return": 5.1},
-            {"month": "Mar", "return": -1.8},
-            {"month": "Apr", "return": 7.3},
-            {"month": "May", "return": 4.6},
-            {"month": "Jun", "return": 2.9},
-        ],
-        "top_performing_strategies": [
-            {"name": "Mean Reversion Pro", "return": 15.2, "trades": 45},
-            {"name": "Momentum Scalper", "return": 12.8, "trades": 127},
-            {"name": "Swing Trader Elite", "return": 8.5, "trades": 23},
-        ],
-        "risk_metrics": {
-            "var_95": 2850,
-            "beta": 0.85,
-            "volatility": 12.3,
-            "correlation_market": 0.72,
-        },
-    }
-    return render_template("user/analytics.html", analytics=analytics_data)
+    """Enhanced analytics page with real performance metrics."""
+    from ..utils.portfolio_manager import PortfolioManager
+    from ..utils.subscription_enforcer import SubscriptionEnforcer, get_plan_summary
+
+    try:
+        # Check subscription access for analytics
+        plan_summary = get_plan_summary(current_user.id)
+
+        # Check if user can access analytics (Pro feature)
+        if plan_summary["plan"]["plan"] != "pro" or not plan_summary["features"].get(
+            "live_trading", False
+        ):
+            return render_template(
+                "user/analytics.html",
+                error="Analytics feature requires Pro subscription",
+                plan_summary=plan_summary,
+                upgrade_required=True,
+                analytics=None,  # Add analytics as None for template
+            )
+
+        # Get comprehensive portfolio data for analytics
+        portfolio_manager = PortfolioManager(current_user.id)
+        portfolio_data = portfolio_manager.get_comprehensive_portfolio()
+
+        # Calculate advanced analytics metrics
+        performance = portfolio_data["performance"]
+        analytics_data = {
+            "performance_metrics": {
+                "total_return": performance.get("total_return_pct", 0),
+                "sharpe_ratio": performance.get("sharpe_ratio", 0),
+                "max_drawdown": performance.get("max_drawdown", 0),
+                "win_rate": performance.get("win_rate", 0),
+                "profit_factor": performance.get("profit_factor", 0),
+                "average_gain": performance.get("avg_gain", 0),
+                "average_loss": performance.get("avg_loss", 0),
+            },
+            "monthly_returns": _calculate_monthly_returns(current_user.id),
+            "trading_stats": {
+                "total_trades": performance.get("total_trades", 0),
+                "winning_trades": performance.get("winning_trades", 0),
+                "losing_trades": performance.get("losing_trades", 0),
+                "consecutive_wins": performance.get("max_consecutive_wins", 0),
+                "consecutive_losses": performance.get("max_consecutive_losses", 0),
+            },
+            "risk_metrics": {
+                "var_95": performance.get("value_at_risk", 0),
+                "volatility": performance.get("volatility", 0),
+                "beta": performance.get("beta", 0),
+                "correlation_market": performance.get("market_correlation", 0),
+            },
+            "portfolio_breakdown": {
+                "total_value": portfolio_data["summary"]["total_value"],
+                "positions": len(portfolio_data["positions"]),
+                "exchanges": len(portfolio_data["exchange_details"]),
+                "strategies": portfolio_data["summary"].get("active_strategies", 0),
+            },
+            "top_performing_strategies": _get_top_strategies(current_user.id),
+        }
+
+        return render_template(
+            "user/analytics.html",
+            analytics=analytics_data,
+            portfolio=portfolio_data,
+            plan_summary=plan_summary,
+            user_info=portfolio_data["user_info"],
+        )
+
+    except Exception as e:
+        logger.error(f"Analytics error for user {current_user.id}: {e}")
+        return render_template(
+            "user/analytics.html",
+            error="Unable to load analytics data",
+            plan_summary=get_plan_summary(current_user.id),
+            analytics=None,  # Add analytics as None for template
+        )
+
+
+@user.route("/api/demo-portfolio/generate", methods=["POST"])
+@login_required
+def generate_demo_portfolio():
+    """Generate demo portfolio data for paper trading users."""
+    try:
+        from ..utils.demo_portfolio import DemoPortfolioGenerator
+
+        # Only allow for paper trading mode
+        from ..models import UserPreferences
+
+        preferences = UserPreferences.query.filter_by(user_id=current_user.id).first()
+        if not preferences or preferences.trading_mode != "paper":
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Demo portfolio generation is only available in paper trading mode",
+                    }
+                ),
+                400,
+            )
+
+        # Generate demo portfolio
+        result = DemoPortfolioGenerator.generate_demo_portfolio(current_user.id)
+
+        if result["status"] == "created":
+            return jsonify(
+                {
+                    "success": True,
+                    "message": "Demo portfolio generated successfully",
+                    "data": result["summary"],
+                }
+            )
+        elif result["status"] == "exists":
+            return (
+                jsonify({"success": False, "message": "Demo portfolio already exists"}),
+                409,
+            )
+        else:
+            return (
+                jsonify(
+                    {"success": False, "message": "Failed to generate demo portfolio"}
+                ),
+                500,
+            )
+
+    except Exception as e:
+        logger.error(f"Error generating demo portfolio for user {current_user.id}: {e}")
+        return jsonify({"success": False, "message": "Internal server error"}), 500
+
+
+@user.route("/api/demo-portfolio/reset", methods=["POST"])
+@login_required
+def reset_demo_portfolio():
+    """Reset demo portfolio data for paper trading users."""
+    try:
+        from ..utils.demo_portfolio import DemoPortfolioGenerator
+
+        # Only allow for paper trading mode
+        from ..models import UserPreferences
+
+        preferences = UserPreferences.query.filter_by(user_id=current_user.id).first()
+        if not preferences or preferences.trading_mode != "paper":
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Demo portfolio reset is only available in paper trading mode",
+                    }
+                ),
+                400,
+            )
+
+        # Reset and regenerate demo portfolio
+        DemoPortfolioGenerator.reset_demo_portfolio(current_user.id)
+        result = DemoPortfolioGenerator.generate_demo_portfolio(current_user.id)
+
+        if result["status"] == "created":
+            return jsonify(
+                {
+                    "success": True,
+                    "message": "Demo portfolio reset and regenerated successfully",
+                    "data": result["summary"],
+                }
+            )
+        else:
+            return (
+                jsonify(
+                    {"success": False, "message": "Failed to reset demo portfolio"}
+                ),
+                500,
+            )
+
+    except Exception as e:
+        logger.error(f"Error resetting demo portfolio for user {current_user.id}: {e}")
+        return jsonify({"success": False, "message": "Internal server error"}), 500
+
+
+def _calculate_monthly_returns(user_id: int) -> list:
+    """Calculate monthly returns from trade history."""
+    from ..models import Trade
+    from datetime import datetime, timedelta
+    import calendar
+
+    try:
+        # Get last 6 months of trade data
+        six_months_ago = datetime.now() - timedelta(days=180)
+        trades = Trade.query.filter(
+            Trade.user_id == user_id, Trade.created_at >= six_months_ago
+        ).all()
+
+        # Group trades by month and calculate returns
+        monthly_data = {}
+        for trade in trades:
+            month_key = trade.created_at.strftime("%Y-%m")
+            month_name = calendar.month_abbr[trade.created_at.month]
+
+            if month_key not in monthly_data:
+                monthly_data[month_key] = {
+                    "month": month_name,
+                    "return": 0.0,
+                    "trades": 0,
+                }
+
+            if trade.pnl:
+                monthly_data[month_key]["return"] += float(trade.pnl)
+            monthly_data[month_key]["trades"] += 1
+
+        # Convert to list and sort by date
+        monthly_returns = list(monthly_data.values())
+        return monthly_returns[-6:]  # Last 6 months
+
+    except Exception as e:
+        logger.error(f"Error calculating monthly returns: {e}")
+        return [
+            {"month": "Jan", "return": 0, "trades": 0},
+            {"month": "Feb", "return": 0, "trades": 0},
+            {"month": "Mar", "return": 0, "trades": 0},
+            {"month": "Apr", "return": 0, "trades": 0},
+            {"month": "May", "return": 0, "trades": 0},
+            {"month": "Jun", "return": 0, "trades": 0},
+        ]
+
+
+def _get_top_strategies(user_id: int) -> list:
+    """Get top performing strategies for the user."""
+    try:
+        # Mock data for now - in a real implementation this would query strategy performance
+        return [
+            {
+                "name": "RSI Mean Reversion",
+                "return": 12.5,
+                "trades": 45,
+                "win_rate": 68.9,
+                "status": "active",
+            },
+            {
+                "name": "Moving Average Crossover",
+                "return": 8.3,
+                "trades": 32,
+                "win_rate": 62.5,
+                "status": "active",
+            },
+            {
+                "name": "Bollinger Bands",
+                "return": 6.7,
+                "trades": 28,
+                "win_rate": 57.1,
+                "status": "paused",
+            },
+        ]
+    except Exception as e:
+        logger.error(f"Error getting top strategies: {e}")
+        return []
 
 
 @user.route("/settings")
@@ -948,6 +1302,28 @@ def get_crypto_status():
         )
 
 
+@user.route("/crypto/status", methods=["GET"])
+@login_required
+def crypto_bot_status():
+    """Get current cryptocurrency trading bot status."""
+    try:
+        from ..automation.bot_manager import BotManager
+
+        crypto_bot = BotManager.get_bot(current_user.id, bot_type="crypto")
+        status = crypto_bot.get_trading_status()
+
+        return jsonify({"success": True, "status": status})
+
+    except Exception as e:
+        logger.error(f"Error getting crypto status: {e}")
+        return (
+            jsonify(
+                {"success": False, "message": f"Failed to get crypto status: {str(e)}"}
+            ),
+            500,
+        )
+
+
 @user.route("/crypto/portfolio")
 def crypto_portfolio():
     """Get cryptocurrency portfolio details."""
@@ -972,6 +1348,13 @@ def crypto_portfolio():
         )
 
 
+@user.route("/test-bot-api")
+@login_required
+def test_bot_api():
+    """Test page for bot API endpoints"""
+    return render_template("test_bot_api.html")
+
+
 @user.route("/automation/sessions", methods=["GET"])
 @login_required
 def get_trading_sessions():
@@ -990,27 +1373,53 @@ def get_trading_sessions():
             if hasattr(stock_bot, "is_running") and stock_bot.is_running:
                 stock_status = stock_bot.get_status()
                 if stock_status.get("is_running"):
-                    # Get active positions and recent trades
-                    for strategy, position in stock_status.get("positions", {}).items():
-                        if position.get("quantity", 0) != 0:
-                            stock_sessions.append(
-                                {
-                                    "strategy_name": strategy.replace("_", " ").title(),
-                                    "symbol": position.get("symbol", "UNKNOWN"),
-                                    "start_time": stock_status.get(
-                                        "start_time", datetime.now().strftime("%H:%M")
-                                    ),
-                                    "pnl": round(position.get("unrealized_pnl", 0), 2),
-                                    "trades_count": stock_status.get("total_trades", 0),
-                                    "entry_price": round(
-                                        position.get("avg_price", 0), 2
-                                    ),
-                                    "current_price": round(
-                                        position.get("current_price", 0), 2
-                                    ),
-                                    "quantity": position.get("quantity", 0),
-                                }
-                            )
+                    # Show running strategies with their positions
+                    positions = stock_status.get("positions", {})
+                    strategies_active = stock_status.get("strategies_active", 0)
+
+                    if positions:
+                        # If there are active positions, show each position
+                        for strategy, position in positions.items():
+                            if position.get("quantity", 0) != 0:
+                                stock_sessions.append(
+                                    {
+                                        "strategy_name": strategy.replace(
+                                            "_", " "
+                                        ).title(),
+                                        "symbol": position.get("symbol", "UNKNOWN"),
+                                        "start_time": stock_status.get(
+                                            "start_time",
+                                            datetime.now().strftime("%H:%M"),
+                                        ),
+                                        "pnl": round(
+                                            position.get("unrealized_pnl", 0), 2
+                                        ),
+                                        "trades_count": stock_status.get(
+                                            "total_trades", 0
+                                        ),
+                                        "entry_price": round(
+                                            position.get("avg_price", 0), 2
+                                        ),
+                                        "current_price": round(
+                                            position.get("current_price", 0), 2
+                                        ),
+                                        "quantity": position.get("quantity", 0),
+                                    }
+                                )
+                    elif strategies_active > 0:
+                        # If no positions but strategies are active, show strategy is monitoring
+                        stock_sessions.append(
+                            {
+                                "strategy_name": "Multi Strategy Engine",
+                                "symbol": "MONITORING",
+                                "start_time": datetime.now().strftime("%H:%M"),
+                                "pnl": round(stock_status.get("daily_pnl", 0), 2),
+                                "trades_count": stock_status.get("total_trades", 0),
+                                "entry_price": 0.0,
+                                "current_price": 0.0,
+                                "quantity": 0.0,
+                            }
+                        )
         except Exception as e:
             logger.warning(f"Error getting stock sessions: {e}")
 
@@ -1023,8 +1432,12 @@ def get_trading_sessions():
                 # Get active strategies and their performance
                 active_strategies = crypto_status.get("active_strategies", {})
                 for strategy_name, strategy_data in active_strategies.items():
-                    if strategy_data.get("active_positions"):
-                        for position in strategy_data.get("active_positions", []):
+                    # Show running strategies even without active positions
+                    active_positions = strategy_data.get("active_positions", [])
+
+                    if active_positions:
+                        # If there are active positions, show each position
+                        for position in active_positions:
                             crypto_sessions.append(
                                 {
                                     "strategy_name": strategy_name.replace(
@@ -1048,6 +1461,25 @@ def get_trading_sessions():
                                     "quantity": round(position.get("quantity", 0), 6),
                                 }
                             )
+                    else:
+                        # If no active positions, show strategy is running
+                        crypto_sessions.append(
+                            {
+                                "strategy_name": strategy_name.replace(
+                                    "_", " "
+                                ).title(),
+                                "symbol": "MONITORING",
+                                "start_time": strategy_data.get(
+                                    "start_time",
+                                    datetime.now().strftime("%H:%M UTC"),
+                                ),
+                                "pnl": 0.0,
+                                "trades_count": strategy_data.get("trades_count", 0),
+                                "entry_price": 0.0,
+                                "current_price": 0.0,
+                                "quantity": 0.0,
+                            }
+                        )
         except Exception as e:
             logger.warning(f"Error getting crypto sessions: {e}")
 
@@ -1083,74 +1515,232 @@ def get_trading_sessions():
 
 @user.route("/portfolio")
 def portfolio():
-    """Portfolio overview for automated trading."""
+    """Enhanced portfolio overview with real data from PortfolioManager."""
     try:
-        from flask import g
+        from ..utils.portfolio_manager import PortfolioManager
+        from ..utils.subscription_enforcer import SubscriptionEnforcer, get_plan_summary
 
-        # Get current trading mode from preferences
-        trading_mode = getattr(g, "trading_mode", "paper")
+        # Get comprehensive portfolio data using our enhanced manager
+        portfolio_manager = PortfolioManager(current_user.id)
+        portfolio_data = portfolio_manager.get_comprehensive_portfolio()
 
-        # Filter orders based on trading mode
-        base_query_stocks = Order.query.filter_by(
-            user_id=current_user.id,
-            exchange_type="stocks",
-            is_paper=(trading_mode == "paper"),
+        # Get subscription and plan info
+        plan_summary = get_plan_summary(current_user.id)
+
+        # Structure data for template
+        portfolio_summary = {
+            "total_value": portfolio_data["summary"].get("total_value", 0),
+            "total_pnl": portfolio_data["summary"].get("total_pnl", 0),
+            "daily_pnl": portfolio_data["performance"].get("daily_pnl", 0),
+            "monthly_pnl": portfolio_data["performance"].get("monthly_pnl", 0),
+            "unrealized_pnl": portfolio_data["summary"].get("unrealized_pnl", 0),
+            "realized_pnl": portfolio_data["summary"].get("realized_pnl", 0),
+            "total_invested": portfolio_data["summary"].get("total_invested", 0),
+            "available_balance": portfolio_data["summary"].get("available_balance", 0),
+            "trading_mode": portfolio_data["user_info"].get("trading_mode", "paper"),
+            "positions_count": len(portfolio_data.get("positions", [])),
+            "active_orders": portfolio_data["summary"].get("active_orders", 0),
+        }
+
+        # Calculate allocations
+        stock_value = sum(
+            pos["market_value"]
+            for pos in portfolio_data["positions"]
+            if pos.get("exchange") == "zerodha"
         )
-
-        base_query_crypto = Order.query.filter_by(
-            user_id=current_user.id,
-            exchange_type="crypto",
-            is_paper=(trading_mode == "paper"),
+        crypto_value = sum(
+            pos["market_value"]
+            for pos in portfolio_data["positions"]
+            if pos.get("exchange") == "binance"
         )
+        total_portfolio = stock_value + crypto_value
 
-        # Get both stock and crypto orders for current trading mode
-        stock_orders = (
-            base_query_stocks.order_by(Order.created_at.desc()).limit(20).all()
-        )
-
-        crypto_orders = (
-            base_query_crypto.order_by(Order.created_at.desc()).limit(20).all()
-        )
-
-        # Calculate portfolio metrics based on trading mode
-        total_orders = len(stock_orders) + len(crypto_orders)
-
-        # Portfolio data varies based on trading mode
-        if trading_mode == "live":
-            portfolio_data = {
-                "total_value": 150000.00,
-                "daily_pnl": 2500.00,
-                "total_pnl": 12500.00,
-                "stock_allocation": 60.0,
-                "crypto_allocation": 40.0,
-                "active_positions": 8,
-                "trading_mode": "live",
-                "mode_label": "Live Trading",
-            }
-        else:
-            portfolio_data = {
-                "total_value": 100000.00,  # Virtual starting amount
-                "daily_pnl": 1200.00,  # Simulated gains
-                "total_pnl": 5800.00,  # Total simulated P&L
-                "stock_allocation": 65.0,
-                "crypto_allocation": 35.0,
-                "active_positions": 5,
-                "trading_mode": "paper",
-                "mode_label": "Paper Trading",
-            }
+        allocations = {
+            "stocks": (
+                (stock_value / total_portfolio * 100) if total_portfolio > 0 else 0
+            ),
+            "crypto": (
+                (crypto_value / total_portfolio * 100) if total_portfolio > 0 else 0
+            ),
+        }
 
         return render_template(
             "user/portfolio.html",
-            portfolio=portfolio_data,
-            stock_orders=stock_orders,
-            crypto_orders=crypto_orders,
-            total_orders=total_orders,
+            title="Portfolio",
+            portfolio=portfolio_summary,
+            positions=portfolio_data["positions"],
+            recent_trades=portfolio_data["recent_trades"],
+            performance=portfolio_data["performance"],
+            allocations=allocations,
+            exchange_details=portfolio_data["exchange_details"],
+            plan_summary=plan_summary,
+            user_info=portfolio_data["user_info"],
         )
 
     except Exception as e:
-        logger.error(f"Error loading portfolio: {e}")
-        flash("Error loading portfolio", "error")
-        return redirect(url_for("user.dashboard"))
+        logger.error(f"Portfolio error for user {current_user.id}: {e}")
+        # Fallback with error message
+        fallback_portfolio = {
+            "total_value": 0,
+            "total_pnl": 0,
+            "daily_pnl": 0,
+            "monthly_pnl": 0,
+            "unrealized_pnl": 0,
+            "realized_pnl": 0,
+            "total_invested": 0,
+            "available_balance": 0,
+            "trading_mode": "paper",
+            "positions_count": 0,
+            "active_orders": 0,
+        }
+        return render_template(
+            "user/portfolio.html",
+            title="Portfolio",
+            error="Unable to load portfolio data. Please try again later.",
+            portfolio=fallback_portfolio,
+            positions=[],
+            recent_trades=[],
+            allocations={"stocks": 0, "crypto": 0},
+            exchange_details={},
+            plan_summary={
+                "plan": {"plan": "free", "active": True},
+                "features": {"live_trading": False},
+                "limits": {"max_orders_per_day": 10},
+                "current_usage": {"orders_today": 0, "max_orders": 10},
+            },
+            user_info={"trading_mode": "paper"},
+            performance={"daily_pnl": 0, "monthly_pnl": 0, "yearly_pnl": 0},
+        )
+
+
+@user.route("/billing")
+def billing():
+    """Billing page for subscription management."""
+    from ..utils.subscription_enforcer import get_plan_summary
+
+    try:
+        plan_summary = get_plan_summary(current_user.id)
+        return render_template("user/billing.html", plan_summary=plan_summary)
+    except Exception as e:
+        logger.error(f"Billing page error: {e}")
+        return render_template(
+            "user/billing.html", error="Unable to load billing information"
+        )
+
+
+@user.route("/api/portfolio")
+@login_required
+def api_portfolio():
+    """Enhanced JSON API for portfolio data with subscription enforcement."""
+    from ..utils.portfolio_manager import PortfolioManager
+    from ..utils.subscription_enforcer import get_plan_summary
+
+    try:
+        # Get comprehensive portfolio data
+        portfolio_manager = PortfolioManager(current_user.id)
+        portfolio_data = portfolio_manager.get_comprehensive_portfolio()
+
+        # Get plan summary for feature restrictions
+        plan_summary = get_plan_summary(current_user.id)
+
+        return jsonify(
+            {
+                "success": True,
+                "portfolio": portfolio_data,
+                "plan": plan_summary,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"API portfolio error for user {current_user.id}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@user.route("/api/portfolio/legacy")
+@login_required
+def api_portfolio_legacy():
+    """Legacy JSON data for portfolio page (backward compatibility)."""
+    mode = request.args.get("mode", "paper").lower()
+    market = request.args.get("market", "stocks").lower()
+    if market not in ("stocks", "crypto"):
+        market = "stocks"
+    trading_mode = "live" if mode == "live" else "paper"
+
+    # Use the new PortfolioManager for legacy route
+    from ..utils.portfolio_manager import PortfolioManager
+    from ..models import Order
+
+    try:
+        portfolio_manager = PortfolioManager(current_user.id)
+        portfolio_data = portfolio_manager.get_comprehensive_portfolio()
+
+        # Get orders for legacy format
+        is_paper = trading_mode == "paper"
+        stock_orders = (
+            Order.query.filter_by(
+                user_id=current_user.id, exchange_type="stocks", is_paper=is_paper
+            )
+            .order_by(Order.created_at.desc())
+            .limit(50)
+            .all()
+        )
+
+        crypto_orders = (
+            Order.query.filter_by(
+                user_id=current_user.id, exchange_type="crypto", is_paper=is_paper
+            )
+            .order_by(Order.created_at.desc())
+            .limit(50)
+            .all()
+        )
+
+        def serialize_order(o: Order):
+            return {
+                "id": o.id,
+                "symbol": o.symbol,
+                "side": o.side,
+                "quantity": o.quantity,
+                "price": o.price,
+                "status": o.status,
+                "created_at": o.created_at.isoformat() if o.created_at else None,
+            }
+
+        # Convert new portfolio format to legacy format
+        legacy_portfolio = {
+            "total_value": portfolio_data["summary"]["total_value"],
+            "daily_pnl": portfolio_data["summary"]["daily_pnl"],
+            "total_pnl": portfolio_data["summary"]["total_pnl"],
+            "stock_allocation": portfolio_data["allocations"]["stocks"]["percentage"],
+            "crypto_allocation": portfolio_data["allocations"]["crypto"]["percentage"],
+            "stock_value": portfolio_data["allocations"]["stocks"]["value"],
+            "crypto_value": portfolio_data["allocations"]["crypto"]["value"],
+            "active_positions": len(portfolio_data["positions"]),
+            "trading_mode": trading_mode,
+            "mode_label": "Live Trading" if trading_mode == "live" else "Paper Trading",
+        }
+
+        # Select market-specific value
+        selected_value = (
+            legacy_portfolio["stock_value"]
+            if market == "stocks"
+            else legacy_portfolio["crypto_value"]
+        )
+
+        response = {
+            "success": True,
+            "mode": trading_mode,
+            "market": market,
+            "portfolio": {**legacy_portfolio, "selected_value": selected_value},
+            "stock_orders": [serialize_order(o) for o in stock_orders],
+            "crypto_orders": [serialize_order(o) for o in crypto_orders],
+            "counts": {"stock": len(stock_orders), "crypto": len(crypto_orders)},
+        }
+        return jsonify(response)
+
+    except Exception as e:
+        logger.error(f"Legacy portfolio API error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @user.route("/risk-management")
